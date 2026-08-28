@@ -7,11 +7,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: verifynng
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,11 +19,11 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -35,12 +35,12 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     volumes:
       - miniodata:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ['CMD', 'mc', 'ready', 'local']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -59,10 +59,10 @@ services:
   mailpit:
     image: axllent/mailpit
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - '8025:8025'
+      - '1025:1025'
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:8025']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -73,9 +73,9 @@ services:
       context: ../tools/fakes/sms
       dockerfile: Dockerfile
     ports:
-      - "4101:4101"
+      - '4101:4101'
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4101/health"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4101/health']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -85,9 +85,9 @@ services:
       context: ../tools/fakes/pay
       dockerfile: Dockerfile
     ports:
-      - "4102:4102"
+      - '4102:4102'
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4102/health"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4102/health']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -97,41 +97,60 @@ services:
       context: ../tools/fakes/geo
       dockerfile: Dockerfile
     ports:
-      - "4103:4103"
+      - '4103:4103'
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4103/health"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4103/health']
       interval: 5s
       timeout: 5s
       retries: 5
 
   # ── Application services ──────────────────────────────────
+  db-migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    command:
+      [
+        'sh',
+        '-c',
+        'cd packages/db && npx prisma migrate deploy && npx prisma db seed',
+      ]
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifynng?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
   api:
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
     ports:
-      - "4000:4000"
+      - '4000:4000'
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifynng?schema=public
       REDIS_URL: redis://redis:6379
-      API_PORT: "4000"
+      API_PORT: '4000'
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_BUCKET: verifynng
       SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
-      SMTP_USER: ""
-      SMTP_PASS: ""
+      SMTP_PORT: '1025'
+      SMTP_USER: ''
+      SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/health"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -142,14 +161,15 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.web-verify
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       NEXT_PUBLIC_API_URL: http://api:4000
+      HOSTNAME: 0.0.0.0
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://0.0.0.0:3000/api/health"]
+      test: ['CMD', 'curl', '-sf', 'http://localhost:3000/api/health']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -160,14 +180,15 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.web-admin
     ports:
-      - "3001:3001"
+      - '3001:3001'
     environment:
       NEXT_PUBLIC_API_URL: http://api:4000
+      HOSTNAME: 0.0.0.0
     depends_on:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://0.0.0.0:3001/api/health"]
+      test: ['CMD', 'curl', '-sf', 'http://localhost:3001/api/health']
       interval: 10s
       timeout: 5s
       retries: 10
