@@ -115,6 +115,10 @@ None. (Reads E02/E03 models via HTTP.)
 
 ## Tasks
 
+Design input: `docs/design/README.md` and `docs/design/foundations/foundations-v0.2-turquoise.dc.html` (open in a browser) are the specification for tokens, type, verdict family and usage rules. `docs/design/design-system-brief.md` lists the full component inventory and states to build. Follow them; where the canvas is silent, decide and record the decision in `docs/design/README.md`.
+
+- [ ] T0a Import `docs/design/foundations/tokens-v0.2-turquoise.css` into `packages/ui` as Tailwind v4 `@theme` tokens under the `--vg-*` namespace; map verdict tokens to E06 `severity` per the table in `docs/design/README.md`; add a CI check that the `packages/ui` token values match the file in `docs/design/foundations/` (single source, no drift).
+- [ ] T0b Storybook "Foundations" stories reproducing the canvas: type scale, neutrals, brand, verdict family with all four channels (notch, icon, band texture, label) — reviewed against the `.dc.html` side by side before any component work.
 - [ ] T1 `packages/ui` scaffold: Tailwind preset, `tokens.css` with the IVORY GLOW palette + semantic verdict colours + dark-mode values, `applyTenantTheme`, shadcn/ui init (Radix-based) with components generated into the package, tsup build, Storybook 8 with a11y addon; Storybook served on `pnpm --filter @verifyng/ui storybook` (port 6006) and built in CI.
 - [ ] T2 Primitives batch 1: Button, IconButton, Input, Textarea, Select, Checkbox, Switch, RadioGroup, Label, FormField/FormMessage, Badge, StatusChip, Skeleton, Kbd — each with a story and an axe test in Storybook test-runner.
 - [ ] T3 Primitives batch 2: Table, DataTable (TanStack Table; column defs, sorting, cursor pagination, row actions menu, empty state slot, sticky header, mobile card fallback), Dialog, ConfirmDialog, Sheet, Toast + provider, Tabs, PageHeader, Breadcrumbs, EmptyState, ProgressBar, CodeBlock.
