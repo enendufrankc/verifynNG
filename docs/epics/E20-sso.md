@@ -1,0 +1,183 @@
+# E20 — SSO & MFA Policy
+
+| | |
+|---|---|
+| Wave | 3 |
+| Status | todo |
+| Owner | — |
+| GitHub Issue | — |
+| Depends on | E02 (identity: `User`, `Membership`, sessions, TOTP MFA, login hooks), E13 (`@Audited`, secrets helper), E11 (settings route group), E15 (`hasFeature('sso')`), E03 (tenant settings) |
+| Unblocks | E18 (auth-lockout runbook references break-glass) |
+| Readiness items | `production-readiness.md` §1 P1 "MFA enforcement option (per-tenant policy)" · §1 P2 "SSO (Google/Microsoft)" · §2 audit log (consumed) |
+
+## Goal
+
+An enterprise tenant can tell its staff "sign in with your work Google/Microsoft account", have new colleagues from `@brand.com` provisioned automatically as viewers, forbid password login entirely, and require MFA for every owner — all configured by the tenant owner in the console and every change audited. The owner keeps a break-glass path (password + TOTP) so a broken IdP never locks a tenant out of its own codes. Local development uses a fake OIDC provider in compose so none of this needs a Google or Microsoft account to test. SAML is explicitly deferred.
+
+## Scope
+
+**In:** OIDC Authorization Code + PKCE login with Google and Microsoft Entra ID via `openid-client`, `TenantSsoConfig` with encrypted client secret, account linking by verified email to an existing `Membership`, JIT provisioning with allowed domains and default role, enforce-SSO mode with owner break-glass, per-tenant MFA policy by role enforced through E02's login hooks, `fake-oidc` compose service with seeded users, settings screens (Security → SSO, Security → MFA policy), audit of every config change, `sso.login` / `sso.config.changed` / `mfa.policy.changed` events, runbook input for E18's auth-lockout doc.
+
+**Out:** SAML 2.0 (future — noted below), SCIM provisioning/deprovisioning (future), platform-level SSO for `support` staff (they use E02 password + TOTP), password/TOTP mechanics and session storage (E02), WebAuthn/passkeys (future, would land in E02), social login for consumers on web-verify (never — consumers are anonymous), per-user MFA enrolment UI (E02 — E20 only forces it), Okta/Auth0 as generic OIDC (technically works via the same code path if `provider = generic` is added later; not tested in this epic).
+
+## Owned paths
+
+```
+apps/api/src/modules/sso/**
+apps/web-admin/app/(console)/settings/security/**      (sub-route under E03/E11's settings group, agreed)
+apps/web-admin/app/(auth)/sso/**                        SSO entry + callback pages (agreed with E02 who owns app/(auth)/**)
+packages/db/prisma/schema.prisma                        (additive block: "E20")
+tools/fakes/oidc/**                                     compose config + seeded users for the fake provider
+docs/sso-setup-guide.md                                 tenant-facing: Google / Entra app registration steps
+```
+
+## Interfaces
+
+**Consumes:**
+- E02: `User`, `Membership(userId, tenantId, role)`, `SessionService.issue(userId, { tenantId, role, amr: string[] })`, `UserService.findByEmail/create`, `MfaService.isEnrolled(userId)` and `MfaService.challenge(...)`, and E02's login pipeline hooks — **change request to E02**: expose `LoginPolicyHook` interface (`beforePasswordLogin(ctx)`, `afterPrimaryAuth(ctx) → { requireMfa: boolean, reason? }`) registered via a `LOGIN_POLICY_HOOKS` multi-provider token so E20 can (a) block password login for enforce-SSO tenants and (b) demand MFA per policy without E02 knowing about SSO. Also `Session.amr` (authentication methods reference: `pwd`, `otp`, `oidc:google`, `oidc:microsoft`) so guards can require a fresh MFA.
+- E13: `@Audited` on all config routes; `SecretsHelper.encrypt/decrypt` for `clientSecretEnc`; audit viewer shows `sso.*` and `mfa.*` actions.
+- E15: `EntitlementService.hasFeature(tenantId, 'sso')` → 402 `plan_limit` when configuring SSO on a plan without it (growth/enterprise only); MFA policy is available on every plan.
+- E03: `Tenant.slug` for the login URL `/sso/:tenantSlug`; tenant settings page shell.
+- E11: `nav.config.ts` entry under Settings → Security (owner only), `apiClient`, form primitives; `loginAs()` fixture extended with `loginViaSso(tenantSlug, fakeUser)`.
+- E14: `NotificationService.send('sso.enabled' | 'mfa.policy.enforced', owner)` (template request to E14).
+
+**Exposes:**
+
+Nest providers (module `SsoModule`):
+```ts
+SsoConfigService     // get(tenantId), upsert(tenantId, dto), disable(tenantId), testConnection(tenantId) → discovery ok / error
+OidcClientFactory    // buildClient(config) → openid-client Client using discovery (Google: accounts.google.com; Entra: login.microsoftonline.com/{tenant}/v2.0; fake: FAKE_OIDC_ISSUER)
+SsoLoginService      // startLogin(tenantSlug, { redirectTo }) → authUrl (state+nonce+PKCE in Redis, 10 min); handleCallback(state, code) → { session } | SsoError
+AccountLinker        // resolve(tenantId, claims) → existing Membership by verified email | JIT-provisioned | rejected(domain)
+MfaPolicyService     // get(tenantId), set(tenantId, { requiredRoles: Role[], gracePeriodDays }), evaluate(userId, tenantId, role) → { required, inGraceUntil? }
+EnforceSsoLoginHook  // implements E02 LoginPolicyHook.beforePasswordLogin: throws `sso_required` unless break-glass (owner + valid TOTP) 
+MfaPolicyLoginHook   // implements afterPrimaryAuth: requireMfa when policy says so (also after OIDC login if the IdP did not assert MFA — see Notes)
+```
+
+HTTP routes:
+```
+GET   /v1/auth/sso/:tenantSlug/start?redirectTo=        anonymous → 302 to IdP
+GET   /v1/auth/sso/callback                               anonymous → sets refresh cookie, 302 to web-admin (/sso/complete)
+GET   /v1/auth/sso/:tenantSlug                             anonymous → { enabled, provider, enforceSso, buttonLabel }   (login page uses this to render the button)
+GET   /v1/tenants/:tenantId/sso                            owner → config without secret (secret shown as ••••last4)
+PUT   /v1/tenants/:tenantId/sso                            owner @Audited { provider, clientId, clientSecret?, issuer? (fake/generic only), allowedDomains[], jitProvisioning, jitDefaultRole, enforceSso }
+POST  /v1/tenants/:tenantId/sso/test                       owner → runs discovery + client credentials sanity, returns diagnostics
+DELETE /v1/tenants/:tenantId/sso                           owner @Audited (disables; clears enforceSso first)
+GET   /v1/tenants/:tenantId/security/mfa-policy            owner|operator|viewer (read)
+PUT   /v1/tenants/:tenantId/security/mfa-policy            owner @Audited { requiredRoles: ['owner','operator'], gracePeriodDays: 7 }
+POST  /v1/auth/break-glass/:tenantSlug                     anonymous → password + TOTP in one request; only for role owner in enforce-SSO tenants; rate-limited 5/hour/IP; @Audited `auth.break_glass`
+```
+
+Domain events:
+```
+sso.login             { tenantId, userId, provider, membershipCreated: boolean, amr: string[], ip }
+sso.login_rejected    { tenantId, provider, emailDomain, reason: 'domain_not_allowed'|'jit_disabled'|'email_unverified'|'state_mismatch' }
+sso.config.changed    { tenantId, actorId, changes: string[] (field names, never values), enforceSso }
+mfa.policy.changed    { tenantId, actorId, requiredRoles, gracePeriodDays }
+auth.break_glass      { tenantId, userId, ip }
+```
+
+Prisma models: `TenantSsoConfig`, `TenantMfaPolicy`, `SsoIdentity`.
+
+## Data model
+
+Additive block `// E20`.
+
+```prisma
+enum SsoProvider { google microsoft fake }        // `fake` only honoured when NODE_ENV !== 'production'
+
+model TenantSsoConfig {
+  id              String      @id @default(cuid())
+  tenantId        String      @unique
+  provider        SsoProvider
+  clientId        String
+  clientSecretEnc String                              // E13 SecretsHelper; never returned by the API
+  issuer          String?                             // required for fake; Entra: tenant-specific issuer; Google: fixed
+  allowedDomains  String[]                            // lowercase, e.g. ["ivoryglow.com","tunnellight.com"]; empty = link-only, no JIT
+  jitProvisioning Boolean     @default(false)
+  jitDefaultRole  String      @default("viewer")      // viewer | operator (never owner)
+  enforceSso      Boolean     @default(false)
+  enabled         Boolean     @default(true)
+  lastTestedAt    DateTime?
+  lastTestResult  String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model SsoIdentity {
+  id          String      @id @default(cuid())
+  tenantId    String
+  userId      String
+  provider    SsoProvider
+  subject     String                                  // IdP `sub` — the stable link, not email
+  email       String
+  lastLoginAt DateTime?
+  createdAt   DateTime    @default(now())
+  @@unique([tenantId, provider, subject])
+  @@index([tenantId, userId])
+}
+
+model TenantMfaPolicy {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  requiredRoles   String[]                            // subset of owner|operator|viewer
+  gracePeriodDays Int      @default(7)                // existing un-enrolled users get this long after the policy is set
+  enforcedFrom    DateTime                            // set when policy first becomes non-empty
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+```
+
+Change request to E02: `Session.amr String[]` and the `LoginPolicyHook` multi-provider token (see Interfaces). `Membership.createdVia String? ('invite'|'jit')` is helpful for E18's directory but optional.
+
+## Tasks
+
+- [ ] T1 `SsoModule` scaffold + schema block + migration `E20_sso_mfa_policy`; env section `SSO_*` (`SSO_CALLBACK_URL=http://localhost:4000/v1/auth/sso/callback`, `FAKE_OIDC_ISSUER=http://fake-oidc:4104/default`, `FAKE_OIDC_PUBLIC_ISSUER=http://localhost:4104/default`, `SSO_STATE_TTL_SECONDS=600`); `SsoConfigService` + config routes with `hasFeature('sso')` gate, secret encryption, `@Audited`, `sso.config.changed` (field names only).
+- [ ] T2 `OidcClientFactory` with `openid-client` discovery per provider, cached per tenant with invalidation on config change; Google and Entra issuer/URL rules; `fake` provider allowed only outside production (startup assertion). `POST …/sso/test` runs discovery and reports `issuer`, `authorization_endpoint`, and whether `email_verified` is available in scopes.
+- [ ] T3 Login flow: `start` (state + nonce + PKCE verifier in Redis under `sso:state:<state>`; `redirectTo` allow-listed to web-admin origin), `callback` (exchange, ID-token validation via `openid-client`, `email_verified === true` required, `hd`/`tid` cross-check with `allowedDomains` where present), `SsoLoginService` → `AccountLinker` → E02 `SessionService.issue` with `amr: ['oidc:<provider>']`; error redirects to `/sso/error?code=` with human messages. `sso.login` / `sso.login_rejected` events.
+- [ ] T4 `AccountLinker`: (1) `SsoIdentity` by `(tenantId, provider, sub)` → existing user; (2) else `User` by email with an active `Membership` in the tenant → link, create `SsoIdentity`; (3) else if `jitProvisioning` and domain ∈ `allowedDomains` → create `User` (no password) + `Membership(role = jitDefaultRole, createdVia='jit')` + identity; (4) else reject `domain_not_allowed` / `jit_disabled`. Email changes at the IdP do not break the link (sub is the key). Integration tests for each branch and for a user who belongs to two tenants.
+- [ ] T5 Enforce-SSO: `EnforceSsoLoginHook` (E02 hook) blocks `POST /v1/auth/login` for any `Membership` in an enforce-SSO tenant with 403 `sso_required { ssoStartUrl }`; users with memberships in several tenants are blocked only for the tenant being selected (login is tenant-scoped in E02). Setting `enforceSso=true` requires: SSO tested OK in the last 24h, the acting owner has logged in via SSO at least once, and every owner has TOTP enrolled (break-glass depends on it) — otherwise 409 with the unmet preconditions listed.
+- [ ] T6 Break-glass: `POST /v1/auth/break-glass/:tenantSlug` accepts `{ email, password, totp }`, only for `role = owner`, rate-limited 5/hour/IP via E13, issues a 1-hour session with `amr: ['pwd','otp','break_glass']`, `@Audited auth.break_glass`, email to all owners via E14; web-admin `/sso/break-glass` page linked from the tenant login page as "Owner emergency access".
+- [ ] T7 MFA policy: `TenantMfaPolicy`, `MfaPolicyService`, routes, `MfaPolicyLoginHook` (E02 `afterPrimaryAuth`): if the user's role in the selected tenant ∈ `requiredRoles` → `requireMfa: true`; if not enrolled and within grace → allow with `session.mfaGraceUntil` + console banner "Enable MFA by <date>"; after grace → login returns `mfa_enrolment_required` and E02's enrolment flow is the only reachable screen. Applies after OIDC login too unless the ID token asserts MFA (`amr` contains `mfa`/`hwk` or Entra `acr`), so IdP-enforced MFA is not doubled. `mfa.policy.changed` event + E14 email to affected members.
+- [ ] T8 `tools/fakes/oidc`: compose service `fake-oidc` using `ghcr.io/navikt/mock-oauth2-server` on 4104 with `JSON_CONFIG` defining issuer `default`, static users `owner@ivoryglow.com`, `ops@ivoryglow.com`, `newhire@ivoryglow.com` (not yet a member), `outsider@gmail.com`, claims `email`, `email_verified`, `hd`, optional `amr:["mfa"]` for `owner@`; a login page where the tester picks a user; README with the mapping to Google/Entra claim differences.
+- [ ] T9 Web-admin auth pages `app/(auth)/sso/**`: tenant login page gets a **Continue with Google/Microsoft** button when `/v1/auth/sso/:slug` says enabled (password form hidden when `enforceSso`, replaced by the break-glass link); `/sso/complete` finishes the cookie hand-off; `/sso/error` explains `domain_not_allowed` etc. with the tenant's `supportEmail`.
+- [ ] T10 Settings screens `app/(console)/settings/security/**` (owner only): **SSO** — provider select, client id/secret, issuer (fake/generic), allowed domains chips, JIT toggle + default role, **Test connection** with diagnostics panel, **Enforce SSO** switch with the precondition checklist and a typed-slug confirmation, disable; **MFA policy** — role checkboxes, grace period, list of members not yet enrolled with days remaining, save with confirmation of who will be affected. Nav entry `settings/security` in `nav.config.ts`.
+- [ ] T11 `docs/sso-setup-guide.md`: Google Cloud OAuth client steps (consent screen, authorised redirect URI, `hd` claim), Entra app registration (single-tenant vs multi-tenant, issuer with tenant id, `email` optional claim, `xms_edov`/`email_verified` note), what to put in the console, troubleshooting table mapping our error codes to fixes; input section for E18's `auth-lockout.md` (break-glass procedure).
+- [ ] T12 Playwright: full SSO flow against `fake-oidc` for link / JIT / rejected; enforce-SSO blocks password; break-glass; MFA policy grace and enforcement; `loginViaSso()` fixture contributed to E11/E21 fixtures.
+
+## Acceptance criteria
+
+- [ ] AC1 `docker compose up` → `http://localhost:4104/default/.well-known/openid-configuration` returns discovery; `ivoryglow` (growth plan in E21 seed) owner at `http://localhost:3001/settings/security/sso` saves provider **fake**, issuer `http://localhost:4104/default`, client `verifyng-local`/`secret`, domains `ivoryglow.com`, JIT on → **Test connection** shows green with issuer and endpoints; `http://localhost:3001/audit` shows `sso.config.changed` with `changes: ["provider","clientId","clientSecret","allowedDomains","jitProvisioning"]` and no secret value anywhere.
+- [ ] AC2 Link existing: log out; on `http://localhost:3001/login/ivoryglow` click **Continue with SSO** → fake-oidc picker → choose `ops@ivoryglow.com` (seeded operator) → land in the console as operator; `SsoIdentity` row created; audit `sso.login` with `membershipCreated: false`.
+- [ ] AC3 JIT: pick `newhire@ivoryglow.com` → lands as **viewer**, `Membership.createdVia = jit`, appears in Team (E02) list; pick `outsider@gmail.com` → `/sso/error?code=domain_not_allowed` with the tenant's support email; `sso.login_rejected` in audit. Turn JIT off → `newhire2@ivoryglow.com` (add via fake-oidc config) is rejected `jit_disabled`.
+- [ ] AC4 Enforce SSO preconditions: toggling **Enforce SSO** before any SSO login → 409 listing "acting owner has not logged in via SSO", "owner ops2@… has no TOTP"; satisfy both (owner logs in via SSO once; enrol TOTP through E02) → toggle succeeds; `curl -X POST localhost:4000/v1/auth/login -d '{"email":"ops@ivoryglow.com","password":"…","tenant":"ivoryglow"}'` → 403 `sso_required` with `ssoStartUrl`; the login page hides the password form.
+- [ ] AC5 Break-glass: `http://localhost:3001/sso/break-glass?tenant=ivoryglow` with owner email + password + current TOTP → session issued, console shows the amber "Emergency access — expires in 60:00" banner, `auth.break_glass` audit row, Mailpit has the owners' alert; 6th attempt in an hour from one IP → 429; an operator's credentials → 403.
+- [ ] AC6 IdP outage: `docker compose stop fake-oidc` → SSO button click shows `/sso/error?code=idp_unreachable` within 10s (discovery timeout), break-glass still works; `docker compose start fake-oidc` → SSO works again with no restart of `api`.
+- [ ] AC7 MFA policy: set `requiredRoles = ['owner','operator']`, grace 7 days → operator `ops@` (not enrolled, password login in tenant `acme` which has no SSO) logs in and sees "Enable MFA by <date>"; `docker compose exec api node cli.js clock:advance --days 8` (E15's `FakeClock`, shared) → next login returns `mfa_enrolment_required` and the console shows only the enrolment screen; after enrolling, login requires TOTP; a `viewer` is never prompted.
+- [ ] AC8 IdP-asserted MFA is honoured: `owner@ivoryglow.com` (fake-oidc emits `amr:["mfa"]`) logs in via SSO under the same policy → no second TOTP prompt; `ops@` via SSO (no `amr`) → TOTP prompt (or grace banner). `Session.amr` visible in E02's sessions page.
+- [ ] AC9 Isolation and plan gate: `acme` (starter plan) owner `PUT /v1/tenants/acme/sso` → 402 `plan_limit`; `ivoryglow` owner `GET /v1/tenants/acme/sso` → 403; E21's isolation matrix covers all `/v1/tenants/:tenantId/sso*` and `/security/*` routes.
+
+## Testing
+
+- Unit: `AccountLinker` decision table (identity match, email link, JIT allowed, domain denied, unverified email, `hd` mismatch), enforce-SSO precondition checker, MFA policy evaluator (role, grace window boundaries, IdP `amr`/`acr` mapping), `redirectTo` allow-list, state/nonce/PKCE storage and single-use.
+- Integration (Postgres + Redis + `fake-oidc` container in the test compose): full callback exchange against the fake issuer, ID-token signature and nonce validation failures → rejected, secret encrypted at rest (`SELECT "clientSecretEnc"` is not the plaintext), config cache invalidation, `LoginPolicyHook` interplay with E02's real login service, break-glass rate limit, audit rows for every mutation with no secret values.
+- E2E (Playwright): AC2–AC5, AC7–AC8 with `loginViaSso()`; visual snapshot of the login page in normal vs enforce-SSO mode.
+- Security checks: no `client_secret` in logs (grep of `api` logs during the E2E run in CI), `state` reuse → 400, callback without cookie → 400, open-redirect attempt on `redirectTo` → 400.
+
+## Compose services added
+
+| Service | Image | Host port | Notes |
+|---|---|---|---|
+| fake-oidc | ghcr.io/navikt/mock-oauth2-server:2.1.10 | 4104 | `JSON_CONFIG_PATH=/config/config.json` from `tools/fakes/oidc/config.json`; issuer `http://localhost:4104/default`; `api` reaches it as `http://fake-oidc:4104/default` — issuer mismatch handled by `FAKE_OIDC_PUBLIC_ISSUER` (browser) vs `FAKE_OIDC_ISSUER` (server) with `openid-client` `skipIssuerCheck` **only** for `provider = fake` |
+
+`api` env additions: `SSO_CALLBACK_URL`, `SSO_STATE_TTL_SECONDS=600`, `FAKE_OIDC_ISSUER`, `FAKE_OIDC_PUBLIC_ISSUER`, `SSO_DISCOVERY_TIMEOUT_MS=5000`.
+
+## Notes and decisions
+
+- **SAML is out.** Every target enterprise IdP (Google Workspace, Entra, Okta, JumpCloud) speaks OIDC; SAML doubles the attack surface (XML signature wrapping) for no customer we have. If a tenant insists, the plan is a `saml` provider behind the same `AccountLinker` using `@node-saml/node-saml` — a new epic, not a task here.
+- **Subject, not email, is the link.** Email is used once to link or provision; afterwards `(provider, sub)` identifies the user so an IdP-side email rename does not create a duplicate account or let someone hijack by registering a matching email elsewhere.
+- **`email_verified` is mandatory.** Google sets it; Entra requires the optional claim or the `xms_edov` fallback — the setup guide covers it; without it login is rejected `email_unverified`.
+- **Enforce-SSO is guarded by preconditions**, not just a switch, because the failure mode (tenant locks itself out) is exactly what a trust product cannot afford. Break-glass is owner + password + TOTP with a short session and loud audit/email.
+- **MFA policy composes with SSO** by trusting the IdP's `amr`/`acr` claim; when the IdP does not assert MFA we add TOTP ourselves rather than trusting the tenant to have configured it upstream.
+- **Multi-tenant users.** A person can be a viewer at `acme` (password) and an operator at `ivoryglow` (enforce-SSO). Hooks evaluate per selected tenant; sessions are per tenant already in E02.
+- **`fake` provider is compile-time fenced** by an assertion at module init when `NODE_ENV=production`, so a misconfigured env cannot expose a test IdP in prod.

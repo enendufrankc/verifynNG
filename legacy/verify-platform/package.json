@@ -1,0 +1,15 @@
+{
+  "name": "verify-platform",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tunnel Light Verify Platform — local milestone 1",
+  "scripts": {
+    "mint": "node cli.js mint",
+    "batches": "node cli.js list",
+    "batch": "node cli.js show",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

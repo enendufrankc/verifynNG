@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Platform — Admin</title>
+<style>
+:root{--ink:#231C10;--ink-soft:#5C5140;--ivory:#F8F3EA;--cream:#FDFAF4;--gold:#C08A2D;--gold-bright:#E3A93C;
+--amber:#9A6A18;--sage:#4A7C59;--red:#A63A2E;--line:rgba(195,138,45,.22);
+--mono:ui-monospace,'SF Mono',Menlo,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Manrope',system-ui,sans-serif;background:var(--ivory);color:var(--ink);min-height:100vh}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.04;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+a{color:var(--amber)}
+/* login */
+.login{display:grid;place-items:center;min-height:100vh}
+.login-box{background:var(--cream);border:1px solid var(--line);border-radius:10px;padding:38px 34px;width:min(92vw,380px);box-shadow:0 30px 60px -30px rgba(35,28,16,.3)}
+.login-box h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:26px;font-weight:600}
+.login-box p{font-size:12.5px;color:var(--ink-soft);margin:8px 0 20px}
+.login-box input{width:100%;padding:13px 15px;border:1px solid var(--line);border-radius:6px;background:var(--ivory);font-size:14px;outline:none}
+.login-box input:focus{border-color:var(--gold)}
+.login-box button{width:100%;margin-top:12px;padding:13px;border:none;border-radius:6px;background:var(--ink);color:var(--ivory);font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;cursor:pointer}
+.login-box button:hover{background:var(--gold)}
+.err{color:var(--red);font-size:12px;margin-top:10px;display:none}
+/* shell */
+.shell{display:none}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 28px;border-bottom:1px solid var(--line);background:var(--cream);position:sticky;top:0;z-index:10}
+.topbar b{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+.topbar button{background:none;border:1px solid var(--line);border-radius:100px;padding:7px 16px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;color:var(--ink-soft)}
+.wrap{max-width:1080px;margin:0 auto;padding:28px}
+h2{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;margin-bottom:4px}
+.sub{color:var(--ink-soft);font-size:13px;margin-bottom:24px}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:30px}
+.stat{background:var(--cream);border:1px solid var(--line);border-radius:8px;padding:18px}
+.stat b{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;display:block;line-height:1}
+.stat span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+.stat.warn b{color:var(--red)}
+/* mint */
+.card{background:var(--cream);border:1px solid var(--line);border-radius:8px;padding:24px;margin-bottom:28px}
+.card h3{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--amber);margin-bottom:16px;font-weight:700}
+.mint-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.mint-form label{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:5px;font-weight:600}
+.mint-form input,.mint-form select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--ivory);font-size:13.5px}
+.mint-form button{align-self:end;padding:11px 22px;border:none;border-radius:6px;background:var(--ink);color:var(--ivory);font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;cursor:pointer}
+.mint-form button:hover{background:var(--gold)}
+.mint-result{margin-top:16px;background:var(--ivory);border:1px dashed var(--gold);border-radius:6px;padding:16px;font-size:13px;display:none}
+.mint-result code{font-family:var(--mono);font-size:11.5px;background:rgba(195,138,45,.1);padding:2px 6px;border-radius:4px;display:inline-block;margin:2px 0}
+.mint-result a{margin-right:14px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);padding:10px 10px;border-bottom:1.5px solid var(--gold)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:rgba(195,138,45,.05)}
+.pill{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:100px;padding:3px 10px;display:inline-block}
+.pill.active{background:rgba(74,124,89,.14);color:var(--sage)}
+.pill.flagged{background:rgba(166,58,46,.12);color:var(--red)}
+.pill.decommissioned{background:rgba(35,28,16,.1);color:var(--ink-soft)}
+.pill.ok{background:rgba(74,124,89,.14);color:var(--sage)}
+.pill.warn{background:rgba(195,138,45,.16);color:var(--amber)}
+.pill.bad{background:rgba(166,58,46,.12);color:var(--red)}
+button.mini{border:1px solid var(--line);background:none;border-radius:100px;padding:4px 12px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin-right:6px}
+button.mini:hover{border-color:var(--gold);color:var(--amber)}
+button.mini.danger:hover{border-color:var(--red);color:var(--red)}
+.linklike{color:var(--amber);cursor:pointer;text-decoration:underline}
+.back{display:inline-block;margin-bottom:14px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);cursor:pointer}
+.back:hover{color:var(--amber)}
+code.unit{font-family:var(--mono);font-size:11px}
+.scans{font-family:var(--mono);font-size:11.5px}
+.empty{color:var(--ink-soft);font-size:13px;padding:20px 0;text-align:center}
+</style>
+</head>
+<body>
+<!-- LOGIN -->
+<div class="login" id="login">
+  <div class="login-box">
+    <h1>Verify Platform</h1>
+    <p>Tenant admin console — Tunnel Light</p>
+    <input type="password" id="pw" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Sign in</button>
+    <div class="err" id="err">Wrong password.</div>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell" id="shell">
+  <div class="topbar"><b>Verify Platform</b><button onclick="logout()">Sign out</button></div>
+  <div class="wrap" id="view"></div>
+</div>
+
+<script>
+let TOKEN = sessionStorage.getItem('vp_token') || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}`, ...(opts.headers||{}) } });
+  if (r.status === 401 && path !== '/api/admin/login') { logout(); throw new Error('unauthorized'); }
+  return r.json();
+}
+
+async function doLogin() {
+  const r = await fetch('/api/admin/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ password: $('pw').value }) });
+  if (!r.ok) { $('err').style.display = 'block'; return; }
+  TOKEN = (await r.json()).token;
+  sessionStorage.setItem('vp_token', TOKEN);
+  enter();
+}
+function logout() { TOKEN = ''; sessionStorage.removeItem('vp_token'); location.reload(); }
+function enter() { if (TOKEN) { $('login').style.display = 'none'; $('shell').style.display = 'block'; dashboard(); } }
+if (TOKEN) enter();
+
+/* ── dashboard ─────────────────────────────────────────── */
+let PRODUCTS = [];
+async function dashboard() {
+  const d = await api('/api/admin/overview');
+  const t = d.tenants[0]; PRODUCTS = (await Promise.resolve([]), t ? null : null);
+  // fetch products via overview tenants
+  const view = $('view');
+  view.innerHTML = `
+    <h2>Dashboard</h2>
+    <p class="sub">${esc(d.tenants.map(t=>t.name).join(', '))} · ${d.batches.length} batches · ${d.totals.units} units commissioned</p>
+    <div class="stats">
+      <div class="stat"><b>${d.totals.units}</b><span>Units</span></div>
+      <div class="stat"><b>${d.batches.length}</b><span>Batches</span></div>
+      <div class="stat"><b>${d.recentScans.length}</b><span>Recent scans</span></div>
+      <div class="stat warn"><b>${d.totals.flagged}</b><span>Flagged</span></div>
+      <div class="stat warn"><b>${d.totals.decommissioned}</b><span>Decommissioned</span></div>
+    </div>
+    <div class="card">
+      <h3>Mint a new batch</h3>
+      <div class="mint-form">
+        <div><label>Product</label><select id="mProduct"></select></div>
+        <div><label>OEM</label><input id="mOem" value="Guiba OEM (China)"></div>
+        <div><label>Units</label><input id="mCount" type="number" value="10" min="1" max="100000"></div>
+        <div><label>Base URL</label><input id="mUrl" value="${location.origin}"></div>
+        <div><button onclick="mint()">Mint batch</button></div>
+      </div>
+      <div class="mint-result" id="mintResult"></div>
+    </div>
+    <div class="card">
+      <h3>Batches</h3>
+      ${d.batches.length ? `<table><tr><th>Batch</th><th>Product</th><th>Units</th><th>T2 scans</th><th>OEM</th><th>Created</th><th></th></tr>
+      ${d.batches.map(b=>`<tr>
+        <td><span class="linklike" onclick="batch('${esc(b.id)}')">${esc(b.id)}</span></td>
+        <td>${esc(b.product)}</td><td>${b.units}</td><td>${b.tier2Scans}</td><td>${esc(b.oem||'-')}</td>
+        <td>${new Date(b.createdAt).toLocaleDateString()}</td>
+        <td><a href="/api/admin/exports/${encodeURIComponent(b.id)}/qr-sheet.html" target="_blank">QR sheet</a>
+            <a href="/api/admin/exports/${encodeURIComponent(b.id)}/manifest.json" target="_blank">Manifest</a></td>
+      </tr>`).join('')}</table>` : `<p class="empty">No batches yet — mint one above.</p>`}
+    </div>
+    <div class="card">
+      <h3>Recent scan activity</h3>
+      ${d.recentScans.length ? `<table><tr><th>When</th><th>Unit</th><th>Tier</th><th>Region</th><th>Verdict</th></tr>
+      ${d.recentScans.slice(0,15).map(s=>`<tr>
+        <td>${new Date(s.at).toLocaleString()}</td><td><code class="unit">${esc(s.unit)}</code></td>
+        <td>${s.tier===2?'<span class="pill warn">hidden</span>':'<span class="pill ok">public</span>'}</td>
+        <td>${esc(s.geo||'-')}</td><td>${esc(s.verdict)}</td></tr>`).join('')}</table>` : `<p class="empty">No scans yet.</p>`}
+    </div>`;
+  // populate product select from first tenant via overview (products list is in tenant detail)
+  const sel = $('mProduct');
+  const known = { ig004:'Turmeric & Curcumin', ig005:'Retinol & Amino Acids', ig006:'Vitamin C & B3 + Peptide 24' };
+  Object.entries(known).forEach(([id,name]) => sel.add(new Option(name, id)));
+}
+
+async function mint() {
+  const body = { productId: $('mProduct').value, oem: $('mOem').value, count: parseInt($('mCount').value,10), baseUrl: $('mUrl').value };
+  const d = await api('/api/admin/mint', { method:'POST', body: JSON.stringify(body) });
+  if (d.error) return alert(d.error);
+  const r = $('mintResult');
+  r.style.display = 'block';
+  r.innerHTML = `Minted <b>${esc(d.batch.id)}</b> — ${d.batch.units} units.<br>
+    <a href="/api/admin/exports/${encodeURIComponent(d.batch.id)}/qr-sheet.html" target="_blank">QR sheet</a>
+    <a href="/api/admin/exports/${encodeURIComponent(d.batch.id)}/manifest.json" target="_blank">Signed manifest</a><br>
+    Try: <a href="/v/${encodeURIComponent(d.sample.tier2Code)}" target="_blank"><code>${esc(d.sample.tier2Code)}</code> (hidden)</a>
+    · <a href="/v/${encodeURIComponent(d.sample.tier1Code)}" target="_blank"><code>${esc(d.sample.tier1Code)}</code> (public)</a>`;
+}
+
+/* ── batch detail ──────────────────────────────────────── */
+async function batch(id) {
+  const d = await api(`/api/admin/batches/${encodeURIComponent(id)}`);
+  if (d.error) return alert(d.error);
+  $('view').innerHTML = `
+    <span class="back" onclick="dashboard()">← Dashboard</span>
+    <h2>${esc(d.batch.id)}</h2>
+    <p class="sub">Product ${esc(d.batch.product)} · ${d.batch.count} units · OEM: ${esc(d.batch.oem||'-')} · created ${new Date(d.batch.createdAt).toLocaleString()}
+      · <a href="/api/admin/exports/${encodeURIComponent(id)}/qr-sheet.html" target="_blank">QR sheet</a>
+      · <a href="/api/admin/exports/${encodeURIComponent(id)}/manifest.json" target="_blank">manifest</a></p>
+    <div class="card"><h3>Units</h3>
+      <table><tr><th>Unit</th><th>Tier 1 (public code)</th><th>T1 scans</th><th>T2 scans</th><th>State</th><th>Actions</th></tr>
+      ${d.units.map(u=>`<tr>
+        <td><code class="unit">${esc(u.id)}</code></td>
+        <td><code class="unit">${esc(u.tier1Code)}</code></td>
+        <td>${u.tier1Scans}</td><td>${u.tier2Scans}</td>
+        <td><span class="pill ${esc(u.state)}">${esc(u.state)}</span></td>
+        <td>
+          <button class="mini" onclick="setState('${esc(u.id)}','flag','${esc(id)}')">Flag</button>
+          <button class="mini danger" onclick="setState('${esc(u.id)}','decommission','${esc(id)}')">Kill</button>
+          ${u.state!=='active'?`<button class="mini" onclick="setState('${esc(u.id)}','restore','${esc(id)}')">Restore</button>`:''}
+        </td></tr>`).join('')}
+      </table></div>
+    <div class="card"><h3>Scan log (latest 100)</h3>
+      ${d.scans.length ? `<table class="scans"><tr><th>When</th><th>Unit</th><th>Tier</th><th>Region</th><th>IP</th><th>Verdict</th></tr>
+      ${d.scans.map(s=>`<tr><td>${new Date(s.at).toLocaleString()}</td><td>${esc(s.unit)}</td><td>${s.tier}</td><td>${esc(s.geo)}</td><td>${esc(s.ip||'')}</td><td>${esc(s.verdict)}</td></tr>`).join('')}</table>` : `<p class="empty">No scans for this batch.</p>`}
+    </div>`;
+}
+
+async function setState(unitId, action, batchId) {
+  const d = await api(`/api/admin/units/${encodeURIComponent(unitId)}/${action}`, { method: 'POST' });
+  if (d.error) return alert(d.error);
+  batch(batchId);
+}
+</script>
+</body>
+</html>
