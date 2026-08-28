@@ -27,3 +27,19 @@ Wave 3: E10 Product Pages · E15 Billing · E16 Public API & Webhooks · E18 Sup
 Cross-cutting: E21 Quality Engineering
 
 Track progress on the [GitHub Project board](https://github.com/enendufrankc/verifynNG/projects) and the `epic`-labelled issues.
+
+## Quickstart
+
+```bash
+pnpm install
+docker compose -f docker/compose.yml up -d     # full local stack
+pnpm db:migrate                                 # run Prisma migrations
+pnpm db:seed                                    # seed ivoryglow tenant + 3 products
+pnpm dev                                        # start all apps in dev mode
+```
+
+- API: http://localhost:4000/health
+- Verify web: http://localhost:3000
+- Admin console: http://localhost:3001
+- Mailpit: http://localhost:8025
+- MinIO console: http://localhost:9001
