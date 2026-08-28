@@ -1,18 +1,18 @@
 # E01 — Code Engine (`packages/core`)
 
-| | |
-|---|---|
-| Wave | 0 |
-| Status | in-progress |
-| Owner | pi-agent |
-| GitHub Issue | [#2](https://github.com/enendufrankc/verifynNG/issues/2) |
-| Depends on | E00 |
-| Unblocks | E02 (token hashing helpers), E04, E05, E06 |
+|                 |                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| Wave            | 0                                                                                           |
+| Status          | done                                                                                        |
+| Owner           | pi-agent                                                                                    |
+| GitHub Issue    | [#2](https://github.com/enendufrankc/verifynNG/issues/2)                                    |
+| Depends on      | E00                                                                                         |
+| Unblocks        | E02 (token hashing helpers), E04, E05, E06                                                  |
 | Readiness items | §2 key rotation for HMAC signing key · §11 test suite for the code engine · mental-model §5 |
 
 ## Goal
 
-A pure TypeScript package that is the single source of truth for what a code *is*: how it is generated, checksummed, hashed at rest, parsed, and how manifests are signed and verified — with **versioned keys** so the signing secret can rotate without invalidating a single printed bottle. Zero I/O, zero framework, 100% branch coverage, property-tested. Every other epic imports this instead of touching `node:crypto` directly.
+A pure TypeScript package that is the single source of truth for what a code _is_: how it is generated, checksummed, hashed at rest, parsed, and how manifests are signed and verified — with **versioned keys** so the signing secret can rotate without invalidating a single printed bottle. Zero I/O, zero framework, 100% branch coverage, property-tested. Every other epic imports this instead of touching `node:crypto` directly.
 
 ## Scope
 
@@ -72,27 +72,27 @@ None. (Key versions are referenced by `kid` inside the code; `Unit.tier1Code` an
 
 ## Tasks
 
-- [ ] T1 Package scaffold: `packages/core` with tsup build (ESM + CJS + d.ts), Vitest, `fast-check` for property tests, 100% coverage threshold enforced in CI.
-- [ ] T2 Crockford base32 encode/decode + `normalizeCode` (accepts human transcription: lowercase, `-`/space separators, I/L→1, O→0).
-- [ ] T3 `KeyRing` interface + `StaticKeyRing` (parses `CORE_KEYS="k1:hex,k2:hex"` and `CORE_ACTIVE_KID`).
-- [ ] T4 `generateCode` / `parseCode` / `verifyChecksum` with the new 5-segment format including `kid`. Checksum = HMAC-SHA256(`${tenant}|${tier}|${kid}|${payload}`) → 8 base32 chars. Constant-time compare.
-- [ ] T5 Compatibility parser for the legacy 4-segment milestone-1 format (`legacy/verify-platform/src/core/crypto.js`) so existing test QR sheets still verify; flag `legacy: true` in `ParsedCode`.
-- [ ] T6 `hashForStorage`, `redactCode`.
-- [ ] T7 Batch watermarking: `deriveBatchWatermark` and payload layout `[4 watermark][16 random]`; document the entropy budget (16 chars ≈ 80 bits random + HMAC checksum).
-- [ ] T8 Manifest canonicalisation, `signManifest`, `verifyManifest`, `receiptHash`.
-- [ ] T9 GS1 Digital Link build/parse.
-- [ ] T10 Key rotation test: codes generated under `k1` still verify after `k2` becomes active; codes under unknown `kid` fail with `UnknownKeyError`.
-- [ ] T11 `docs/core-code-format.md`: the spec of the format, alphabet, entropy, threat model, rotation procedure. Update `docs/verify-platform-mental-model.md` §5 to point at it.
+- [x] T1 Package scaffold: `packages/core` with tsup build (ESM + CJS + d.ts), Vitest, `fast-check` for property tests, 100% coverage threshold enforced in CI.
+- [x] T2 Crockford base32 encode/decode + `normalizeCode` (accepts human transcription: lowercase, `-`/space separators, I/L→1, O→0).
+- [x] T3 `KeyRing` interface + `StaticKeyRing` (parses `CORE_KEYS="k1:hex,k2:hex"` and `CORE_ACTIVE_KID`).
+- [x] T4 `generateCode` / `parseCode` / `verifyChecksum` with the new 5-segment format including `kid`. Checksum = HMAC-SHA256(`${tenant}|${tier}|${kid}|${payload}`) → 8 base32 chars. Constant-time compare.
+- [x] T5 Compatibility parser for the legacy 4-segment milestone-1 format (`legacy/verify-platform/src/core/crypto.js`) so existing test QR sheets still verify; flag `legacy: true` in `ParsedCode`.
+- [x] T6 `hashForStorage`, `redactCode`.
+- [x] T7 Batch watermarking: `deriveBatchWatermark` and payload layout `[4 watermark][16 random]`; document the entropy budget (16 chars ≈ 80 bits random + HMAC checksum).
+- [x] T8 Manifest canonicalisation, `signManifest`, `verifyManifest`, `receiptHash`.
+- [x] T9 GS1 Digital Link build/parse.
+- [x] T10 Key rotation test: codes generated under `k1` still verify after `k2` becomes active; codes under unknown `kid` fail with `UnknownKeyError`.
+- [x] T11 `docs/core-code-format.md`: the spec of the format, alphabet, entropy, threat model, rotation procedure. Update `docs/verify-platform-mental-model.md` §5 to point at it.
 
 ## Acceptance criteria
 
-- [ ] AC1 `pnpm --filter @verifyng/core test` reports 100% statements/branches/functions/lines.
-- [ ] AC2 Property test: for 10,000 random `(tenant, tier)` inputs, `verifyChecksum(generateCode(...))` is `ok` and any single-character mutation of the code fails.
-- [ ] AC3 Property test: `normalizeCode` makes `parseCode` accept lowercase, `-`-separated and I/L/O-substituted transcriptions of any generated code.
-- [ ] AC4 Rotation: test from T10 passes; documented procedure in `docs/core-code-format.md`.
-- [ ] AC5 A manifest signed with `k1`, mutated in any field, fails `verifyManifest`; `receiptHash` is identical for shuffled input orders.
-- [ ] AC6 Legacy codes from `legacy/` verify when the legacy secret is loaded as `kid=legacy`.
-- [ ] AC7 Package has no runtime dependency other than Node built-ins (checked in CI via `depcheck`).
+- [x] AC1 `pnpm --filter @verifyng/core test` reports 100% statements/branches/functions/lines.
+- [x] AC2 Property test: for 10,000 random `(tenant, tier)` inputs, `verifyChecksum(generateCode(...))` is `ok` and any single-character mutation of the code fails.
+- [x] AC3 Property test: `normalizeCode` makes `parseCode` accept lowercase, `-`-separated and I/L/O-substituted transcriptions of any generated code.
+- [x] AC4 Rotation: test from T10 passes; documented procedure in `docs/core-code-format.md`.
+- [x] AC5 A manifest signed with `k1`, mutated in any field, fails `verifyManifest`; `receiptHash` is identical for shuffled input orders.
+- [x] AC6 Legacy codes from `legacy/` verify when the legacy secret is loaded as `kid=legacy`.
+- [x] AC7 Package has no runtime dependency other than Node built-ins (checked in CI via `depcheck`).
 
 ## Testing
 
