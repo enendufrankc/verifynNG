@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { execSync } from 'node:child_process';
+import { resolve } from 'node:path';
 
 const rootPrisma = new PrismaClient();
 
@@ -27,13 +28,11 @@ export async function createTestDatabase(
   );
 
   // Run migrations against the test schema
-  execSync(
-    `npx prisma migrate deploy --schema packages/db/prisma/schema.prisma`,
-    {
-      env: { ...process.env, DATABASE_URL: testDatabaseUrl },
-      stdio: 'pipe',
-    },
-  );
+  const schemaPath = resolve(__dirname, '../prisma/schema.prisma');
+  execSync(`npx prisma migrate deploy --schema "${schemaPath}"`, {
+    env: { ...process.env, DATABASE_URL: testDatabaseUrl },
+    stdio: 'pipe',
+  });
 
   const testPrisma = new PrismaClient({
     datasources: {
