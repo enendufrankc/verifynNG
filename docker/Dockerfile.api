@@ -6,6 +6,7 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
+COPY packages/db/prisma/schema.prisma packages/db/prisma/schema.prisma
 COPY apps/api/package.json apps/api/
 
 RUN pnpm install --frozen-lockfile
@@ -15,21 +16,25 @@ COPY packages/db/ packages/db/
 COPY apps/api/ apps/api/
 COPY tsconfig.base.json ./
 
+# Build packages that the API depends on
 RUN pnpm --filter @verifynng/db prisma:generate
+RUN pnpm --filter @verifynng/config build
+RUN pnpm --filter @verifynng/db build
 RUN pnpm --filter @verifynng/api build
 
 # ── Production stage ───────────────────────────────────────────
 FROM node:22-alpine AS runner
 RUN addgroup --system --gid 1001 appgroup && \
-    adduser --system --uid 1001 appuser
+    adduser --system --uid 1001 appuser && \
+    apk add --no-cache openssl
 WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/packages/db/prisma ./prisma
+ENV NODE_ENV=production
+
+# Copy everything needed for runtime from builder
+COPY --from=builder /app .
 
 USER appuser
 EXPOSE 4000
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "apps/api/dist/main.js"]
