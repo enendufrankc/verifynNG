@@ -16,18 +16,19 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "prisma migrate deploy",
-    "db:reset": "prisma migrate reset --force",
-    "db:seed": "prisma db seed",
+    "db:migrate": "node scripts/prisma-with-env.cjs migrate deploy",
+    "db:reset": "node scripts/prisma-with-env.cjs migrate reset --force",
+    "db:seed": "node scripts/prisma-with-env.cjs db seed",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "5.22.0"
+    "@prisma/client": "6.19.3",
+    "dotenv": "17.4.2"
   },
   "devDependencies": {
     "@types/node": "22",
-    "prisma": "5.22.0",
+    "prisma": "6.19.3",
     "tsx": "4.20.4",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
