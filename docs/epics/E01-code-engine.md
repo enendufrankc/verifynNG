@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 0 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | pi-agent |
 | GitHub Issue | [#2](https://github.com/enendufrankc/verifynNG/issues/2) |
 | Depends on | E00 |
 | Unblocks | E02 (token hashing helpers), E04, E05, E06 |
