@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IVORY GLOW — Verify Your Product</title>
+<style>
+:root{
+  --ivory:#F8F3EA;--cream:#FDFAF4;--gold:#C08A2D;--gold-bright:#E3A93C;
+  --amber:#9A6A18;--ink:#231C10;--ink-soft:#5C5140;--sage:#4A7C59;--red:#A63A2E;
+  --display:'Cormorant Garamond',Georgia,serif;--body:'Manrope',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--body);background:linear-gradient(168deg,var(--cream),var(--ivory));color:var(--ink);
+  min-height:100svh;display:flex;flex-direction:column;align-items:center;padding:24px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.brand{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.34em;text-transform:uppercase;margin-top:12px;color:var(--ink)}
+.card{background:var(--cream);border:1px solid rgba(195,138,45,.3);border-radius:10px;max-width:440px;width:100%;
+  padding:34px 30px;margin-top:22px;box-shadow:0 30px 60px -30px rgba(35,28,16,.3);position:relative;overflow:hidden}
+/* states */
+.badge{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;font-size:38px;position:relative}
+.badge::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid;opacity:.4;animation:pulse 2.4s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.9);opacity:.5}70%{transform:scale(1.15);opacity:0}100%{opacity:0}}
+.ok .badge{background:rgba(74,124,89,.12);color:var(--sage);border:2px solid var(--sage)}
+.ok .badge::after{border-color:var(--sage)}
+.warn .badge{background:rgba(195,138,45,.14);color:var(--amber);border:2px solid var(--gold)}
+.warn .badge::after{border-color:var(--gold)}
+.bad .badge{background:rgba(166,58,46,.1);color:var(--red);border:2px solid var(--red)}
+.bad .badge::after{border-color:var(--red)}
+.title{font-family:var(--display);font-size:27px;font-weight:600;text-align:center;line-height:1.15}
+.ok .title{color:var(--sage)}.warn .title{color:var(--amber)}.bad .title{color:var(--red)}
+.msg{font-size:14px;color:var(--ink-soft);text-align:center;margin-top:12px}
+.rows{margin-top:22px;display:grid;gap:0;border-top:1px solid rgba(195,138,45,.18)}
+.row{display:flex;justify-content:space-between;gap:12px;padding:11px 2px;border-bottom:1px solid rgba(195,138,45,.18);font-size:13px}
+.row span{color:var(--ink-soft);letter-spacing:.04em}
+.row b{font-weight:600;text-align:right}
+.foot{margin-top:28px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);text-align:center}
+.foot b{color:var(--amber)}
+.spin{width:44px;height:44px;border:3px solid rgba(195,138,45,.25);border-top-color:var(--gold);border-radius:50%;margin:30px auto;animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.enter-code{margin-top:26px;text-align:center}
+.enter-code input{font-family:var(--body);font-size:14px;letter-spacing:.06em;padding:13px 16px;width:100%;
+  border:1px solid rgba(195,138,45,.4);border-radius:6px;background:var(--ivory);color:var(--ink);outline:none}
+.enter-code input:focus{border-color:var(--gold)}
+.enter-code button{margin-top:12px;width:100%;padding:14px;border:none;border-radius:6px;background:var(--ink);color:var(--ivory);
+  font-family:var(--body);font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;transition:.3s}
+.enter-code button:hover{background:var(--gold)}
+.tier-tag{position:absolute;top:14px;right:14px;font-size:8.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  padding:6px 10px;border-radius:100px;background:rgba(195,138,45,.12);color:var(--amber)}
+</style>
+</head>
+<body>
+  <div class="brand">Ivory&nbsp;Glow</div>
+  <div class="card" id="card">
+    <div class="spin" id="spin"></div>
+    <p class="msg">Checking your code…</p>
+  </div>
+  <div class="foot">Verified by <b>Tunnel Light Verify Platform</b><br>IVORY GLOW® · NG/TM/O/2020/11950</div>
+
+<script>
+const code = decodeURIComponent(location.pathname.split('/v/')[1] || location.search.slice(1) || '');
+const card = document.getElementById('card');
+
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function render(r){
+  const cls = r.verdict==='authentic'||r.verdict==='ok' ? 'ok'
+            : r.verdict==='already-verified'||r.verdict==='suspicious'||r.verdict==='rate-limited' ? 'warn'
+            : 'bad';
+  const icon = cls==='ok' ? '✓' : cls==='warn' ? '!' : '✕';
+  const title = {authentic:'Authentic', ok:'Genuine Product Line', 'already-verified':'Already Verified',
+    suspicious:'Suspicious Activity', unknown:'Not In Registry', invalid:'Invalid Code',
+    'rate-limited':'Too Many Attempts', error:'Error'}[r.verdict] || r.verdict;
+  const tier = r.tier===2 ? 'Hidden Code · Unit Verification' : r.tier===1 ? 'Public QR · Product Line' : '';
+
+  let rows = '';
+  if (r.product) rows += `<div class="row"><span>Product</span><b>${esc(r.product)}</b></div>`;
+  if (r.batch) rows += `<div class="row"><span>Batch</span><b>${esc(r.batch.id)}</b></div>`;
+  if (r.batch?.oem) rows += `<div class="row"><span>Manufacturer</span><b>${esc(r.batch.oem)}</b></div>`;
+  if (r.firstVerifiedAt) rows += `<div class="row"><span>First verified</span><b>${new Date(r.firstVerifiedAt).toLocaleString()}</b></div>`;
+  if (r.scanCount != null) rows += `<div class="row"><span>Times verified</span><b>${r.scanCount}</b></div>`;
+  if (r.distinctRegions?.length) rows += `<div class="row"><span>Regions seen</span><b>${r.distinctRegions.map(esc).join(', ')}</b></div>`;
+  if (r.code) rows += `<div class="row"><span>Code</span><b>${esc(r.code)}</b></div>`;
+  if (r.reason && !r.message) rows += `<div class="row" style="border:none"><span>Detail</span><b>${esc(r.reason)}</b></div>`;
+
+  card.className = 'card ' + cls;
+  card.innerHTML = `${tier?`<div class="tier-tag">${tier}</div>`:''}
+    <div class="badge">${icon}</div>
+    <div class="title">${title}</div>
+    ${r.message?`<p class="msg">${esc(r.message)}</p>`:r.reason?`<p class="msg">${esc(r.reason)}</p>`:''}
+    ${rows?`<div class="rows">${rows}</div>`:''}
+    <div class="enter-code">
+      <input id="ci" placeholder="Or enter another code (e.g. ivoryglow.2.XXXX…)" spellcheck="false">
+      <button onclick="location.href='/v/'+encodeURIComponent(document.getElementById('ci').value.trim())">Verify</button>
+    </div>`;
+}
+
+if (code) {
+  fetch('/api/verify/' + encodeURIComponent(code))
+    .then(r => r.json()).then(render)
+    .catch(e => render({verdict:'error', reason:'Network error — check your connection and rescan.'}));
+} else {
+  render({verdict:'invalid', reason:'No code detected. Scan the QR code on your IVORY GLOW product, or enter the code below.'});
+}
+</script>
+</body>
+</html>
