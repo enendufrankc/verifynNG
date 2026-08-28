@@ -28,7 +28,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest --coverage",
-    "test:nocov": "vitest run"
+    "test:nocov": "vitest run",
+    "depcheck": "npx depcheck --ignores=@types/node,tsup,typescript,vitest,@vitest/coverage-istanbul,@vitest/coverage-v8,fast-check,eslint,prettier,depcheck"
   },
   "devDependencies": {
     "@types/node": "22",
