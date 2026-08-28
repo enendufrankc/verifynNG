@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Epic helper: start a worktree for an epic and print the agent prompt; show status.
+#   scripts/epic start E06      → creates ../verifynNG-E06 on branch epic/E06-<slug>, prints prompt
+#   scripts/epic status         → all epics: issue, state, assignee, branch
+#   scripts/epic done E06       → removes the worktree (after its issue is closed and branch merged)
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO="enendufrankc/verifynNG"
+cmd="${1:-}"; id="${2:-}"
+
+file_for() { ls "$ROOT/docs/epics/$1-"*.md 2>/dev/null | head -1; }
+slug_for() { basename "$(file_for "$1")" .md | sed "s/^$1-//"; }
+issue_for() { grep -oE "issues/[0-9]+" "$(file_for "$1")" | head -1 | cut -d/ -f2; }
+
+case "$cmd" in
+  start)
+    [[ -n "$id" ]] || { echo "usage: scripts/epic start EXX"; exit 1; }
+    f="$(file_for "$id")"; [[ -n "$f" ]] || { echo "no epic file for $id"; exit 1; }
+    slug="$(slug_for "$id")"; num="$(issue_for "$id")"
+    wt="$ROOT/../verifynNG-$id"; br="epic/$id-$slug"
+    git -C "$ROOT" fetch -q origin main
+    if [[ -d "$wt" ]]; then echo "worktree exists: $wt"; else
+      git -C "$ROOT" worktree add -q "$wt" -b "$br" origin/main && echo "created $wt on $br"
+    fi
+    cat <<EOF
+
+────────────────────────────────────────────────────────────────
+Open a terminal in:  $wt
+Start your agent there and paste this:
+────────────────────────────────────────────────────────────────
+You own epic $id in this repo. Read AGENTS.md, docs/epics/README.md,
+docs/epics/$(basename "$f"), and your section of docs/epics/CROSS-EPIC-REQUESTS.md.
+Claim GitHub issue #$num: assign yourself and set Owner/Status in the epic file via a small PR.
+Work only inside your owned paths; follow the hot-spot rules for shared files; open small PRs
+into main; keep CI green; tick the issue checklist as tasks merge. The epic is done when every
+acceptance criterion is demonstrated against docker compose up with evidence in the issue.
+Branch: $br
+────────────────────────────────────────────────────────────────
+EOF
+    ;;
+  status)
+    printf "%-4s %-6s %-12s %-18s %s\n" ID ISSUE STATE ASSIGNEE TITLE
+    for f in "$ROOT"/docs/epics/E*.md; do
+      eid="$(basename "$f" | cut -c1-3)"; num="$(grep -oE "issues/[0-9]+" "$f" | head -1 | cut -d/ -f2)"
+      [[ -n "$num" ]] || continue
+      gh issue view "$num" -R "$REPO" --json state,assignees,title \
+        --jq "\"$eid  #$num  \" + .state + \"  \" + ((.assignees|map(.login)|join(\",\"))|if .==\"\" then \"-\" else . end) + \"  \" + .title" 2>/dev/null
+    done
+    echo; echo "Worktrees:"; git -C "$ROOT" worktree list
+    ;;
+  done)
+    [[ -n "$id" ]] || { echo "usage: scripts/epic done EXX"; exit 1; }
+    git -C "$ROOT" worktree remove "$ROOT/../verifynNG-$id" && echo "removed worktree for $id"
+    ;;
+  *) sed -n '2,6p' "$0";;
+esac
