@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 0 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | enendufrankc |
 | GitHub Issue | [#1](https://github.com/enendufrankc/verifynNG/issues/1) |
 | Depends on | — |
 | Unblocks | everything |
