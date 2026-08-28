@@ -5,7 +5,7 @@
 | Wave | 1 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#14](https://github.com/enendufrankc/verifynNG/issues/14) |
 | Depends on | E00 |
 | Unblocks | E04, E05, E06, E07, E08, E16, E18 (every epic with a mutating route or a quota) |
 | Readiness items | §2 TLS/HSTS/security headers/CSP · §2 secrets management · §2 audit log (tamper-evident) · §2 per-tenant rate limits & quotas · §2 dependency/secret scanning in CI · §2 key rotation runbook · §2 encryption-at-rest documentation · §2 incident response plan (threat model + SECURITY.md) · P0 summary item 3 |

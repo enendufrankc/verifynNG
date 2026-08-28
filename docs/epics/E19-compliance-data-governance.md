@@ -5,7 +5,7 @@
 | Wave | 2 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#20](https://github.com/enendufrankc/verifynNG/issues/20) |
 | Depends on | E02 (users, sessions, roles), E06 (ScanEvent fields and hashing), E03 (tenant status, signup acceptance records, tenant export), E13 (`@Audited`, AuditLog), E14 (`MailerPort` for DSAR verification mail; marketing/transactional split), E08 (Report + contact consent), E09 (web-verify app hosts `/legal/**`), E11 (admin shell, `loginAs`) |
 | Unblocks | E15 (billing needs accepted ToS version before charging), E18 (incident register, DSAR queue in support), E03 offboarding purge (executes E19 policy) |
 | Readiness items | `production-readiness.md` §3 all rows: privacy policy + ToS, NDPR/NDPA data mapping + lawful basis + retention + consent records, UK GDPR track, DPAs/subprocessor list, retention & deletion policy, AUP, subprocessor list public · §2 incident response plan + breach notification (NDPR 72 h) · §6 transactional vs promotional consent split |

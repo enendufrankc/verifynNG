@@ -5,7 +5,7 @@
 | Wave | 1 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#3](https://github.com/enendufrankc/verifynNG/issues/3) |
 | Depends on | E01 (token hashing helpers), E00 |
 | Unblocks | E03, E11, E13, E16, E18, E19, E20 — and every tenant-scoped route in every epic |
 | Readiness items | `production-readiness.md` §1 all P0/P1 rows (tenant-aware authN, real IdP, RBAC, password reset + session revocation, service-to-service auth, MFA option) · §2 "cross-tenant isolation tests in CI" · `architecture.md` step 7 |

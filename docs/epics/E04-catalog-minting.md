@@ -5,7 +5,7 @@
 | Wave | 1 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#5](https://github.com/enendufrankc/verifynNG/issues/5) |
 | Depends on | E01 (`generateCode`, `hashForStorage`, `deriveBatchWatermark`, `signManifest`), E00; soft: E02 (`@Roles`), E03 (`S3` provider, `TenantStatusGuard`) |
 | Unblocks | E05 (manifest delivery + batch states), E06 (units to verify), E07 (unit lifecycle), E10 (product pages), E12 (minted-units metering), E15 (`EntitlementPolicy` replacement), E16 (public minting API) |
 | Readiness items | `architecture.md` step 2 "give the brand control", step 6 tenant namespacing of catalog · `production-readiness.md` §7 "entitlement enforcement at mint time" (hook only) · mental-model §3 domain model, §5 traceable code ranges |

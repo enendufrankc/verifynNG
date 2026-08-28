@@ -5,7 +5,7 @@
 | Wave | 2 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#10](https://github.com/enendufrankc/verifynNG/issues/10) |
 | Depends on | E06 (verify API, verdicts, ScanEvent), E01 (`normalizeCode`, `redactCode`, fixture codes), E03 (public tenant profile), E08 (`ReportForm`), E11 (design tokens in `packages/ui`) |
 | Unblocks | E10 (product-page slot in the tier-1 verdict view), E17 (`/status` route lives in this app), E19 (`/legal/**` lives in this app), E12 (`POST /v1/events/page` beacon source) |
 | Readiness items | `architecture.md` step 1 (the demo loop, done properly) and step 3 (two tiers rendered distinctly) · mental-model §4 soft verdicts, §5 "no code displayed back in full" · `production-readiness.md` §2 security headers/CSP on the consumer surface, §3 privacy disclosure link, §5 error tracking on pages |

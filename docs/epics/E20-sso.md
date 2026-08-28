@@ -5,7 +5,7 @@
 | Wave | 3 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#21](https://github.com/enendufrankc/verifynNG/issues/21) |
 | Depends on | E02 (identity: `User`, `Membership`, sessions, TOTP MFA, login hooks), E13 (`@Audited`, secrets helper), E11 (settings route group), E15 (`hasFeature('sso')`), E03 (tenant settings) |
 | Unblocks | E18 (auth-lockout runbook references break-glass) |
 | Readiness items | `production-readiness.md` §1 P1 "MFA enforcement option (per-tenant policy)" · §1 P2 "SSO (Google/Microsoft)" · §2 audit log (consumed) |
