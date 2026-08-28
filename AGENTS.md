@@ -47,6 +47,7 @@ Verification before claiming done = those commands green **and** the epic's acce
 - Tier-1 verification stays stateless. Verdict logic lives only in E06's engine.
 - No cloud infra work in any epic — local Docker is the target. Infra is a later, separate effort.
 - Additive-only changes to `schema.prisma`; one migration per PR; never edit another epic's models.
+- UI work takes every colour, font, spacing, radius and verdict treatment from `packages/ui` tokens, which implement `docs/design/` (Direction A). No ad-hoc values; design changes land in `docs/design/` first.
 - Don't add external services or accounts. Every integration is a port with a local fake in compose.
 
 ## Layers of guidance

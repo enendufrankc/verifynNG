@@ -165,6 +165,8 @@ model PageMediaAsset {
 
 ## Tasks
 
+Design input: use `packages/ui` tokens/components (E11) which implement `docs/design/foundations/foundations-v0.2-turquoise.dc.html`; read `docs/design/README.md` for the verdict family rules (four channels, colour last, tone keyed off E06 `severity`) and the enum mapping. Do not introduce colours, fonts or radii outside the tokens.
+
 - [ ] T1 `packages/page-schema`: zod schemas for every block above, `pageSchema`, `defaultBlock`, `migratePage`, JSON fixtures, 100 % coverage (pure package, no deps beyond zod). Markdown sanitiser allow-list defined here as data so renderer and builder agree.
 - [ ] T2 `ProductPagesModule` + E10 schema block + migration `E10_product_pages`; `ProductPageService` draft/publish/rollback/versions with optimistic concurrency on drafts (`If-Match: draftUpdatedAt`); tenant slug uniqueness; `product_page.published` event; `@Audited` on publish/rollback/delete; `PagesEntitlementPort` default.
 - [ ] T3 Public read routes with caching headers, tier-1 lookup by `productId`, preview token (HMAC, 15 min, `no-store`), sitemap route; 410 for unpublished/offboarded, 404 never distinguishes tenant existence beyond slug.

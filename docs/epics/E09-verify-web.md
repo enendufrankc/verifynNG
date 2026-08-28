@@ -86,6 +86,8 @@ None. E09 owns no Prisma models. It reads E06's verify response and E03's public
 
 ## Tasks
 
+Design input: use `packages/ui` tokens/components (E11) which implement `docs/design/foundations/foundations-v0.2-turquoise.dc.html`; read `docs/design/README.md` for the verdict family rules (four channels, colour last, tone keyed off E06 `severity`) and the enum mapping. Do not introduce colours, fonts or radii outside the tokens.
+
 - [ ] T1 App shell: take over the E00 skeleton — root `layout.tsx` with `TenantThemeProvider`, `TenantFooter` (legal links → E19 routes, status → E17 route, "Verified by Tunnel Light Verify Platform" line as in the legacy footer), `error.tsx`/`not-found.tsx`, `middleware.ts` setting CSP (`default-src 'self'; img-src 'self' data: <MINIO_PUBLIC_URL>; connect-src 'self' <API_URL>`), HSTS, `X-Frame-Options: DENY` except `/p/**` (E10 embeds in the builder preview), `Referrer-Policy: no-referrer`. Tailwind wired to E11 tokens.
 - [ ] T2 `lib/api.ts`: typed server-only client for `GET /v1/verify/:code` and `GET /v1/tenants/:slug/public-profile` with 3s timeout, one retry on network error (never on 4xx), `x-verify-proxy-key` + forwarded IP/UA headers, Zod-parsed responses. Stub for public-profile returning IVORY GLOW defaults when E03 responds 404 (remove when E03 ships).
 - [ ] T3 `/v/[code]` server route: decode, `normalizeCode`, call verify API once at request time (`dynamic = 'force-dynamic'`, `Cache-Control: private, no-store`), resolve tenant from `parseCode(code).tenant`, render `<VerdictView>`; when verify returns 5xx or times out, render the `error` state with a retry button (never a fake verdict). Sets `<title>` and OG tags from tenant profile + verdict class (no code in metadata).
