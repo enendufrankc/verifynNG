@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/broadsheet-a5f7142c-fe88-4799-ad8e-dc671e75b2e4/styles.css">
+<script src="_ds/broadsheet-a5f7142c-fe88-4799-ad8e-dc671e75b2e4/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  /* ── neutral ramp ─────────────────────────────────────── */
+  --n0:#FFFFFF; --n50:#FAFCFF; --n100:#E9EEF7; --n200:#DDE5F3; --n300:#CCD0E0;
+  --n400:#A9AFC4; --n500:#868DA6; --n600:#5A6280;
+  --n700:#333B57; --n800:#202537; --n900:#131720; --n1000:#040506;
+  --n-grad:linear-gradient(135deg,#9197AE 0%,#F4F6FB 100%);
+
+  /* ── signal colours ───────────────────────────────────── */
+  --tq:#5AE9D7; --tq-dark:#1CCFB8; --tq-500:#9EF8EC; --tq-light:#EDFDFB;
+  --orange:#FF7958; --red:#FF5858; --red-light:#FFEBEB;
+  --green:#6CDA91; --green-dark:#2FBB5E; --blue-light:#EBF3FF;
+
+  /* ── verdict family (platform-locked, AA-deepened) ────── */
+  --v-pos:#14713A;   --v-pos-tint:#E4F7EB;
+  --v-hist:#3D4767;  --v-hist-tint:#EBF3FF;
+  --v-susp:#A8461F;  --v-susp-tint:#FFEDE7;
+  --v-flag:#B92B2B;  --v-flag-tint:#FFEBEB;
+  --v-dec:#333B57;   --v-dec-tint:#E9EEF7;
+  --v-unk:#6B3FA0;   --v-unk-tint:#F1EAFB;
+  --v-util:#5A6280;  --v-util-tint:#FAFCFF;
+
+  /* ── semantic ─────────────────────────────────────────── */
+  --bg:#D9DCEF; --surface:var(--n0); --surface-sunken:var(--n50);
+  --fg:var(--n900); --fg-muted:var(--n600); --fg-faint:var(--n400);
+  --border:var(--n200); --border-strong:var(--n300);
+  --brand:var(--tq); --brand-ink:var(--n1000); --brand-text:#0E8F7F;
+  --focus:var(--tq-dark);
+
+  /* ── scale ────────────────────────────────────────────── */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --s8:32px; --s10:40px; --s12:48px; --s16:64px; --s20:80px;
+  --r-xs:6px; --r-sm:10px; --r-md:16px; --r-lg:24px; --r-xl:32px; --r-full:999px;
+  --e-sm:0 1px 2px rgba(19,23,32,.05);
+  --e-md:0 4px 16px rgba(19,23,32,.07),0 1px 3px rgba(19,23,32,.04);
+  --e-lg:0 18px 48px rgba(19,23,32,.10),0 4px 12px rgba(19,23,32,.05);
+
+  --ff:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  --fm:'IBM Plex Mono',ui-monospace,monospace;
+}
+body{margin:0;background:var(--bg);font-family:var(--ff);color:var(--fg);-webkit-font-smoothing:antialiased;}
+a{color:var(--brand-text);text-decoration:none;font-weight:600;}
+a:hover{color:#0A6E62;text-decoration:underline;}
+h1,h2,h3,h4,h5,h6{font-family:var(--ff);}
+h1,h2,h3,h4,h5,p{margin:0;}
+pre,code{font-family:var(--fm);}
+@keyframes vn-reveal{from{opacity:0;transform:translateY(8px) scale(.985);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
+@media (max-width:1180px){
+  [data-stack]{grid-template-columns:minmax(0,1fr) !important;}
+  [data-row]{grid-template-columns:minmax(0,1fr) !important;gap:24px !important;}
+}
+@media (max-width:820px){
+  [data-pad]{padding:28px !important;}
+  [data-hero]{font-size:52px !important;line-height:1.06 !important;}
+}
+</style>
+</helmet>
+
+<div style="padding:48px 40px 96px;max-width:1560px;margin:0 auto;display:flex;flex-direction:column;gap:32px;">
+
+<!-- ══ MASTHEAD ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:64px;box-shadow:var(--e-md);">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:40px;flex-wrap:wrap;margin-bottom:48px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span style="display:inline-flex;gap:3px;align-items:flex-end;">
+        <span style="width:7px;height:22px;border-radius:3px;background:var(--n1000);"></span>
+        <span style="width:7px;height:22px;border-radius:3px;background:var(--n1000);"></span>
+        <span style="width:7px;height:22px;border-radius:3px;background:var(--tq-dark);"></span>
+        <span style="width:7px;height:10px;border-radius:3px;background:var(--n300);"></span>
+      </span>
+      <span style="font-size:20px;font-weight:800;letter-spacing:-.03em;">verifyn<span style="color:var(--tq-dark);">ng</span></span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;font-weight:700;padding:7px 14px;border-radius:var(--r-full);background:var(--tq-light);color:var(--brand-text);">Design system v0.2</span>
+      <span style="font-size:12px;font-weight:600;padding:7px 14px;border-radius:var(--r-full);background:var(--n100);color:var(--n600);">Tokens · Foundations · Verdicts</span>
+    </div>
+  </div>
+
+  <h1 data-hero="" style="font-size:80px;line-height:90px;font-weight:600;letter-spacing:-.035em;max-width:16ch;margin-bottom:28px;text-wrap:pretty;">One token set. Three surfaces. One meaning of genuine.</h1>
+  <p style="font-size:18px;line-height:28px;color:var(--fg-muted);max-width:62ch;margin-bottom:48px;">A multi-tenant authenticity platform. Tenants may repaint the chrome; they may never repaint a verdict. Everything below is the primitive layer, the semantic layer, and the six keys a tenant is allowed to touch.</p>
+
+  <div data-row="" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;">
+    <div><div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:8px;">Surfaces</div><div style="font-size:16px;line-height:26px;font-weight:500;">Consumer verify web · Tenant console · Print &amp; docs</div></div>
+    <div><div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:8px;">Verdict states</div><div style="font-size:16px;line-height:26px;font-weight:500;">7 verdicts + 3 utility</div></div>
+    <div><div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:8px;">Tenant surface</div><div style="font-size:16px;line-height:26px;font-weight:500;">6 whitelisted keys</div></div>
+    <div><div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:8px;">Baseline</div><div style="font-size:16px;line-height:26px;font-weight:500;">360px · low-end Android · 3G</div></div>
+  </div>
+</div>
+
+<!-- ══ TYPOGRAPHY ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">Typography</div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:40px;flex-wrap:wrap;margin-bottom:36px;">
+    <div style="font-size:64px;line-height:76px;font-weight:600;letter-spacing:-.04em;">Plus Jakarta Sans</div>
+    <div style="display:flex;gap:44px;">
+      <span style="font-size:26px;font-weight:700;">Bold</span>
+      <span style="font-size:26px;font-weight:600;">SemiBold</span>
+      <span style="font-size:26px;font-weight:400;">Regular</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;background:var(--tq-light);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:40px;">
+    <span style="width:6px;height:6px;border-radius:99px;background:var(--tq-dark);flex:none;"></span>
+    <span style="font-size:14px;line-height:22px;color:var(--n700);"><strong>Substitution.</strong> The reference specifies <strong>Mont</strong> (Fontfabric, commercial). Plus Jakarta Sans is the nearest open equivalent — same geometric skeleton, double-storey <em>a</em>, similar rounded terminals. Send the Mont licence files and I will swap the stack; the scale below is unchanged either way.</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 100px 100px 130px;gap:0;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:6px;">
+    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);">Typography style</span>
+    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);">Size</span>
+    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);">Line</span>
+    <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);">Weight</span>
+  </div>
+  <sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="8">
+    <div style="display:grid;grid-template-columns:1fr 100px 100px 130px;gap:0;align-items:baseline;padding:11px 0;">
+      <span style="font-size:{{ t.px }};line-height:{{ t.lh }};font-weight:{{ t.w }};letter-spacing:{{ t.ls }};text-transform:{{ t.tt }};color:var(--fg);">{{ t.name }}</span>
+      <span style="font-size:13px;color:var(--fg-muted);font-family:var(--fm);">{{ t.size }}</span>
+      <span style="font-size:13px;color:var(--fg-muted);font-family:var(--fm);">{{ t.line }}</span>
+      <span style="font-size:13px;color:var(--fg-muted);">{{ t.wname }}</span>
+    </div>
+  </sc-for>
+</div>
+
+<!-- ══ COLOUR ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">Neutral</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:44px;">
+    <sc-for list="{{ neutrals }}" as="c" hint-placeholder-count="13">
+      <div style="border-radius:var(--r-md);background:{{ c.bg }};box-shadow:inset 0 0 0 1px rgba(19,23,32,.07);height:132px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
+        <span style="font-size:11px;font-weight:600;color:{{ c.fg }};">{{ c.name }}</span>
+        <span style="font-size:11px;font-family:var(--fm);color:{{ c.fg }};">{{ c.hex }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">Colours</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:20px;">
+    <sc-for list="{{ colours }}" as="c" hint-placeholder-count="10">
+      <div style="border-radius:var(--r-md);background:{{ c.bg }};box-shadow:inset 0 0 0 1px rgba(19,23,32,.07);height:132px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
+        <span style="font-size:11px;font-weight:600;color:{{ c.fg }};">{{ c.name }}</span>
+        <span style="font-size:11px;font-family:var(--fm);color:{{ c.fg }};">{{ c.hex }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;gap:12px;align-items:flex-start;background:var(--n50);border-radius:var(--r-sm);padding:14px 16px;max-width:80ch;">
+    <span style="width:6px;height:6px;border-radius:99px;background:var(--n400);flex:none;margin-top:8px;"></span>
+    <span style="font-size:14px;line-height:22px;color:var(--n600);">Neutral 400–600 were cropped out of the reference sheet and are interpolated in OKLCH between 300 and 700. Replace with the real values if the source file has them.</span>
+  </div>
+</div>
+
+<!-- ══ THE COLLISION ══ -->
+<div data-pad="" style="background:var(--n900);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-lg);color:var(--n100);">
+  <div style="font-size:14px;font-weight:600;color:var(--tq);margin-bottom:24px;">Read this before using the palette</div>
+  <h2 style="font-size:48px;line-height:58px;font-weight:600;letter-spacing:-.03em;max-width:22ch;margin-bottom:24px;">Turquoise cannot be both the brand and a verdict.</h2>
+  <p style="font-size:18px;line-height:28px;color:var(--n300);max-width:64ch;margin-bottom:40px;">The reference palette gives one accent and three signals. An authenticity product needs seven distinguishable verdicts, and the accent has to stay out of all of them — otherwise a consumer learns that “the brand colour” means “genuine”, which is exactly the confusion counterfeiters exploit.</p>
+
+  <div data-row="" style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
+    <div style="background:rgba(255,255,255,.05);border-radius:var(--r-md);padding:28px;">
+      <div style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:12px;">Turquoise is chrome only</div>
+      <p style="font-size:15px;line-height:24px;color:var(--n300);margin-bottom:16px;">Primary buttons, links, focus, selection, active nav. Never a verdict, never a status pill.</p>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:12px;font-family:var(--fm);padding:6px 10px;border-radius:6px;background:var(--tq);color:var(--n1000);font-weight:600;">#5AE9D7 fill</span>
+        <span style="font-size:12px;font-family:var(--fm);padding:6px 10px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--tq);">#1CCFB8 text</span>
+      </div>
+      <p style="font-size:13px;line-height:21px;color:var(--n400);margin-top:14px;">#5AE9D7 on white is 1.5:1 — it carries dark ink, never light. Turquoise <em>text</em> uses #0E8F7F on light grounds.</p>
+    </div>
+    <div style="background:rgba(255,255,255,.05);border-radius:var(--r-md);padding:28px;">
+      <div style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:12px;">Signals are deepened</div>
+      <p style="font-size:15px;line-height:24px;color:var(--n300);margin-bottom:16px;">Green, orange and red keep the reference hue and lose lightness until they clear 4.5:1. The bright originals survive as tints and fills behind dark ink.</p>
+      <div style="display:grid;gap:6px;font-family:var(--fm);font-size:12px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--green)">#2FBB5E</span><span style="color:var(--n400)">→</span><span style="color:#6CDA91">#14713A</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--orange)">#FF7958</span><span style="color:var(--n400)">→</span><span style="color:#FF9E85">#A8461F</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--red)">#FF5858</span><span style="color:var(--n400)">→</span><span style="color:#FF8A8A">#B92B2B</span></div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.05);border-radius:var(--r-md);padding:28px;">
+      <div style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:12px;">One hue added</div>
+      <p style="font-size:15px;line-height:24px;color:var(--n300);margin-bottom:16px;">“Not recognised” needs a hue the reference does not carry. Violet <span style="font-family:var(--fm);font-size:13px;color:#B08BE8;">#6B3FA0</span> sits far from green, orange and red under every common form of colour blindness.</p>
+      <div style="height:44px;border-radius:var(--r-xs);background:linear-gradient(90deg,#6B3FA0,#8B5CD6);"></div>
+      <p style="font-size:13px;line-height:21px;color:var(--n400);margin-top:14px;">Flagged as an addition. Swap it if the brand has a fifth colour I have not seen.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VERDICT FAMILY ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">The verdict family</div>
+  <h2 style="font-size:48px;line-height:58px;font-weight:600;letter-spacing:-.03em;max-width:20ch;margin-bottom:20px;">Four channels carry every verdict. Colour is only one.</h2>
+  <p style="font-size:18px;line-height:28px;color:var(--fg-muted);max-width:64ch;margin-bottom:12px;">Each state is identified by a <strong>notch signature</strong>, an <strong>icon</strong>, a <strong>band texture</strong> and a <strong>plain-language label</strong> before colour is considered. Strip the colour and all ten remain distinguishable.</p>
+  <p style="font-size:15px;line-height:24px;color:var(--fg-faint);max-width:64ch;margin-bottom:44px;">Enum strings are provisional — from the written brief, pending the E06/E07/E08 push.</p>
+
+  <sc-for list="{{ verdicts }}" as="v" hint-placeholder-count="4">
+    <div data-row="" style="display:grid;grid-template-columns:minmax(240px,290px) minmax(300px,1fr) minmax(0,260px);gap:36px;padding:30px 0;border-top:1px solid var(--border);align-items:start;">
+      <div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+          <span style="width:48px;height:48px;border-radius:var(--r-md);background:{{ v.tint }};display:inline-flex;align-items:center;justify-content:center;flex:none;">
+            <span style="display:inline-flex;color:{{ v.hex }};"><i data-lucide="{{ v.icon }}" style="width:24px;height:24px;stroke-width:2;"></i></span>
+          </span>
+          <div>
+            <div style="font-size:20px;line-height:30px;font-weight:600;letter-spacing:-.01em;">{{ v.label }}</div>
+            <div style="font-family:var(--fm);font-size:12px;color:var(--fg-faint);">{{ v.enum }}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:14px;" aria-hidden="true">
+          <span style="width:24px;height:7px;border-radius:3px;background:{{ v.n0 }};"></span>
+          <span style="width:24px;height:7px;border-radius:3px;background:{{ v.n1 }};"></span>
+          <span style="width:24px;height:7px;border-radius:3px;background:{{ v.n2 }};"></span>
+          <span style="width:24px;height:7px;border-radius:3px;background:{{ v.n3 }};"></span>
+        </div>
+        <div style="height:10px;border-radius:3px;background:{{ v.band }};"></div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);margin-top:8px;">{{ v.bandName }} band · {{ v.icon }}</div>
+      </div>
+
+      <div>
+        <p style="font-size:16px;line-height:26px;color:var(--n700);margin-bottom:18px;max-width:46ch;">{{ v.body }}</p>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:7px 20px;font-size:14px;line-height:24px;">
+          <span style="color:var(--fg-faint);">Tone</span><span style="color:var(--n700);">{{ v.tone }}</span>
+          <span style="color:var(--fg-faint);">Action</span><span style="color:var(--n700);">{{ v.action }}</span>
+          <span style="color:var(--fg-faint);">Console pill</span><span style="color:var(--n700);">{{ v.pill }}</span>
+          <span style="color:var(--fg-faint);">Print, B&amp;W</span><span style="color:var(--n700);">{{ v.print }}</span>
+        </div>
+      </div>
+
+      <div style="background:{{ v.tint }};border-radius:var(--r-md);padding:20px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:{{ v.hex }};margin-bottom:14px;">{{ v.label }}</div>
+        <div style="display:grid;gap:7px;font-family:var(--fm);font-size:11.5px;">
+          <div style="display:flex;justify-content:space-between;gap:12px;"><span style="color:var(--n500);">fg</span><span style="color:var(--n800);">{{ v.hex }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;"><span style="color:var(--n500);">fill</span><span style="color:var(--n800);">{{ v.fill }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;"><span style="color:var(--n500);">tint</span><span style="color:var(--n800);">{{ v.tint }}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;"><span style="color:var(--n500);">on white</span><span style="color:var(--n800);">{{ v.ratio }}</span></div>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+  <div style="border-top:1px solid var(--border);"></div>
+</div>
+
+<!-- ══ VERDICTCARD ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">VerdictCard · 360 × 800</div>
+  <h2 style="font-size:48px;line-height:58px;font-weight:600;letter-spacing:-.03em;max-width:22ch;margin-bottom:20px;">Same component. Two tenants. Identical meaning.</h2>
+  <p style="font-size:18px;line-height:28px;color:var(--fg-muted);max-width:60ch;margin-bottom:36px;">Tap a state to switch both cards. Type, radius and chrome follow the tenant; the band, icon, notch signature and label do not move.</p>
+
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:44px;">
+    <sc-for list="{{ verdicts }}" as="v" hint-placeholder-count="6">
+      <button type="button" onClick="{{ v.select }}" style="font-family:var(--ff);font-size:14px;font-weight:600;padding:0 18px;min-height:44px;border-radius:var(--r-sm);border:1.5px solid {{ v.chipBorder }};background:{{ v.chipBg }};color:{{ v.chipFg }};cursor:pointer;transition:all .14s ease;" style-hover="filter:brightness(.97);" style-active="transform:translateY(1px);" style-focus-visible="outline:2px solid var(--tq-dark);outline-offset:2px;">{{ v.label }}</button>
+    </sc-for>
+  </div>
+
+  <div style="display:flex;gap:48px;flex-wrap:wrap;align-items:flex-start;">
+
+    <!-- platform -->
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:14px;">Platform default</div>
+      <div style="width:360px;height:800px;background:var(--n50);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--e-lg);display:flex;flex-direction:column;">
+        <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:-.03em;">
+            <span style="display:inline-flex;gap:2px;align-items:flex-end;"><span style="width:5px;height:15px;border-radius:2px;background:var(--n1000);"></span><span style="width:5px;height:15px;border-radius:2px;background:var(--n1000);"></span><span style="width:5px;height:15px;border-radius:2px;background:var(--tq-dark);"></span><span style="width:5px;height:7px;border-radius:2px;background:var(--n300);"></span></span>
+            verifyn<span style="color:var(--tq-dark);margin-left:-3px;">ng</span>
+          </span>
+          <span style="font-size:12px;font-weight:500;color:var(--n500);">Zaria Pharma</span>
+        </div>
+        <div style="height:6px;background:{{ cur.band }};"></div>
+        <div key="{{ cur.enum }}" style="flex:1;padding:32px 20px 20px;display:flex;flex-direction:column;animation:vn-reveal .34s cubic-bezier(.2,.7,.3,1) both;">
+          <span style="width:64px;height:64px;border-radius:var(--r-md);background:{{ cur.tint }};display:inline-flex;align-items:center;justify-content:center;margin-bottom:22px;">
+            <span style="display:inline-flex;color:{{ cur.hex }};"><i data-lucide="{{ cur.icon }}" style="width:32px;height:32px;stroke-width:2;"></i></span>
+          </span>
+          <div style="display:flex;gap:5px;margin-bottom:18px;" aria-hidden="true">
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n0 }};"></span>
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n1 }};"></span>
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n2 }};"></span>
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n3 }};"></span>
+          </div>
+          <h3 style="font-size:30px;line-height:40px;font-weight:600;letter-spacing:-.03em;margin-bottom:12px;">{{ cur.label }}</h3>
+          <p style="font-size:16px;line-height:26px;color:var(--n600);margin-bottom:22px;">{{ cur.body }}</p>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:auto;">
+            <div style="background:var(--n100);border-radius:var(--r-md) var(--r-md) 4px 4px;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--n500);margin-bottom:6px;">Code</div>
+              <div style="font-family:var(--fm);font-size:15px;letter-spacing:.02em;">ivoryglow.2.k1.ABCD…</div>
+            </div>
+            <div style="background:var(--n100);padding:14px 16px;display:flex;gap:10px;align-items:flex-start;">
+              <span style="width:7px;height:7px;border-radius:3px;background:{{ cur.hex }};flex:none;margin-top:6px;"></span>
+              <div>
+                <div style="font-size:14px;font-weight:700;line-height:22px;">{{ cur.hist }}</div>
+                <div style="font-size:13px;line-height:21px;color:var(--n600);">{{ cur.histNote }}</div>
+              </div>
+            </div>
+            <div style="background:var(--n100);border-radius:4px 4px var(--r-md) var(--r-md);padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--n500);margin-bottom:5px;">Product</div><div style="font-size:14px;line-height:22px;">Radiance Serum 30ml</div></div>
+              <div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--n500);margin-bottom:5px;">Batch</div><div style="font-family:var(--fm);font-size:14px;line-height:22px;">B-4471</div></div>
+            </div>
+          </div>
+          <button type="button" style="min-height:52px;border-radius:var(--r-sm);border:none;background:var(--tq);color:var(--n1000);font-family:var(--ff);font-size:16px;line-height:20px;font-weight:700;cursor:pointer;margin-top:20px;" style-hover="background:var(--tq-dark);" style-active="transform:translateY(1px);" style-focus-visible="outline:2px solid var(--tq-dark);outline-offset:2px;">{{ cur.action }}</button>
+          <button type="button" style="min-height:44px;border-radius:var(--r-sm);border:none;background:transparent;color:var(--n600);font-family:var(--ff);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;" style-hover="color:var(--n900);background:var(--n100);">Report a problem</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ivory glow -->
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:14px;">Tenant · Ivory Glow</div>
+      <div style="width:360px;height:800px;background:#F5F1E8;border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--e-lg);display:flex;flex-direction:column;font-family:'Inter',system-ui,sans-serif;">
+        <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-family:'Playfair Display',Georgia,serif;font-weight:700;font-size:18px;color:#231C10;">Ivory Glow</span>
+          <span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:#5C5140;">verifynNG</span>
+        </div>
+        <div style="height:6px;background:{{ cur.band }};"></div>
+        <div key="{{ cur.enum }}" style="flex:1;padding:32px 20px 20px;display:flex;flex-direction:column;animation:vn-reveal .34s cubic-bezier(.2,.7,.3,1) both;">
+          <span style="width:64px;height:64px;border-radius:18px;background:{{ cur.tint }};display:inline-flex;align-items:center;justify-content:center;margin-bottom:22px;">
+            <span style="display:inline-flex;color:{{ cur.hex }};"><i data-lucide="{{ cur.icon }}" style="width:32px;height:32px;stroke-width:2;"></i></span>
+          </span>
+          <div style="display:flex;gap:5px;margin-bottom:18px;" aria-hidden="true">
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n0 }};"></span>
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n1 }};"></span>
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n2 }};"></span>
+            <span style="width:28px;height:8px;border-radius:3px;background:{{ cur.n3 }};"></span>
+          </div>
+          <h3 style="font-family:'Playfair Display',Georgia,serif;font-size:34px;line-height:42px;font-weight:700;letter-spacing:-.01em;margin-bottom:12px;color:#231C10;">{{ cur.label }}</h3>
+          <p style="font-size:16px;line-height:26px;color:#5C5140;margin-bottom:22px;">{{ cur.body }}</p>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:auto;">
+            <div style="background:#EBE4D5;border-radius:18px 18px 4px 4px;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5C5140;margin-bottom:6px;">Code</div>
+              <div style="font-family:var(--fm);font-size:15px;letter-spacing:.02em;color:#231C10;">ivoryglow.2.k1.ABCD…</div>
+            </div>
+            <div style="background:#EBE4D5;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;">
+              <span style="width:7px;height:7px;border-radius:3px;background:{{ cur.hex }};flex:none;margin-top:6px;"></span>
+              <div>
+                <div style="font-size:14px;font-weight:700;line-height:22px;color:#231C10;">{{ cur.hist }}</div>
+                <div style="font-size:13px;line-height:21px;color:#5C5140;">{{ cur.histNote }}</div>
+              </div>
+            </div>
+            <div style="background:#EBE4D5;border-radius:4px 4px 18px 18px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5C5140;margin-bottom:5px;">Product</div><div style="font-size:14px;line-height:22px;color:#231C10;">Radiance Serum 30ml</div></div>
+              <div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5C5140;margin-bottom:5px;">Batch</div><div style="font-family:var(--fm);font-size:14px;line-height:22px;color:#231C10;">B-4471</div></div>
+            </div>
+          </div>
+          <button type="button" style="min-height:52px;border-radius:18px;border:none;background:#9A6A18;color:#F5F1E8;font-family:'Inter',sans-serif;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;" style-hover="background:#845A14;" style-active="transform:translateY(1px);" style-focus-visible="outline:2px solid #9A6A18;outline-offset:2px;">{{ cur.action }}</button>
+          <button type="button" style="min-height:44px;border-radius:18px;border:none;background:transparent;color:#5C5140;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px;" style-hover="color:#231C10;background:#EBE4D5;">Report a problem</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:300px;display:flex;flex-direction:column;gap:20px;">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);">What moved</div>
+      <p style="font-size:15px;line-height:24px;color:var(--n700);"><strong>Tenant-controlled.</strong> Surface, foreground, display face, body face, radius scale, primary button fill, logo lockup.</p>
+      <p style="font-size:15px;line-height:24px;color:var(--n700);"><strong>Platform-locked.</strong> The band, its hex, the icon, the notch signature, the label wording, the 52px action height, the truncated code, and the report affordance.</p>
+      <div style="background:var(--v-susp-tint);border-radius:var(--r-md);padding:18px;">
+        <div style="font-size:14px;font-weight:700;line-height:22px;color:var(--v-susp);margin-bottom:6px;">Contrast guard fired</div>
+        <p style="font-size:13.5px;line-height:21px;color:var(--n700);">Ivory Glow's gold <span style="font-family:var(--fm);">#E3A93C</span> is 1.9:1 on ivory. The guard substituted deep gold <span style="font-family:var(--fm);">#9A6A18</span> at 4.9:1 for all text and fills; the declared gold survives only as a decorative rule.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ UI PRIMITIVES ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:32px;">UI</div>
+  <div data-stack="" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:40px;">
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:16px;">Button / primary</div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">
+        <button type="button" style="min-height:44px;padding:0 22px;border:none;border-radius:var(--r-sm);background:var(--tq);color:var(--n1000);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 22px;border:none;border-radius:var(--r-sm);background:var(--tq-dark);color:var(--n1000);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 22px;border:none;border-radius:var(--r-sm);background:var(--tq-dark);color:var(--n1000);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;outline:2px solid var(--tq-dark);outline-offset:2px;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 22px;border:none;border-radius:var(--r-sm);background:var(--tq);color:var(--n1000);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Start now <span style="display:inline-flex;"><i data-lucide="arrow-up-right" style="width:18px;height:18px;"></i></span></button>
+        <button type="button" disabled="" style="min-height:44px;padding:0 22px;border:none;border-radius:var(--r-sm);background:var(--n200);color:var(--n400);font-family:var(--ff);font-size:16px;font-weight:700;cursor:not-allowed;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 22px;border:none;border-radius:var(--r-sm);background:var(--tq);color:var(--n1000);font-family:var(--ff);font-size:16px;font-weight:700;cursor:wait;display:inline-flex;align-items:center;gap:8px;opacity:.75;"><span style="width:14px;height:14px;border-radius:99px;border:2px solid var(--n1000);border-right-color:transparent;display:inline-block;"></span> Working</button>
+      </div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);margin-top:14px;line-height:18px;">default · hover · focus<br>with icon · disabled · loading</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:16px;">Button / outline &amp; tertiary</div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start;">
+        <button type="button" style="min-height:44px;padding:0 22px;border:1.5px solid var(--n300);border-radius:var(--r-sm);background:var(--n0);color:var(--n900);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 22px;border:1.5px solid var(--n900);border-radius:var(--r-sm);background:var(--n0);color:var(--n900);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 22px;border:1.5px solid var(--n300);border-radius:var(--r-sm);background:var(--n0);color:var(--n900);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">Add new <span style="display:inline-flex;"><i data-lucide="plus" style="width:18px;height:18px;"></i></span></button>
+        <button type="button" style="min-height:44px;padding:0 4px;border:none;background:none;color:var(--brand-text);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 4px;border:none;background:none;color:var(--n400);font-family:var(--ff);font-size:16px;font-weight:700;cursor:not-allowed;">Start now</button>
+        <button type="button" style="min-height:44px;padding:0 4px;border:none;background:none;color:var(--v-flag);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Log out</button>
+      </div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);margin-top:14px;line-height:18px;">outline · outline hover · with icon<br>text · text disabled · text danger</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:16px;">Input</div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <label style="display:block;"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:6px;">E-mail</span><input type="text" placeholder="Your email *" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;border:1.5px solid var(--n200);border-radius:var(--r-sm);background:var(--n0);font-family:var(--ff);font-size:16px;color:var(--n900);" /></label>
+        <label style="display:block;"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:6px;">E-mail</span><input type="text" value="ada@zaria.ng" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;border:1.5px solid var(--tq-dark);border-radius:var(--r-sm);background:var(--n0);font-family:var(--ff);font-size:16px;color:var(--n900);outline:2px solid var(--tq-dark);outline-offset:2px;" /></label>
+        <label style="display:block;"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:6px;color:var(--v-flag);">E-mail</span><input type="text" value="ada@zaria" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;border:1.5px solid var(--v-flag);border-radius:var(--r-sm);background:var(--red-light);font-family:var(--ff);font-size:16px;color:var(--n900);" /><span style="display:block;font-size:13px;color:var(--v-flag);margin-top:6px;">Add a domain — ada@zaria.ng</span></label>
+        <label style="display:block;"><span style="display:block;font-size:14px;font-weight:600;margin-bottom:6px;color:var(--n400);">E-mail</span><input type="text" placeholder="Not editable" disabled="" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;border:1.5px solid var(--n200);border-radius:var(--r-sm);background:var(--n100);font-family:var(--ff);font-size:16px;color:var(--n400);" /></label>
+      </div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);margin-top:14px;line-height:18px;">rest · focus · error · disabled</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:16px;">CodeInput · 360px</div>
+      <div style="background:var(--n50);border-radius:var(--r-md);padding:20px;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Enter the code</div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <input type="text" value="ivoryglow" style="flex:2;min-width:0;box-sizing:border-box;min-height:48px;padding:0 10px;border:1.5px solid var(--n200);border-radius:var(--r-xs);background:var(--n0);font-family:var(--fm);font-size:14px;text-align:center;" />
+          <input type="text" value="2" style="flex:1;min-width:0;box-sizing:border-box;min-height:48px;padding:0 6px;border:1.5px solid var(--n200);border-radius:var(--r-xs);background:var(--n0);font-family:var(--fm);font-size:14px;text-align:center;" />
+          <input type="text" value="k1" style="flex:1;min-width:0;box-sizing:border-box;min-height:48px;padding:0 6px;border:1.5px solid var(--n200);border-radius:var(--r-xs);background:var(--n0);font-family:var(--fm);font-size:14px;text-align:center;" />
+          <input type="text" placeholder="ABCD" style="flex:1.4;min-width:0;box-sizing:border-box;min-height:48px;padding:0 6px;border:1.5px solid var(--tq-dark);border-radius:var(--r-xs);background:var(--n0);font-family:var(--fm);font-size:14px;text-align:center;outline:2px solid var(--tq-dark);outline-offset:2px;" />
+        </div>
+        <div style="font-size:13px;line-height:21px;color:var(--n500);margin-bottom:14px;">Four groups, separated by dots. Case does not matter.</div>
+        <button type="button" style="width:100%;min-height:52px;border:none;border-radius:var(--r-sm);background:var(--tq);color:var(--n1000);font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;">Check this code</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin:44px 0 20px;">Status pills · console enums</div>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;">
+    <sc-for list="{{ verdicts }}" as="v" hint-placeholder-count="7">
+      <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:7px 13px;border-radius:var(--r-full);background:{{ v.tint }};color:{{ v.hex }};">
+        <span style="display:inline-flex;"><i data-lucide="{{ v.icon }}" style="width:14px;height:14px;stroke-width:2.4;"></i></span>{{ v.label }}
+      </span>
+    </sc-for>
+  </div>
+</div>
+
+<!-- ══ ICONS ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:20px;">Icons · Lucide, 2px stroke, round caps</div>
+  <p style="font-size:16px;line-height:26px;color:var(--fg-muted);max-width:64ch;margin-bottom:32px;">The reference sheet uses a bespoke outline set. Lucide is the nearest CDN-available match — same geometric construction, 24px grid, 2px stroke, rounded joins — and it is what the brief already specifies. Verdict icons are drawn from the same set so nothing in the interface mixes drawing styles.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;">
+    <sc-for list="{{ icons }}" as="ic" hint-placeholder-count="44">
+      <span style="width:46px;height:46px;border-radius:var(--r-xs);background:var(--n50);display:inline-flex;align-items:center;justify-content:center;color:var(--n800);" title="{{ ic }}"><i data-lucide="{{ ic }}" style="width:22px;height:22px;stroke-width:1.8;"></i></span>
+    </sc-for>
+  </div>
+</div>
+
+<!-- ══ SCALES ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:32px;">Space · radius · elevation · motion · breakpoints</div>
+  <div data-stack="" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:44px;">
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:18px;">Space · 4px base</div>
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">1 · 4</span><span style="height:14px;width:4px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">2 · 8</span><span style="height:14px;width:8px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">3 · 12</span><span style="height:14px;width:12px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">4 · 16</span><span style="height:14px;width:16px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">6 · 24</span><span style="height:14px;width:24px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">8 · 32</span><span style="height:14px;width:32px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">12 · 48</span><span style="height:14px;width:48px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">16 · 64</span><span style="height:14px;width:64px;border-radius:2px;background:var(--tq-dark);"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);width:46px;">20 · 80</span><span style="height:14px;width:80px;border-radius:2px;background:var(--tq-dark);"></span></div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:18px;">Radius</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">
+        <div style="height:52px;background:var(--n100);border-radius:6px;"></div>
+        <div style="height:52px;background:var(--n100);border-radius:10px;"></div>
+        <div style="height:52px;background:var(--n100);border-radius:16px;"></div>
+        <div style="height:52px;background:var(--n100);border-radius:24px;"></div>
+        <div style="height:52px;background:var(--n100);border-radius:32px;"></div>
+        <div style="height:52px;background:var(--n100);border-radius:999px;"></div>
+      </div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);line-height:19px;">6 xs · 10 sm · 16 md<br>24 lg · 32 xl · full</div>
+
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin:32px 0 18px;">Elevation</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <div style="height:52px;background:var(--n0);border-radius:10px;box-shadow:var(--e-sm);"></div>
+        <div style="height:52px;background:var(--n0);border-radius:10px;box-shadow:var(--e-md);"></div>
+        <div style="height:52px;background:var(--n0);border-radius:10px;box-shadow:var(--e-lg);"></div>
+      </div>
+      <div style="font-family:var(--fm);font-size:11px;color:var(--fg-faint);line-height:19px;margin-top:10px;">sm inline · md card · lg sheet</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:18px;">Motion</div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:12px 18px;font-size:14px;line-height:23px;">
+        <span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;">340ms</span><span style="color:var(--n700);"><strong>Verdict reveal.</strong> Opacity, 8px rise, 0.985 scale, <span style="font-family:var(--fm);font-size:12px;">cubic-bezier(.2,.7,.3,1)</span>. Capped at 400ms. The band paints unanimated first, so the verdict is legible before the card settles.</span>
+        <span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;">140ms</span><span style="color:var(--n700);">Hover, press, selection.</span>
+        <span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;">200ms</span><span style="color:var(--n700);">Drawer, sheet, dialog entry.</span>
+        <span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;">0ms</span><span style="color:var(--n700);"><span style="font-family:var(--fm);font-size:12px;">prefers-reduced-motion</span> cuts all of it. No verdict depends on animation to be understood.</span>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin:32px 0 18px;">Breakpoints</div>
+      <div style="font-family:var(--fm);font-size:13px;line-height:26px;color:var(--n700);">360 consumer baseline<br>480 consumer comfortable<br>768 tablet · docs<br>1024 console minimum<br>1440 console target<br>1920 console wide</div>
+
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin:32px 0 18px;">Focus ring</div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+        <span style="display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:10px;background:var(--tq);color:var(--n1000);font-size:15px;font-weight:700;outline:2px solid var(--tq-dark);outline-offset:2px;">Focused</span>
+        <span style="font-size:14px;line-height:22px;color:var(--n600);max-width:26ch;">2px solid, 2px offset, <span style="font-family:var(--fm);font-size:12px;">tq-dark</span> — or <span style="font-family:var(--fm);font-size:12px;">n900</span> where the tenant brand fails 3:1 behind it.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ THEMING ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">Theming</div>
+  <h2 style="font-size:48px;line-height:58px;font-weight:600;letter-spacing:-.03em;max-width:24ch;margin-bottom:20px;">Ivory Glow, as the tenant would actually submit it.</h2>
+  <p style="font-size:18px;line-height:28px;color:var(--fg-muted);max-width:62ch;margin-bottom:44px;">Six keys in, validated, contrast-guarded, resolved into the semantic layer. Anything outside the whitelist is rejected at save time with a named error — dropping it silently would let a tenant believe they had changed something they had not.</p>
+
+  <div data-stack="" style="display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:start;">
+    <div>
+      <div style="font-family:var(--fm);font-size:12px;color:var(--fg-faint);margin-bottom:12px;">tenants/ivory-glow/theme.tokens.json</div>
+      <pre style="margin:0;background:var(--n900);color:#C7D0DB;border-radius:var(--r-md);padding:26px;font-family:var(--fm);font-size:12.5px;line-height:1.75;overflow-x:auto;">{
+  "$schema": "w3c-design-tokens/1.0",
+  "tenant": { "$value": "ivory-glow" },
+  "brand": {
+    "primary":   { "$type":"color", "$value":"#E3A93C" },
+    "secondary": { "$type":"color", "$value":"#5C5140" },
+    "surface":   { "$type":"color", "$value":"#F5F1E8" },
+    "fg":        { "$type":"color", "$value":"#231C10" }
+  },
+  "font": {
+    "display": { "$type":"fontFamily",
+                 "$value":["Playfair Display","Georgia","serif"] },
+    "body":    { "$type":"fontFamily",
+                 "$value":["Inter","system-ui","sans-serif"] }
+  },
+  "radius": { "scale": { "$type":"number", "$value":1.5 } },
+  "logo": {
+    "light": { "$type":"asset", "$value":"ivory-glow/mark.svg" },
+    "mono":  { "$type":"asset", "$value":"ivory-glow/mark-mono.svg" }
+  }
+}</pre>
+      <p style="font-size:14px;line-height:22px;color:var(--fg-muted);margin-top:14px;">Radius scale is a multiplier on the platform ramp, clamped 0–2. Ivory Glow's 1.5 turns 6/10/16/24 into 9/15/24/36.</p>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:18px;">Contrast guard · resolution order</div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:32px;">
+        <div style="display:grid;grid-template-columns:26px 1fr;gap:14px;font-size:15px;line-height:24px;"><span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;padding-top:3px;">1</span><span style="color:var(--n700);">Measure <span style="font-family:var(--fm);font-size:13px;">brand.primary</span> against <span style="font-family:var(--fm);font-size:13px;">brand.surface</span>. At 4.5:1 or better, use it for text and fills. Done.</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr;gap:14px;font-size:15px;line-height:24px;"><span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;padding-top:3px;">2</span><span style="color:var(--n700);">Otherwise darken in OKLCH, reducing L in 0.02 steps at fixed chroma and hue, until it clears. That becomes <span style="font-family:var(--fm);font-size:13px;">brand.primary.readable</span>.</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr;gap:14px;font-size:15px;line-height:24px;"><span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;padding-top:3px;">3</span><span style="color:var(--n700);">If L hits 0.25 without clearing, fall back to <span style="font-family:var(--fm);font-size:13px;">brand.fg</span> and warn in the branding editor.</span></div>
+        <div style="display:grid;grid-template-columns:26px 1fr;gap:14px;font-size:15px;line-height:24px;"><span style="font-family:var(--fm);font-size:12px;color:var(--brand-text);font-weight:600;padding-top:3px;">4</span><span style="color:var(--n700);">Keep the declared value as <span style="font-family:var(--fm);font-size:13px;">brand.primary.decorative</span> for rules, large-type fills and the logo field. Never body text or a control label.</span></div>
+      </div>
+
+      <div style="display:flex;gap:14px;margin-bottom:32px;">
+        <div style="flex:1;background:#F5F1E8;border-radius:var(--r-md);padding:18px;">
+          <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:700;color:#E3A93C;margin-bottom:8px;">Declared gold</div>
+          <div style="font-family:var(--fm);font-size:11px;line-height:18px;color:#5C5140;">#E3A93C on #F5F1E8<br>1.9:1 — <span style="color:var(--v-flag);font-weight:600;">fails</span></div>
+        </div>
+        <div style="flex:1;background:#F5F1E8;border-radius:var(--r-md);padding:18px;">
+          <div style="font-family:'Inter',sans-serif;font-size:16px;font-weight:700;color:#9A6A18;margin-bottom:8px;">Guarded gold</div>
+          <div style="font-family:var(--fm);font-size:11px;line-height:18px;color:#5C5140;">#9A6A18 on #F5F1E8<br>4.9:1 — <span style="color:var(--v-pos);font-weight:600;">passes</span></div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:14px;">Rejected at save time</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:center;font-family:var(--fm);font-size:12.5px;color:var(--n700);"><span style="display:inline-flex;color:var(--v-flag);"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.6;"></i></span>verdict.* — platform-owned</div>
+        <div style="display:flex;gap:10px;align-items:center;font-family:var(--fm);font-size:12.5px;color:var(--n700);"><span style="display:inline-flex;color:var(--v-flag);"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.6;"></i></span>space.* — density is platform</div>
+        <div style="display:flex;gap:10px;align-items:center;font-family:var(--fm);font-size:12.5px;color:var(--n700);"><span style="display:inline-flex;color:var(--v-flag);"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.6;"></i></span>motion.* — reduced-motion contract</div>
+        <div style="display:flex;gap:10px;align-items:center;font-family:var(--fm);font-size:12.5px;color:var(--n700);"><span style="display:inline-flex;color:var(--v-flag);"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.6;"></i></span>focus.* — derived, not declared</div>
+        <div style="display:flex;gap:10px;align-items:center;font-family:var(--fm);font-size:12.5px;color:var(--n700);"><span style="display:inline-flex;color:var(--v-flag);"><i data-lucide="x" style="width:15px;height:15px;stroke-width:2.6;"></i></span>any key outside the six above</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PRINCIPLES ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:32px;">Principles</div>
+  <div data-stack="" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:36px 48px;">
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">Verdict first</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">The answer is the first thing painted and the first thing read aloud. Brand and product imagery come after it, or not at all.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">Honest, not binary</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">Ten states, because reality has ten. “Checked before” is history, not a warning. “Not recognised” is an absence of record, not an accusation.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">Never a full code</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">Every rendering is truncated — <span style="font-family:var(--fm);font-size:15px;">ivoryglow.2.k1.ABCD…</span> — in the app, the console, the audit log, support tooling and email alike.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">Constant trust semantics</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">A consumer who learns what orange means on one tenant knows what it means on all of them. Hence the verdict family is not themeable.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">Low-end first</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">System fonts until the webfont lands, no blocking imagery above the verdict, no gradient that costs a repaint. Readable at 100 nits and at 1,000.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">Dense but calm</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">The console packs rows tightly and still resolves to one accent, one family and one weight of rule. Density from spacing, not ornament.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">AA · 44px · never colour alone</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">4.5:1 for body, 3:1 for chrome, 44px minimum targets, four redundant channels on every verdict.</p></div>
+    <div><h3 style="font-size:20px;line-height:30px;font-weight:600;margin-bottom:8px;">The platform recedes</h3><p style="font-size:16px;line-height:26px;color:var(--fg-muted);">verifynNG appears once per screen, small, as attribution. The tenant owns the surface; the platform owns the meaning.</p></div>
+  </div>
+</div>
+
+<!-- ══ DECISIONS ══ -->
+<div data-pad="" style="background:var(--surface);border-radius:var(--r-xl);padding:56px 64px;box-shadow:var(--e-md);">
+  <div style="font-size:14px;font-weight:600;color:var(--fg-faint);margin-bottom:24px;">Decisions</div>
+  <h2 style="font-size:48px;line-height:58px;font-weight:600;letter-spacing:-.03em;max-width:22ch;margin-bottom:16px;">Everything unspecified, and what I chose.</h2>
+  <p style="font-size:18px;line-height:28px;color:var(--fg-muted);max-width:58ch;margin-bottom:40px;">All reversible. Flag any you disagree with before the component set is built on top of them.</p>
+  <sc-for list="{{ decisions }}" as="d" hint-placeholder-count="12">
+    <div data-row="" style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:36px;padding:20px 0;border-top:1px solid var(--border);">
+      <div style="font-size:16px;line-height:26px;font-weight:700;">{{ d.k }}</div>
+      <div style="font-size:16px;line-height:26px;color:var(--fg-muted);">{{ d.v }}</div>
+    </div>
+  </sc-for>
+  <div style="border-top:1px solid var(--border);"></div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const POS='#14713A', HIST='#3D4767', SUSP='#A8461F', FLAG='#B92B2B', DEC='#333B57', UNK='#6B3FA0', UTIL='#5A6280';
+const off='#DDE5F3';
+
+const DATA = [
+  { enum:'genuine', label:'Genuine', hex:POS, fill:'#2FBB5E', tint:'#E4F7EB', ratio:'6.4:1',
+    icon:'shield-check', notch:[POS,POS,POS,POS], band:'solid',
+    body:'Authentic, and manufactured on the tier-1 authentication line. This is the strongest confirmation verifynNG can give.',
+    tone:'Confident, brief. No celebration.', action:'See product details',
+    pill:'Solid fill, white label', print:'Solid rule, filled glyph',
+    hist:'First check · today, 14:02', histNote:'No earlier checks on record.' },
+
+  { enum:'authentic_first', label:'Authentic', hex:POS, fill:'#6CDA91', tint:'#E4F7EB', ratio:'6.4:1',
+    icon:'check', notch:[POS,POS,off,off], band:'solid',
+    body:'Authentic. This is the first time this code has been checked — which is what you want to see on a sealed product.',
+    tone:'Reassuring. Explains why “first” is good.', action:'See product details',
+    pill:'Outline, coloured label', print:'Solid rule, check glyph',
+    hist:'First check · today, 14:02', histNote:'No earlier checks on record.' },
+
+  { enum:'already_verified', label:'Checked before', hex:HIST, fill:'#3D4767', tint:'#EBF3FF', ratio:'8.8:1',
+    icon:'history', notch:[HIST,off,HIST,off], band:'dotted',
+    body:'Authentic, and checked 3 times before — most recently 12 August 2026 near Lagos. Normal for a product on display; worth a second look if you just broke the seal.',
+    tone:'Neutral history. Explicitly not a warning.', action:'See the check history',
+    pill:'Neutral fill, ink label', print:'Dotted rule, repeat glyph',
+    hist:'Checked 3 times', histNote:'Most recently 12 Aug 2026 · Lagos, NG' },
+
+  { enum:'suspicious', label:'Check this', hex:SUSP, fill:'#FF7958', tint:'#FFEDE7', ratio:'5.9:1',
+    icon:'triangle-alert', notch:[SUSP,off,off,SUSP], band:'dashed',
+    body:'This code is authentic, but it has been checked far more often than a single unit normally is, and from places it was never shipped to.',
+    tone:'Plain, unalarmed. Describes the pattern, not a conclusion.', action:'Tell us where you bought it',
+    pill:'Tint fill, deep label', print:'Dashed rule, triangle glyph',
+    hist:'Checked 14 times', histNote:'Across 6 states · shipped to Kano only' },
+
+  { enum:'flagged', label:'Flagged by the brand', hex:FLAG, fill:'#FF5858', tint:'#FFEBEB', ratio:'6.2:1',
+    icon:'flag', notch:[FLAG,FLAG,off,FLAG], band:'solid',
+    body:'Ivory Glow has flagged this unit. Do not use the product. Contact the brand using the details below.',
+    tone:'Direct instruction, attributed to the brand.', action:'Contact Ivory Glow',
+    pill:'Solid fill, white label', print:'Solid rule, flag glyph',
+    hist:'Flagged 4 Aug 2026', histNote:'Packaging tamper · +234 700 000 0000' },
+
+  { enum:'decommissioned', label:'Withdrawn', hex:DEC, fill:'#333B57', tint:'#E9EEF7', ratio:'10.1:1',
+    icon:'package-x', notch:[DEC,off,off,off], band:'hatch',
+    body:'This unit was recalled or destroyed and should not be in circulation. If you are holding it, the brand wants to hear from you.',
+    tone:'Factual, past tense.', action:'Report where you found it',
+    pill:'Muted fill, struck-through code', print:'Hatched rule, crossed glyph',
+    hist:'Withdrawn 19 Jun 2026', histNote:'Recall R-2026-114 · batch B-4471' },
+
+  { enum:'unknown', label:'Not recognised', hex:UNK, fill:'#8B5CD6', tint:'#F1EAFB', ratio:'7.9:1',
+    icon:'circle-help', notch:[off,UNK,UNK,off], band:'hatch',
+    body:'We have no record of this code. It may have been mistyped, or the product may not be genuine. Check the code, then tell us where you bought it.',
+    tone:'Names counterfeiting as a possibility, never a finding.', action:'Re-enter the code',
+    pill:'Tint fill, violet label', print:'Hatched rule, queried glyph',
+    hist:'No record', histNote:'This code has never been issued by Ivory Glow.' },
+
+  { enum:'invalid', label:'Not a valid code', hex:UTIL, fill:'#5A6280', tint:'#FAFCFF', ratio:'6.0:1',
+    icon:'text-cursor-input', notch:[off,off,off,off], band:'dashed',
+    body:'That is not a verifynNG code. Codes are four groups separated by dots. Check for a mistyped character and try again.',
+    tone:'Helpful, specific about the format.', action:'Try again',
+    pill:'Utility — no pill', print:'n/a',
+    hist:'Nothing checked', histNote:'Format: tenant.tier.key.code' },
+
+  { enum:'rate_limited', label:'Too many checks', hex:UTIL, fill:'#5A6280', tint:'#FAFCFF', ratio:'6.0:1',
+    icon:'timer', notch:[UTIL,off,off,off], band:'dotted',
+    body:'You have checked a lot of codes in a short time. Wait 60 seconds and try again — nothing is wrong with the product.',
+    tone:'Separates the limit from the verdict, explicitly.', action:'Wait 60 seconds',
+    pill:'Utility — no pill', print:'n/a',
+    hist:'42 checks in 2 minutes', histNote:'Limit resets at 14:04.' },
+
+  { enum:'error', label:'Could not check', hex:UTIL, fill:'#5A6280', tint:'#FAFCFF', ratio:'6.0:1',
+    icon:'cloud-off', notch:[off,UTIL,off,off], band:'dotted',
+    body:'You are offline, or the service is busy. Your scan is saved on this phone and will be checked as soon as there is a connection.',
+    tone:'Owns the failure. Promises the scan is not lost.', action:'Retry now',
+    pill:'Utility — no pill', print:'n/a',
+    hist:'1 scan queued', histNote:'Saved on this phone · checks automatically.' }
+];
+
+const TYPE = [
+  ['Headline 1','80px','90px',600,'-.035em','none','80','90','SemiBold'],
+  ['Headline 2','64px','76px',600,'-.03em','none','64','76','SemiBold'],
+  ['Headline 3','48px','58px',600,'-.03em','none','48','58','SemiBold'],
+  ['Headline 4','30px','40px',600,'-.02em','none','30','40','SemiBold'],
+  ['Headline 5','20px','30px',600,'-.01em','none','20','30','SemiBold'],
+  ['Body L Bold','18px','28px',700,'0','none','18','28','Bold'],
+  ['Body L SemiBold','18px','28px',600,'0','none','18','28','SemiBold'],
+  ['Body L','18px','28px',400,'0','none','18','28','Regular'],
+  ['Body M Bold','16px','26px',700,'0','none','16','26','Bold'],
+  ['Body M SemiBold','16px','26px',600,'0','none','16','26','SemiBold'],
+  ['Body M','16px','26px',400,'0','none','16','26','Regular'],
+  ['Body S Bold','14px','24px',700,'0','none','14','24','Bold'],
+  ['Body S SemiBold','14px','24px',600,'0','none','14','24','SemiBold'],
+  ['Body S','14px','24px',400,'0','none','14','24','Regular'],
+  ['Body XS SemiBold','12px','16px',600,'0','none','12','16','SemiBold'],
+  ['Body XS','12px','22px',400,'0','none','12','22','Regular'],
+  ['Caption L','14px','20px',700,'.06em','uppercase','14','20','Bold'],
+  ['Caption S','12px','16px',600,'.06em','uppercase','12','16','SemiBold'],
+  ['Button','16px','20px',700,'0','none','16','20','Bold']
+];
+
+const NEUTRALS = [
+  ['Neutral 0','#FFFFFF','#131720'], ['Neutral 50','#FAFCFF','#131720'],
+  ['Neutral 100','#E9EEF7','#131720'], ['Neutral 200','#DDE5F3','#131720'],
+  ['Neutral 300','#CCD0E0','#131720'], ['Neutral 400','#A9AFC4','#131720'],
+  ['Neutral 500','#868DA6','#131720'], ['Neutral 600','#5A6280','#FFFFFF'],
+  ['Neutral 700','#333B57','#FFFFFF'], ['Neutral 800','#202537','#FFFFFF'],
+  ['Neutral 900','#131720','#FFFFFF'], ['Neutral 1000','#040506','#FFFFFF'],
+  ['Neutral Gradient','linear-gradient(135deg,#9197AE,#F4F6FB)','#131720']
+];
+
+const COLOURS = [
+  ['Turquoise','#5AE9D7','#04413A'], ['Turquoise Dark','#1CCFB8','#04413A'],
+  ['Turquoise 500','#9EF8EC','#04413A'], ['Turquoise Light','#EDFDFB','#04413A'],
+  ['Orange','#FF7958','#4A1707'], ['Blue Light','#EBF3FF','#131720'],
+  ['Red','#FF5858','#4A0808'], ['Red Light','#FFEBEB','#4A0808'],
+  ['Green','#6CDA91','#0A3D1E'], ['Green Dark','#2FBB5E','#052E12'],
+  ['Violet (added)','#8B5CD6','#FFFFFF'], ['Violet Deep (added)','#6B3FA0','#FFFFFF']
+];
+
+const ICONS = ['circle-plus','chevron-down','undo-2','settings','copy','circle-help','sparkles','eye','eye-off','circle-check','arrow-up-right','arrow-left','info','search','bell','bell-off','user-search','download','upload','send','paperclip','contact','maximize-2','align-left','fingerprint','scan-barcode','message-square-more','list-collapse','chevron-left','rotate-ccw','log-in','circle-user','x','check','pencil','house','share-2','external-link','archive','image-plus','hard-hat','scan-face','users','id-card','layout-grid','mail','stamp','calendar','ellipsis-vertical','trash-2','message-circle','circle-slash','file-text','cloud-upload','check-check','grid-2x2','scan-search','map','file-search','file-plus','message-square-warning','zap','files','scan-line','circle-x','triangle-alert','image','file-check','qr-code','shield-check','flag','package-x','history','timer','cloud-off','text-cursor-input'];
+
+const DECISIONS = [
+  ['Turquoise is chrome, never a verdict','The reference gives one accent. An authenticity product cannot let the brand colour also mean “genuine” — that is the confusion counterfeiters trade on. Turquoise is confined to buttons, links, focus, selection and active nav.'],
+  ['Plus Jakarta Sans stands in for Mont','Mont is a commercial Fontfabric release. Plus Jakarta Sans matches the geometric skeleton, the double-storey a and the rounded terminals, and is open. Send the licence files and I will swap the stack; the scale is identical either way.'],
+  ['Signals are deepened, not used raw','#6CDA91, #FF7958 and #FF5858 all fail 4.5:1 on white. Each keeps its hue and loses lightness until it clears; the bright originals survive as fills behind dark ink and as tints.'],
+  ['One hue added: violet','Seven verdicts need seven separable hues and the reference carries four. Violet #6B3FA0 is far from green, orange and red under deuteranopia, protanopia and tritanopia alike. Replace it if the brand has a fifth colour I have not seen.'],
+  ['Neutral 400–600 interpolated','Those three steps were cropped out of the reference sheet. Interpolated in OKLCH between 300 and 700 so the perceptual spacing holds.'],
+  ['Lucide for icons','The reference set is bespoke. Lucide is the closest CDN match — 24px grid, 2px stroke, rounded joins — and the brief already specifies it. Verdict icons come from the same set so nothing mixes drawing styles.'],
+  ['Tier 1 and tier 2 share a hue','Two adjacent greens are indistinguishable to a deuteranope and in sunlight. Both positives use #14713A; the tier is carried by the notch signature, the icon and the label.'],
+  ['Utility states are neutral','Invalid, rate-limited and error take Neutral 600, not a signal hue. They describe the request, not the product; colouring them red would teach consumers that a network failure means a fake.'],
+  ['Unknown and counterfeit are one state','The platform cannot tell them apart — absence of a record is all it has. “Not recognised” names counterfeiting as a possibility, not a finding. Split them if the epics carry separate enums.'],
+  ['Consumer web is light-only','Dark is a console affordance. A tenant-themed dark consumer surface multiplies the contrast-guard surface area with no benefit under the sunlight constraint.'],
+  ['Radius as a multiplier','Tenants set one number, clamped 0–2, rather than five independent radii. Preserves the ratio between inline, card and sheet corners across every tenant.'],
+  ['Enum strings are provisional','The repository is empty on main, so E06/E07/E08 could not be read. Names follow the brief and are the one thing here I expect to change on first sync.']
+];
+
+function bandFill(kind, hex) {
+  if (kind === 'solid') return hex;
+  if (kind === 'dotted') return 'repeating-linear-gradient(90deg,' + hex + ' 0 4px,transparent 4px 9px)';
+  if (kind === 'dashed') return 'repeating-linear-gradient(90deg,' + hex + ' 0 14px,transparent 14px 22px)';
+  return 'repeating-linear-gradient(45deg,' + hex + ' 0 3px,transparent 3px 8px)';
+}
+
+class Component extends DCLogic {
+  state = { i: 1 };
+
+  paintIcons() {
+    if (window.lucide && window.lucide.createIcons) {
+      try { window.lucide.createIcons(); } catch (e) {}
+    }
+  }
+  componentDidMount() {
+    this.paintIcons();
+    this._t = setInterval(() => this.paintIcons(), 700);
+    setTimeout(() => { clearInterval(this._t); }, 6000);
+  }
+  componentDidUpdate() { this.paintIcons(); }
+  componentWillUnmount() { clearInterval(this._t); }
+
+  renderVals() {
+    const verdicts = DATA.map((d, idx) => ({
+      enum: d.enum, label: d.label, hex: d.hex, fill: d.fill, tint: d.tint,
+      ratio: d.ratio, icon: d.icon, body: d.body, tone: d.tone,
+      action: d.action, pill: d.pill, print: d.print,
+      hist: d.hist, histNote: d.histNote,
+      n0: d.notch[0], n1: d.notch[1], n2: d.notch[2], n3: d.notch[3],
+      band: bandFill(d.band, d.hex), bandName: d.band,
+      chipBg: idx === this.state.i ? d.tint : '#FFFFFF',
+      chipFg: idx === this.state.i ? d.hex : '#333B57',
+      chipBorder: idx === this.state.i ? d.hex : '#DDE5F3',
+      select: () => this.setState({ i: idx })
+    }));
+
+    return {
+      verdicts,
+      cur: verdicts[this.state.i],
+      icons: ICONS,
+      typeScale: TYPE.map(t => ({
+        name: t[0], px: t[1], lh: t[2], w: t[3], ls: t[4], tt: t[5],
+        size: t[6], line: t[7], wname: t[8]
+      })),
+      neutrals: NEUTRALS.map(c => ({ name: c[0], bg: c[1], fg: c[2], hex: c[1].indexOf('gradient') > -1 ? '#9197AE → #F4F6FB' : c[1] })),
+      colours: COLOURS.map(c => ({ name: c[0], bg: c[1], fg: c[2], hex: c[1] })),
+      decisions: DECISIONS.map(d => ({ k: d[0], v: d[1] }))
+    };
+  }
+}
+</script>
+</body>
+</html>
