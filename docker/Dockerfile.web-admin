@@ -1,0 +1,34 @@
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+WORKDIR /app
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/web-admin/package.json apps/web-admin/
+COPY packages/config/package.json packages/config/
+
+RUN pnpm install --frozen-lockfile
+
+COPY apps/web-admin/ apps/web-admin/
+COPY packages/config/ packages/config/
+COPY tsconfig.base.json ./
+
+RUN pnpm --filter @verifynng/web-admin build
+
+# ── Production stage ───────────────────────────────────────────
+FROM node:22-alpine AS runner
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 appuser && \
+    apk add --no-cache curl
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/web-admin/.next/standalone ./
+COPY --from=builder /app/apps/web-admin/.next/static ./apps/web-admin/.next/static
+
+USER appuser
+EXPOSE 3001
+
+ENV PORT=3001
+ENV HOSTNAME=0.0.0.0
+CMD ["node", "apps/web-admin/server.js"]

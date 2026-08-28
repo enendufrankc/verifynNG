@@ -1,13 +1,13 @@
 # E00 — Foundation & Dev Platform
 
-| | |
-|---|---|
-| Wave | 0 |
-| Status | todo |
-| Owner | — |
-| GitHub Issue | [#1](https://github.com/enendufrankc/verifynNG/issues/1) |
-| Depends on | — |
-| Unblocks | everything |
+|                 |                                                               |
+| --------------- | ------------------------------------------------------------- |
+| Wave            | 0                                                             |
+| Status          | done                                                          |
+| Owner           | enendufrankc                                                  |
+| GitHub Issue    | [#1](https://github.com/enendufrankc/verifynNG/issues/1)      |
+| Depends on      | —                                                             |
+| Unblocks        | everything                                                    |
 | Readiness items | §4 environment separation, CI/CD · §11 test suite scaffolding |
 
 ## Goal
@@ -41,10 +41,11 @@ AGENTS.md, CLAUDE.md, CONTRIBUTING.md
 **Consumes:** nothing.
 
 **Exposes:**
+
 - `packages/config`: `loadEnv()` returning a Zod-validated typed env; `Env` type. Sections per epic.
 - `packages/db`: `prisma` client singleton; `createTestDatabase()` helper that provisions an isolated schema per test file and runs migrations (used by every integration test in the repo).
 - Base Prisma models (below).
-- Nest: `AppModule` with `ConfigModule`, `PrismaModule`, `HealthModule`; global `ValidationPipe` (whitelist + transform); `@TenantId()` decorator *placeholder* that E02 will back with real auth.
+- Nest: `AppModule` with `ConfigModule`, `PrismaModule`, `HealthModule`; global `ValidationPipe` (whitelist + transform); `@TenantId()` decorator _placeholder_ that E02 will back with real auth.
 - Compose service names/ports (see below) — fixed contract for all epics.
 - CI job names: `lint`, `typecheck`, `test`, `build`, `compose-config`.
 
@@ -96,18 +97,18 @@ All tenant-owned tables get a composite index starting with `tenantId`.
 
 ## Compose services added
 
-| Service | Image | Host port |
-|---|---|---|
-| postgres | postgres:16-alpine | 5432 |
-| redis | redis:7-alpine | 6379 |
-| minio | minio/minio | 9000 (S3), 9001 (console) |
-| mailpit | axllent/mailpit | 8025 (UI), 1025 (SMTP) |
-| fake-sms | tools/fakes/sms | 4101 |
-| fake-pay | tools/fakes/pay | 4102 |
-| fake-geo | tools/fakes/geo | 4103 |
-| api | apps/api | 4000 |
-| web-verify | apps/web-verify | 3000 |
-| web-admin | apps/web-admin | 3001 |
+| Service    | Image              | Host port                 |
+| ---------- | ------------------ | ------------------------- |
+| postgres   | postgres:16-alpine | 5432                      |
+| redis      | redis:7-alpine     | 6379                      |
+| minio      | minio/minio        | 9000 (S3), 9001 (console) |
+| mailpit    | axllent/mailpit    | 8025 (UI), 1025 (SMTP)    |
+| fake-sms   | tools/fakes/sms    | 4101                      |
+| fake-pay   | tools/fakes/pay    | 4102                      |
+| fake-geo   | tools/fakes/geo    | 4103                      |
+| api        | apps/api           | 4000                      |
+| web-verify | apps/web-verify    | 3000                      |
+| web-admin  | apps/web-admin     | 3001                      |
 
 Later epics add more services; the full port registry is in `CROSS-EPIC-REQUESTS.md` (E17 observability on 3100–3105, fakes on 4104–4106, docs on 3002).
 
@@ -115,3 +116,5 @@ Later epics add more services; the full port registry is in `CROSS-EPIC-REQUESTS
 
 - Node 22 LTS, pnpm 9, Next.js 15, NestJS 11, Prisma 6 — pin exact versions in the lockfile; upgrade via dedicated PRs.
 - The legacy JS prototype under `legacy/` is never imported by any package; it exists so agents can read the milestone-1 behaviour.
+- **Branch protection (T8)** is unavailable on a private free-plan repo — GitHub requires Pro or public visibility for required status checks. Options: (a) make the repo public, (b) upgrade to Pro, or (c) rely on convention + Husky pre-push hook until CI billing is resolved. Decision deferred to repo owner.
+- **CI (T8)** is waived while GitHub Actions is unavailable due to account billing lock. A Husky `pre-push` hook enforces `pnpm lint && pnpm typecheck && pnpm test && pnpm build`. CI becomes required before wave-1 fan-out.

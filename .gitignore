@@ -11,3 +11,7 @@ coverage/
 legacy/verify-platform/data/
 legacy/verify-platform/exports/
 docs/design/*.zip
+.vitest/
+playwright-report/
+test-results/
+*.tsbuildinfo
