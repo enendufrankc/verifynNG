@@ -5,10 +5,8 @@ import {
   disconnectTestHelper,
 } from './test-helpers';
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-// This test requires DATABASE_URL pointing at a running Postgres
-describe.skipIf(!DATABASE_URL)('createTestDatabase', () => {
+// Requires a running Postgres (docker compose up). DATABASE_URL falls back to .env.example via vitest.setup.ts.
+describe('createTestDatabase', () => {
   let result: Awaited<ReturnType<typeof createTestDatabase>>;
 
   beforeAll(async () => {
