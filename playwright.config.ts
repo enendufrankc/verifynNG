@@ -8,10 +8,12 @@ export default defineConfig({
     {
       name: 'web-verify',
       use: { baseURL: 'http://localhost:3000' },
+      testMatch: /web-verify\.spec/,
     },
     {
       name: 'web-admin',
       use: { baseURL: 'http://localhost:3001' },
+      testMatch: /web-admin\.spec/,
     },
   ],
 });
