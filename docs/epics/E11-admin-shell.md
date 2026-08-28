@@ -52,9 +52,10 @@ docs/console.md
 `packages/ui` (`@verifyng/ui`):
 ```ts
 // tokens.css — CSS variables on :root and [data-theme]; default = IVORY GLOW from legacy sheet.js
---vg-bg: #f5f1e8;  --vg-surface: #ffffff;  --vg-ink: #231C10;  --vg-muted: #5C5140;
---vg-brand: #E3A93C;  --vg-brand-strong: #9A6A18;  --vg-border: #E3A93C33;
---vg-success / --vg-warning / --vg-danger / --vg-info  (verdict colours: green/amber/red/grey used by E09 too)
+--vg-*  tokens come from docs/design/foundations/ (Claude Design output; direction A or B — see docs/design/README.md).
+        Platform chrome uses the platform palette; IVORY GLOW is a *tenant theme* applied via applyTenantTheme, not the default.
+--vg-verdict-{ok,authentic,history,suspicious,flagged,decommissioned,unknown,util}-{fg,tint}  — platform-locked, never tenant-overridable;
+        keyed off E06 `severity`, shared with E09. Values and the enum mapping: docs/design/README.md.
 --vg-radius, --vg-font-sans, --vg-font-mono, spacing scale
 // tailwind preset: `@verifyng/ui/tailwind-preset` maps colours to `bg-brand`, `text-ink`, … via var()
 applyTenantTheme(el: HTMLElement, branding: { primaryColor?: string; accentColor?: string }): void   // overrides --vg-brand/--vg-brand-strong only
@@ -156,7 +157,8 @@ None. Optional dev-only `storybook` is run from `pnpm`, not compose.
 
 - **Refresh token in an httpOnly cookie via a Next route-handler proxy, access token in memory.** E02's API accepts the refresh token in the body; the browser must never hold it in JS-readable storage, so `/api/auth/session` on the Next server exchanges cookie ↔ body. Access tokens (15 min) stay in memory and are re-acquired on reload via one refresh call.
 - shadcn/ui components are generated *into* `packages/ui` (owned source, not a dependency) so tenant theming is done in one place via CSS variables; Radix primitives provide the a11y baseline.
-- The IVORY GLOW palette is the *default* theme, not the brand of the platform. The platform-level chrome (login page, support area) uses the neutral ivory/ink tokens; `--vg-brand*` is what tenants override.
+- The platform has its own identity (see `docs/design/`); IVORY GLOW is tenant #1's theme, shipped as the worked example of `applyTenantTheme` and as seed branding. `--vg-brand*` is what tenants override; verdict tokens are locked.
+- Design source of truth is `docs/design/foundations/`. E11's first task is to import the chosen direction's tokens into `packages/ui` and delete the other.
 - Verdict colours are semantic tokens shared with E09 so a consumer page and the console show the same green/amber/red/grey for the same verdict; never colour-only (icon + label always).
 - `EmptyState` placeholders are deliberately owned by E11 only until the owning epic's first PR; that PR replaces the file, no coordination needed. Nav entries are seeded by E11 so the information architecture is fixed in wave 1 and other epics only edit their own entry.
 - `team/` and `settings/security` are the exception to "E11 builds no business screens": they exercise every convention against real E02 routes and serve as the reference implementation other epics copy.

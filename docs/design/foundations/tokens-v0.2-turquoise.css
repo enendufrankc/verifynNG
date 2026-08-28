@@ -1,0 +1,39 @@
+:root{
+  /* ── neutral ramp ─────────────────────────────────────── */
+  --n0:#FFFFFF; --n50:#FAFCFF; --n100:#E9EEF7; --n200:#DDE5F3; --n300:#CCD0E0;
+  --n400:#A9AFC4; --n500:#868DA6; --n600:#5A6280;
+  --n700:#333B57; --n800:#202537; --n900:#131720; --n1000:#040506;
+  --n-grad:linear-gradient(135deg,#9197AE 0%,#F4F6FB 100%);
+
+  /* ── signal colours ───────────────────────────────────── */
+  --tq:#5AE9D7; --tq-dark:#1CCFB8; --tq-500:#9EF8EC; --tq-light:#EDFDFB;
+  --orange:#FF7958; --red:#FF5858; --red-light:#FFEBEB;
+  --green:#6CDA91; --green-dark:#2FBB5E; --blue-light:#EBF3FF;
+
+  /* ── verdict family (platform-locked, AA-deepened) ────── */
+  --v-pos:#14713A;   --v-pos-tint:#E4F7EB;
+  --v-hist:#3D4767;  --v-hist-tint:#EBF3FF;
+  --v-susp:#A8461F;  --v-susp-tint:#FFEDE7;
+  --v-flag:#B92B2B;  --v-flag-tint:#FFEBEB;
+  --v-dec:#333B57;   --v-dec-tint:#E9EEF7;
+  --v-unk:#6B3FA0;   --v-unk-tint:#F1EAFB;
+  --v-util:#5A6280;  --v-util-tint:#FAFCFF;
+
+  /* ── semantic ─────────────────────────────────────────── */
+  --bg:#D9DCEF; --surface:var(--n0); --surface-sunken:var(--n50);
+  --fg:var(--n900); --fg-muted:var(--n600); --fg-faint:var(--n400);
+  --border:var(--n200); --border-strong:var(--n300);
+  --brand:var(--tq); --brand-ink:var(--n1000); --brand-text:#0E8F7F;
+  --focus:var(--tq-dark);
+
+  /* ── scale ────────────────────────────────────────────── */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
+  --s8:32px; --s10:40px; --s12:48px; --s16:64px; --s20:80px;
+  --r-xs:6px; --r-sm:10px; --r-md:16px; --r-lg:24px; --r-xl:32px; --r-full:999px;
+  --e-sm:0 1px 2px rgba(19,23,32,.05);
+  --e-md:0 4px 16px rgba(19,23,32,.07),0 1px 3px rgba(19,23,32,.04);
+  --e-lg:0 18px 48px rgba(19,23,32,.10),0 4px 12px rgba(19,23,32,.05);
+
+  --ff:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  --fm:'IBM Plex Mono',ui-monospace,monospace;
+}

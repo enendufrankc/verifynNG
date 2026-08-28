@@ -10,3 +10,4 @@ coverage/
 .DS_Store
 legacy/verify-platform/data/
 legacy/verify-platform/exports/
+docs/design/*.zip
