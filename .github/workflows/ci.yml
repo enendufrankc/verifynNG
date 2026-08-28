@@ -45,8 +45,8 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: verifynng
-          POSTGRES_PASSWORD: verifynng
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
           POSTGRES_DB: verifynng
         ports:
           - 5432:5432
