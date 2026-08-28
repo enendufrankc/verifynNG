@@ -1,0 +1,30 @@
+# Dev override: bind mounts for hot reload
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    volumes:
+      - ../apps/api/src:/app/dist:ro
+    environment:
+      NODE_ENV: development
+
+  web-verify:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web-verify
+    volumes:
+      - ../apps/web-verify/app:/app/apps/web-verify/app:ro
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+
+  web-admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web-admin
+    volumes:
+      - ../apps/web-admin/app:/app/apps/web-admin/app:ro
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:4000

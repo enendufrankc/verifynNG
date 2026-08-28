@@ -28,8 +28,6 @@ Commit format: `feat(E06): tier-2 verdict engine`. PR titles carry the epic id.
 
 ## Commands
 
-Until E00 lands there are none. E00 defines them; when it does, this section is updated to list:
-
 ```
 pnpm install
 docker compose -f docker/compose.yml up -d     # full local stack

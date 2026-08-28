@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── E00 Base models ─────────────────────────────────────────────
+
+enum TenantStatus {
+  pending
+  active
+  suspended
+  offboarded
+}
+
+enum UnitState {
+  active
+  flagged
+  decommissioned
+}
+
+model Tenant {
+  id        String       @id @default(cuid())
+  slug      String       @unique
+  name      String
+  legalName String?
+  status    TenantStatus @default(pending)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  users      User[]
+  products   Product[]
+  oems       Oem[]
+  batches    Batch[]
+  units      Unit[]
+  scanEvents ScanEvent[]
+  auditLogs  AuditLog[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String?
+  email        String   @unique
+  passwordHash String?
+  displayName  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  tenantId  String
+  sku       String
+  name      String
+  gtin      String?
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  batches Batch[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+}
+
+model Oem {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  country   String?
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  batches Batch[]
+
+  @@index([tenantId])
+}
+
+model Batch {
+  id        String   @id @default(cuid())
+  tenantId  String
+  productId String
+  oemId     String?
+  count     Int
+  status    String
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  oem     Oem?    @relation(fields: [oemId], references: [id])
+  units   Unit[]
+
+  @@index([tenantId])
+}
+
+model Unit {
+  id        String    @id @default(cuid())
+  tenantId  String
+  batchId   String
+  tier1Code String    @unique
+  tier2Hash String    @unique
+  state     UnitState @default(active)
+  createdAt DateTime  @default(now())
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  batch      Batch       @relation(fields: [batchId], references: [id])
+  scanEvents ScanEvent[]
+
+  @@index([tenantId])
+}
+
+model ScanEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  unitId     String?
+  tier       Int
+  verdict    String
+  ip         String?
+  geoCountry String?
+  geoCity    String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  unit   Unit?  @relation(fields: [unitId], references: [id])
+
+  @@index([tenantId])
+  @@index([unitId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  actorId   String?
+  action    String
+  target    String
+  payload   Json
+  prevHash  String?
+  hash      String
+  createdAt DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}

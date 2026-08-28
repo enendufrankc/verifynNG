@@ -1,0 +1,35 @@
+{
+  "name": "@verifynng/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "start:prod": "node dist/main",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.3",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.2.3",
+    "@nestjs/platform-express": "11.2.3",
+    "@nestjs/terminus": "11.1.1",
+    "@verifynng/config": "workspace:*",
+    "@verifynng/db": "workspace:*",
+    "ioredis": "5.7.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "uuid": "11.1.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.24",
+    "@nestjs/schematics": "11.0.2",
+    "@types/express": "5.0.3",
+    "@types/uuid": "10.0.0",
+    "typescript": "5.9.2",
+    "vitest": "4.1.11"
+  }
+}
