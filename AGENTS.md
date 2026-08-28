@@ -18,6 +18,8 @@ The working agreement in short:
 2. `git worktree add ../verifynNG-EXX -b epic/EXX-<slug> main` — one epic, one worktree, one branch.
 3. Stay inside the epic's **Owned paths**. Shared files follow the hot-spot rules in the README.
 4. Small PRs into `main`; CI green; `main` always `docker compose up`s cleanly.
+> **Temporary (from 2026-08-28): GitHub Actions is unavailable (account billing lock), so `main` has no required CI checks.** Until it's restored, "CI green" means: you ran `pnpm lint && pnpm typecheck && pnpm test && pnpm build` and `pnpm test:e2e` against `docker compose up` locally and pasted the output in the PR. A Husky `pre-push` hook enforces the first four. CI becomes required again before the wave-1 fan-out; this note is deleted then.
+
 5. Build against published **Interfaces** of other epics; stub behind them if upstream hasn't shipped.
 6. Tests are in scope. Integration tests hit real Postgres. Don't mock what we own.
 7. Verify every acceptance criterion against `docker compose up` and paste evidence in the issue before closing.

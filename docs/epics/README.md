@@ -89,6 +89,8 @@ Any agent (Claude, Codex, Pi, a human) picking up an epic follows this. It is al
 2. **Isolate.** `git worktree add ../verifynNG-EXX -b epic/EXX-<slug> main`. One epic, one worktree, one long-lived branch. Small PRs from that branch into `main` are encouraged; the epic is done when its acceptance criteria all pass on `main`.
 3. **Stay inside owned paths.** Each epic lists the paths it owns. Touching another epic's paths requires a comment on that epic's issue first. Shared hot-spots have rules below.
 4. **Never break `main`.** CI (lint, typecheck, unit + integration, build, `docker compose config`) must be green. `main` must always `docker compose up` cleanly.
+> **Temporary (from 2026-08-28): GitHub Actions is unavailable (account billing lock), so `main` has no required CI checks.** Until it's restored, "CI green" means: you ran `pnpm lint && pnpm typecheck && pnpm test && pnpm build` and `pnpm test:e2e` against `docker compose up` locally and pasted the output in the PR. A Husky `pre-push` hook enforces the first four. CI becomes required again before the wave-1 fan-out; this note is deleted then.
+
 5. **Consume interfaces, not internals.** Each epic publishes the interfaces it exposes (Nest providers, events, DB models, HTTP routes). Depend on those. If you need something an upstream epic hasn't shipped, stub behind the published interface and open an issue.
 6. **Tests are part of the epic.** Unit tests for logic, integration tests against real Postgres for anything touching the DB, one Playwright flow per user-facing acceptance criterion. No mocking of things we own.
 7. **Verify in Docker before claiming done.** Run the acceptance criteria against `docker compose up`, paste the evidence (command output, screenshot) in the issue.
