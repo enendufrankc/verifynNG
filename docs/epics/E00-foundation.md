@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Wave | 0 |
-| Status | in-progress |
+| Status | done |
 | Owner | enendufrankc |
 | GitHub Issue | [#1](https://github.com/enendufrankc/verifynNG/issues/1) |
 | Depends on | — |
