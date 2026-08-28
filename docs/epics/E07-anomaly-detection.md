@@ -5,7 +5,7 @@
 | Wave | 2 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#8](https://github.com/enendufrankc/verifynNG/issues/8) |
 | Depends on | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11) |
 | Unblocks | E08 (anomaly context on report detail), E16 (`unit.flagged`, `anomaly.detected` webhooks), E12 (anomaly counts) |
 | Readiness items | `architecture.md` step 9 (rules first, no ML) · mental-model §4 anomaly signals table · §4 "verdicts are anomaly scores, not booleans" · §1 owner-only kill (RBAC on decommission) |

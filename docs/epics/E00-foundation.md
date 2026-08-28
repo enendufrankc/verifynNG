@@ -5,7 +5,7 @@
 | Wave | 0 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#1](https://github.com/enendufrankc/verifynNG/issues/1) |
 | Depends on | — |
 | Unblocks | everything |
 | Readiness items | §4 environment separation, CI/CD · §11 test suite scaffolding |

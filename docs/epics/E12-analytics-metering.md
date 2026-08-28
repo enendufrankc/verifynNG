@@ -5,7 +5,7 @@
 | Wave | 2 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#13](https://github.com/enendufrankc/verifynNG/issues/13) |
 | Depends on | E06 (ScanEvent, `scan.recorded`), E04 (Product/Batch, `batch.minted`), E11 (admin shell, tokens, `apiClient`, analytics EmptyState route group), E02 (`@TenantId()`, `@Roles()`), E00 (BullMQ, Redis) |
 | Unblocks | E15 Billing (consumes `UsageSummary` and `GET /v1/tenants/:id/usage`), E18 Support (tenant volume view), E17 (per-tenant volume metric source) |
 | Readiness items | `production-readiness.md` §7 "usage metering separated from pricing" · §5 "per-tenant volume" (metric feed) · `architecture.md` step 8 (scan event store → analytics dashboard) |

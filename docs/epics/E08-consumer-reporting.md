@@ -5,7 +5,7 @@
 | Wave | 2 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#9](https://github.com/enendufrankc/verifynNG/issues/9) |
 | Depends on | E06, E11 (also consumes E13, E14, E07 when available, E19 for consent) |
 | Unblocks | E09 (renders `ReportForm`), E12 (report counts), E16 (`report.created` webhook), E18 (support view of reports) |
 | Readiness items | `architecture.md` step 10 (consumers report fakes) · mental-model §5 "detection is the product" → enforcement loop · §3 consent records for consumer contact data (NDPR) · §2 per-IP limits on a public write endpoint |

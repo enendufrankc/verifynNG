@@ -5,7 +5,7 @@
 | Wave | 0 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#2](https://github.com/enendufrankc/verifynNG/issues/2) |
 | Depends on | E00 |
 | Unblocks | E02 (token hashing helpers), E04, E05, E06 |
 | Readiness items | §2 key rotation for HMAC signing key · §11 test suite for the code engine · mental-model §5 |

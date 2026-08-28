@@ -5,7 +5,7 @@
 | Wave | 2 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#6](https://github.com/enendufrankc/verifynNG/issues/6) |
 | Depends on | E04, E14 (also consumes E02, E13) |
 | Unblocks | E07 (dead-code and pre-reveal rules need batch status + `expectedShipDate`), E16 (`batch.printed` webhook) |
 | Readiness items | `architecture.md` step 5 (codes must reach the factory safely) · mental-model §5 "OEM code sharing" · §1 service-to-service / OEM endpoints carry tenant context (P1) |

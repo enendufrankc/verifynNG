@@ -5,7 +5,7 @@
 | Wave | 1 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#4](https://github.com/enendufrankc/verifynNG/issues/4) |
 | Depends on | E02 (interfaces: `MembershipService.addOwner`, `@Roles`, `@PlatformRole('support')`, `TenantContextGuard`), E00 |
 | Unblocks | E15 (plan/suspension hooks), E18 (support review UI extends this queue), E19 (offboarding deletion honours retention), E09/E10 (branding settings) |
 | Readiness items | `production-readiness.md` §8 all rows (onboarding, identity verification, suspension/reactivation, offboarding) · §3 "Acceptable Use Policy", "Privacy policy + ToS" acceptance records · `architecture.md` step 6 |

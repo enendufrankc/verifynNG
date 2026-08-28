@@ -5,7 +5,7 @@
 | Wave | 1 → 3 (cross-cutting; starts with wave 1, owns the CI matrix to the end) |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#22](https://github.com/enendufrankc/verifynNG/issues/22) |
 | Depends on | E00 (test tooling, `createTestDatabase()`, CI skeleton); consumes every feature epic as it lands |
 | Unblocks | every epic's demo (realistic seed), E15/E16/E18/E20 acceptance flows, release gate |
 | Readiness items | `production-readiness.md` §11 all rows (engine test suite is E01's; E21 owns isolation + lifecycle integration tests, load testing, chaos/failover drills) · §2 "cross-tenant isolation tests in CI" · §4 CI/CD gates · §4 backups + restore drills (runs E18's script nightly) |

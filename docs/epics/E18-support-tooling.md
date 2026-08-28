@@ -5,7 +5,7 @@
 | Wave | 3 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#19](https://github.com/enendufrankc/verifynNG/issues/19) |
 | Depends on | E02 (roles incl. platform `support`, sessions), E13 (`@Audited`, audit viewer), E11 (admin shell, route groups), E14 (`MailerPort`, inbound simulation), E08 (captcha port), E15 (plan/usage for tenant directory), E12 (`GET /tenants/:id/usage`), E09 (web-verify for public `/support` form) |
 | Unblocks | E17 (runbook link target for "verify API down"), E21 (support fixtures) |
 | Readiness items | `production-readiness.md` §9 all rows (support intake, audited admin impersonation, runbooks, public docs/FAQ, self-service) · §2 audit log (consumed) |

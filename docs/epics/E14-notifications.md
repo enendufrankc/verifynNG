@@ -5,7 +5,7 @@
 | Wave | 1 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#15](https://github.com/enendufrankc/verifynNG/issues/15) |
 | Depends on | E00 |
 | Unblocks | E02 (password.reset, mfa.recovery), E03 (tenant.welcome), E04 (batch.minted), E05, E07, E08, E15 |
 | Readiness items | §6 transactional email · §6 SMS · §6 alert routing · §6 deliverability hygiene (bounce handling, suppression lists; SPF/DKIM/DMARC checklist) · §6 tenant-branded notifications (data model only, P2) · P0 summary item 8 |

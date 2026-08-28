@@ -5,7 +5,7 @@
 | Wave | 1 |
 | Status | todo |
 | Owner | — |
-| GitHub Issue | — |
+| GitHub Issue | [#7](https://github.com/enendufrankc/verifynNG/issues/7) |
 | Depends on | E01 (`parseCode`, `verifyChecksum`, `hashForStorage`, `redactCode`, `normalizeCode`), E00; soft: E04 (units to look up — E06 tests seed units directly via `packages/db`) |
 | Unblocks | E07 (anomaly rules consume `scan.recorded`), E08 (report button on red/amber verdicts), E09 (consumer web renders these responses), E12 (analytics over `ScanEvent`), E16 (publishes the OpenAPI schema), E17 (verify-path metrics), E19 (retention over `ScanEvent`) |
 | Readiness items | `architecture.md` steps 1, 3, 4, 8 · `production-readiness.md` §2 "per-tenant rate limits & quotas", §5 "centralized logs with tenant context" (verify path emits tenant on every line), §6 "SMS consumer verification fallback", mental-model §4 two-tier policy, §5 anti-abuse |
