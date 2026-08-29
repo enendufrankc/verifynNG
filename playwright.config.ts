@@ -26,7 +26,7 @@ export default defineConfig({
         baseURL: `http://localhost:${verifyPort}`,
         viewport: { width: 1280, height: 720 },
       },
-      testMatch: /.*\.e2e\.spec/,
+      testMatch: /.*\.spec\.ts/,
     },
     {
       name: 'web-verify-mobile',
@@ -35,7 +35,7 @@ export default defineConfig({
         viewport: { width: 375, height: 667 },
         isMobile: true,
       },
-      testMatch: /.*\.e2e\.spec/,
+      testMatch: /.*\.spec\.ts/,
     },
     {
       name: 'web-admin-desktop',
@@ -43,7 +43,7 @@ export default defineConfig({
         baseURL: `http://localhost:${adminPort}`,
         viewport: { width: 1280, height: 720 },
       },
-      testMatch: /.*\.e2e\.spec/,
+      testMatch: /.*\.spec\.ts/,
     },
   ],
 });
