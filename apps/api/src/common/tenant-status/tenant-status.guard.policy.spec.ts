@@ -113,4 +113,78 @@ describe('TenantStatusGuard policy bump enforcement', () => {
     expect(db.policyDocument.findMany).not.toHaveBeenCalled();
     expect(db.policyAcceptance.findMany).not.toHaveBeenCalled();
   });
+
+  it.each(['viewer', 'operator'])(
+    'bypasses policy gating for %s requests',
+    async (role) => {
+      db.tenant.findFirst.mockResolvedValue({ status: 'active' });
+      const request = {
+        path: '/tenants/tenant-a/settings',
+        params: { tenantId: 'tenant-a' },
+        method: 'PATCH',
+        principal: { userId: 'user-a', role, tenantId: 'tenant-a' },
+      };
+
+      await expect(
+        guardWithMetadata().canActivate(executionContext(request)),
+      ).resolves.toBe(true);
+      expect(db.policyDocument.findMany).not.toHaveBeenCalled();
+      expect(db.policyAcceptance.findMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it('exempts owner GET requests from policy gating', async () => {
+    db.tenant.findFirst.mockResolvedValue({ status: 'active' });
+    const request = {
+      path: '/tenants/tenant-a/policies',
+      params: { tenantId: 'tenant-a' },
+      method: 'GET',
+      principal: { userId: 'user-a', role: 'owner', tenantId: 'tenant-a' },
+    };
+
+    await expect(
+      guardWithMetadata().canActivate(executionContext(request)),
+    ).resolves.toBe(true);
+    expect(db.policyDocument.findMany).not.toHaveBeenCalled();
+    expect(db.policyAcceptance.findMany).not.toHaveBeenCalled();
+  });
+
+  it('exempts the owner policy acceptance route while policies are pending', async () => {
+    db.tenant.findFirst.mockResolvedValue({ status: 'active' });
+    const request = {
+      path: '/tenants/tenant-a/policies/accept',
+      params: { tenantId: 'tenant-a' },
+      method: 'POST',
+      principal: { userId: 'user-a', role: 'owner', tenantId: 'tenant-a' },
+    };
+
+    await expect(
+      guardWithMetadata().canActivate(executionContext(request)),
+    ).resolves.toBe(true);
+    expect(db.policyDocument.findMany).not.toHaveBeenCalled();
+    expect(db.policyAcceptance.findMany).not.toHaveBeenCalled();
+  });
+
+  it('allows an owner write when every current policy is accepted', async () => {
+    db.tenant.findFirst.mockResolvedValue({ status: 'active' });
+    db.policyDocument.findMany.mockResolvedValue([
+      { kind: 'tos', version: 'policy-b' },
+      { kind: 'tos', version: 'policy-a' },
+      { kind: 'aup', version: 'policy-a' },
+    ]);
+    db.policyAcceptance.findMany.mockResolvedValue([
+      { kind: 'tos', version: 'policy-b' },
+      { kind: 'aup', version: 'policy-a' },
+    ]);
+    const request = {
+      path: '/tenants/tenant-a/settings',
+      params: { tenantId: 'tenant-a' },
+      method: 'PATCH',
+      principal: { userId: 'user-a', role: 'owner', tenantId: 'tenant-a' },
+    };
+
+    await expect(
+      guardWithMetadata().canActivate(executionContext(request)),
+    ).resolves.toBe(true);
+  });
 });
