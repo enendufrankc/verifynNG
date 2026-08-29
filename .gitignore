@@ -15,4 +15,5 @@ docs/design/*.zip
 .vitest/
 playwright-report/
 test-results/
+tools/load/results/
 *.tsbuildinfo
