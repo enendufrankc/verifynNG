@@ -145,6 +145,11 @@ export async function batch(
       oemId: overrides.oemId,
       count: overrides.count ?? 100,
       status: overrides.status ?? 'minted',
+      idempotencyKey:
+        overrides.idempotencyKey ?? `factory-${uniqueSlug('batch')}`,
+      requestedBy: overrides.requestedBy ?? 'factory-user',
+      watermark: overrides.watermark ?? 'TEST',
+      kid: overrides.kid ?? 'k1',
     },
   });
 }
@@ -169,9 +174,11 @@ export async function unit(
       id: overrides.id,
       tenantId: overrides.tenantId,
       batchId: overrides.batchId,
+      serial: overrides.serial ?? idx,
+      productId: overrides.productId ?? 'factory-product',
       tier1Code:
         overrides.tier1Code ?? `VK1TEST${String(idx).padStart(8, '0')}`,
-      tier2Hash: overrides.tier2Hash ?? `hash_test_${idx}`,
+      tier2Hash: overrides.tier2Hash ?? idx.toString(16).padStart(64, '0'),
       state: overrides.state ?? 'active',
     },
   });
