@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "require": "./dist/index.js"
+    },
+    "./testing": {
+      "import": "./dist/testing/index.js",
+      "require": "./dist/testing/index.js"
     }
   },
   "scripts": {
@@ -19,6 +23,7 @@
     "db:migrate": "node scripts/prisma-with-env.cjs migrate deploy",
     "db:reset": "node scripts/prisma-with-env.cjs migrate reset --force",
     "db:seed": "node scripts/prisma-with-env.cjs db seed",
+    "db:seed:realistic": "tsx prisma/seed/realistic/index.ts",
     "prisma:generate": "prisma generate",
     "postinstall": "prisma generate"
   },
