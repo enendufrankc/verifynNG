@@ -125,6 +125,10 @@ Emitted via Nest `EventEmitter2`. Consumers subscribe to the string event name.
 
 Verify routes are `@Public()` — no tenant is authenticated. The tenant is derived from the code's first segment, so a tenant-A code is looked up against tenant-A's data only. The isolation harness asserts the negative case: a tenant-A code never resolves to tenant-B brand data, verified on the `brand.slug` field in the response.
 
+## Degraded-mode contract (E21 chaos test, published jointly with E17)
+
+Postgres or Redis being unavailable **returns `503`, never a false verdict**. Every DB/Redis call on the hot path is wrapped so a failure short-circuits to `HttpException('Service temporarily unavailable', 503)` rather than falling through to a default verdict. Verified against compose: `docker stop redis` (or `postgres`) → `GET /v1/verify/:code` → `503` and the `api` container itself stays up (no crash, no restart) — the shared `ioredis` client has an `error` listener specifically so a Redis outage degrades instead of taking the process down. GeoIP is the one exception by design: a `fake-geo`/MaxMind failure never blocks verification (see Geo Granularity above) — a missing geo lookup is not "false", it's an honestly-absent signal.
+
 ## Hot-path query plans (T11)
 
 Both hot lookups are unique-index scans against Postgres 16, sub-millisecond:

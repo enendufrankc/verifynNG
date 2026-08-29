@@ -502,3 +502,67 @@ describe('VerdictEngine', () => {
     expect(r.severity).toBe('amber');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Property test: evaluate() never leaks a full code, across every branch.
+// ---------------------------------------------------------------------------
+
+describe('VerdictEngine — code redaction property', () => {
+  const rawPayload = 'THISSHOULDNEVERAPPEAR12345';
+
+  const branches: Array<[string, CtxOverrides]> = [
+    ['invalid (parsed null)', { parsed: null }],
+    ['invalid (checksum bad)', { checksumOk: false }],
+    ['rate-limited', { rateLimited: true, retryAfterSec: 1 }],
+    ['tier1 ok', { tier: 1 }],
+    ['tier1 unknown', { tier: 1, unit: null }],
+    ['tier2 unknown', { unit: null }],
+    [
+      'tier2 decommissioned',
+      { unit: { ...baseUnit, state: 'decommissioned' } },
+    ],
+    [
+      'tier2 flagged',
+      { unit: { ...baseUnit, state: 'flagged' }, priorScanRegions: [] },
+    ],
+    ['tier2 authentic', { priorScanRegions: [] }],
+    [
+      'tier2 already-verified',
+      { priorScanRegions: [{ city: 'Lagos', country: 'NG' }] },
+    ],
+    [
+      'tier2 suspicious',
+      {
+        priorScanRegions: [
+          { city: 'Lagos', country: 'NG' },
+          { city: 'Lagos', country: 'NG' },
+          { city: 'Lagos', country: 'NG' },
+          { city: 'Lagos', country: 'NG' },
+          { city: 'Paris', country: 'FR' },
+        ],
+      },
+    ],
+  ];
+
+  it.each(branches)(
+    '%s: code is exactly redactedCode, never the raw payload',
+    (_label, overrides) => {
+      for (let i = 0; i < 25; i++) {
+        const redactedCode = `ivoryglow.2.k1.${Math.random().toString(36).slice(2, 6).toUpperCase()}…`;
+        const r = engine.evaluate(
+          makeCtx({
+            ...overrides,
+            redactedCode,
+            parsed:
+              overrides.parsed === null
+                ? null
+                : { ...baseParsed, tier: overrides.tier ?? 2 },
+          }),
+        );
+        expect(r.code).toBe(redactedCode);
+        expect(r.code).not.toContain(rawPayload);
+        expect(JSON.stringify(r)).not.toContain(rawPayload);
+      }
+    },
+  );
+});
