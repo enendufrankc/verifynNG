@@ -8,6 +8,7 @@ import { S3Module } from './common/s3.module';
 import { EventsModule } from './common/events.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { BatchesModule } from './modules/batches/batches.module';
+import { BullMQModule } from './jobs/bullmq.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { BatchesModule } from './modules/batches/batches.module';
     S3Module,
     EventsModule,
     CatalogModule,
+    BullMQModule,
     BatchesModule,
   ],
 })

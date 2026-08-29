@@ -4,6 +4,8 @@ import {
   ConflictException,
   HttpException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaClient, Batch } from '@prisma/client';
 import {
   generateCode,
@@ -29,6 +31,7 @@ export class MintService {
     @Inject(ENTITLEMENT_POLICY) private entitlementPolicy: EntitlementPolicy,
     private manifestService: ManifestService,
     private events: EventsService,
+    @InjectQueue('mint') private mintQueue: Queue,
   ) {
     const env = loadEnv();
     this.ring = new StaticKeyRing(env.CORE_KEYS, env.CORE_ACTIVE_KID);
@@ -132,8 +135,23 @@ export class MintService {
     const isJob = count > syncMax;
 
     if (isJob) {
-      // Task 7 will implement BullMQ job minting
-      throw new Error('Job minting not yet implemented');
+      const job = await this.mintQueue.add(
+        'mint',
+        {
+          tenantId,
+          batchId: batch.id,
+          count,
+        },
+        {
+          jobId: `${tenantId}:${idempotencyKey}`,
+          removeOnComplete: true,
+        },
+      );
+      await this.prisma.batch.update({
+        where: { id: batch.id },
+        data: { jobId: job.id?.toString() ?? undefined },
+      });
+      return { batch, mode: 'job', jobId: job.id?.toString() };
     }
 
     // Synchronous mint — tier2Codes held in memory ONLY for the manifest
