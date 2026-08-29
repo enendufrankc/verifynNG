@@ -27,10 +27,25 @@ const e00Schema = z.object({
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:4000'),
 });
 
+// ── E14 Notifications ──────────────────────────────────────────
+const e14Schema = e00Schema.extend({
+  MAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
+  RESEND_API_KEY: z.string().default(''),
+  SMS_PROVIDER: z.enum(['fake', 'termii']).default('fake'),
+  TERMII_API_KEY: z.string().default(''),
+  TERMII_SENDER: z.string().default('VerifyN'),
+  FAKE_SMS_URL: z.string().default('http://localhost:4101'),
+  WHATSAPP_PROVIDER: z.enum(['fake', 'meta']).default('fake'),
+  META_WA_PHONE_NUMBER_ID: z.string().default(''),
+  META_WA_ACCESS_TOKEN: z.string().default(''),
+  META_WA_BUSINESS_ACCOUNT_ID: z.string().default(''),
+  NOTIFICATIONS_FROM: z.string().default('VerifyN <noreply@verifyn.ng>'),
+  FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
+});
+
 // ── Sections for other epics will be added here ────────────────
 // E02 will add JWT_SECRET, etc.
-// E14 will add EMAIL_FROM, etc.
 
-export const envSchema = e00Schema;
+export const envSchema = e14Schema;
 
-export type Env = z.infer<typeof envSchema>;
+export type Env = z.infer<typeof e14Schema>;
