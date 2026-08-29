@@ -43,8 +43,63 @@ async function main() {
     });
   }
 
+  // ── E14: Seed default notification routing rules for ivoryglow ──
+  const defaultRules = [
+    {
+      eventName: 'anomaly.detected',
+      templateId: 'anomaly.alert',
+      channels: ['email'],
+      roles: ['owner'],
+    },
+    {
+      eventName: 'report.created',
+      templateId: 'report.received',
+      channels: ['email'],
+      roles: ['owner', 'operator'],
+    },
+    {
+      eventName: 'batch.minted',
+      templateId: 'batch.minted',
+      channels: ['email'],
+      roles: ['owner'],
+    },
+    {
+      eventName: 'manifest.delivered',
+      templateId: 'manifest.delivered',
+      channels: ['email'],
+      roles: ['owner'],
+    },
+    {
+      eventName: 'receipt.mismatch',
+      templateId: 'receipt.mismatch',
+      channels: ['email', 'sms'],
+      roles: ['owner'],
+    },
+  ];
+
+  for (const rule of defaultRules) {
+    await prisma.notificationRoutingRule.upsert({
+      where: {
+        tenantId_eventName_templateId: {
+          tenantId: tenant.id,
+          eventName: rule.eventName,
+          templateId: rule.templateId,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        eventName: rule.eventName,
+        templateId: rule.templateId,
+        channels: rule.channels as any,
+        roles: rule.roles,
+        enabled: true,
+      },
+    });
+  }
+
   console.log(
-    `Seeded tenant ${tenant.name} with ${products.length} products`,
+    `Seeded tenant ${tenant.name} with ${products.length} products and ${defaultRules.length} notification rules`,
   );
 }
 
