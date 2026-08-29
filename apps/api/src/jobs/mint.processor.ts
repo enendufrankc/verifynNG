@@ -67,10 +67,12 @@ export class MintProcessor extends WorkerHost {
         const { code: tier1Code } = generateCode(this.ring, {
           tenant: tenantId,
           tier: 1 as Tier,
+          watermark: batch.watermark,
         });
         const { code: tier2Code } = generateCode(this.ring, {
           tenant: tenantId,
           tier: 2 as Tier,
+          watermark: batch.watermark,
         });
         const tier2Hash = hashForStorage(tier2Code);
         tier2Codes.push(tier2Code);

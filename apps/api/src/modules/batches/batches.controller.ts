@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Body, Param, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { toBuffer as qrToBuffer } from 'qrcode';
 import { BatchesService } from './batches.service';
 import { MintService } from './mint.service';
 import { ExportsService } from './exports.service';
 import { CreateBatchDto } from './dto/create-batch.dto';
 import { TenantId } from '../../common/tenant-id.decorator';
+import { Roles } from '../../common/roles.decorator';
 
 type ArtefactKind = 'qr-zip' | 'sheet-pdf' | 'tier1-csv' | 'all-zip';
 
@@ -69,6 +71,7 @@ export class BatchesController {
   }
 
   @Get(':batchId/downloads/:artefact')
+  @Roles('operator')
   async download(
     @TenantId() tenantId: string,
     @Param('batchId') batchId: string,
@@ -81,5 +84,29 @@ export class BatchesController {
       artefact as ArtefactKind,
     );
     return res.redirect(302, url);
+  }
+
+  @Get(':batchId/units/:unitId/qr.png')
+  @Roles('operator')
+  async tier1Qr(
+    @TenantId() tenantId: string,
+    @Param('batchId') batchId: string,
+    @Param('unitId') unitId: string,
+    @Query('tier') tier: string,
+    @Res() res: Response,
+  ) {
+    if (tier !== '1')
+      return res.status(404).send({ error: 'tier_not_available' });
+    const { url } = await this.exportsService.getTier1QrUrl(
+      tenantId,
+      batchId,
+      unitId,
+    );
+    const png = await qrToBuffer(url, {
+      width: 300,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+    });
+    res.type('png').send(png);
   }
 }

@@ -84,6 +84,32 @@ describe('generateCode', () => {
     expect(code.split('.')[3]).toHaveLength(32);
   });
 
+  it('embeds the batch watermark at the start of the payload', () => {
+    const ring = makeRing();
+    const { code } = generateCode(ring, {
+      tenant: 'test',
+      tier: 1,
+      watermark: 'AB12',
+    });
+    expect(parseCode(code)!.payload.slice(0, 4)).toBe('AB12');
+    expect(parseCode(code)!.payload).toHaveLength(20);
+  });
+
+  it('rejects malformed watermarks and undersized payloads', () => {
+    const ring = makeRing();
+    expect(() =>
+      generateCode(ring, { tenant: 'test', tier: 1, watermark: 'bad!' }),
+    ).toThrow('watermark');
+    expect(() =>
+      generateCode(ring, {
+        tenant: 'test',
+        tier: 1,
+        watermark: 'AB12',
+        payloadLength: 3,
+      }),
+    ).toThrow('payloadLength');
+  });
+
   it('generates different codes on each call', () => {
     const ring = makeRing();
     const a = generateCode(ring, { tenant: 'test', tier: 2 });
