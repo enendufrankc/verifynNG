@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 2 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | frank.enendu |
 | GitHub Issue | [#18](https://github.com/enendufrankc/verifynNG/issues/18) |
 | Depends on | E00 (compose, health module, request-id middleware), E14 (`NotificationService`, `MailerPort` for alert routing), E06 (verify endpoint to probe; verdict/rate-limit metrics), E02 (`@TenantId()`/user context for log enrichment — consumed via `AsyncLocalStorage`, soft dependency) |
 | Unblocks | E18 Support (log/trace lookup by requestId), E21 (perf gates read the same metrics), E15/E12 (per-tenant volume from metrics vs rollups reconciliation) |
