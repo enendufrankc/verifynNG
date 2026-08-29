@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, FormField } from '@verifyng/ui';
 import { useAuthStore } from '@/lib/auth-store';
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -58,15 +66,15 @@ export default function LoginPage() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-fg">Sign in</h2>
-        <p className="text-sm text-fg-muted">
+        <h2 className="text-fg text-lg font-semibold">Sign in</h2>
+        <p className="text-fg-muted text-sm">
           Enter your credentials to access the console
         </p>
       </div>
 
       {error && (
         <div
-          className="rounded-md bg-v-flag-tint p-3 text-sm text-v-flag"
+          className="bg-v-flag-tint text-v-flag rounded-md p-3 text-sm"
           role="alert"
         >
           {error}
@@ -101,7 +109,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-between">
         <a
           href="/forgot-password"
-          className="text-sm text-brand-text hover:underline"
+          className="text-brand-text text-sm hover:underline"
         >
           Forgot password?
         </a>

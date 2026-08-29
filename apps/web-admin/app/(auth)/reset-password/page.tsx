@@ -1,10 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, FormField } from '@verifyng/ui';
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -52,15 +60,15 @@ export default function ResetPasswordPage() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-fg">Set new password</h2>
-        <p className="text-sm text-fg-muted">
+        <h2 className="text-fg text-lg font-semibold">Set new password</h2>
+        <p className="text-fg-muted text-sm">
           Choose a strong password for your account.
         </p>
       </div>
 
       {error && (
         <div
-          className="rounded-md bg-v-flag-tint p-3 text-sm text-v-flag"
+          className="bg-v-flag-tint text-v-flag rounded-md p-3 text-sm"
           role="alert"
         >
           {error}

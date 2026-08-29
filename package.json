@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "turbo lint && tsx scripts/check-token-drift.ts",
+    "check:tokens": "tsx scripts/check-token-drift.ts",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "playwright test",
@@ -36,6 +37,7 @@
     "prettier": "3.6.2",
     "prettier-plugin-tailwindcss": "0.7.1",
     "prisma": "6.19.3",
+    "tsx": "^4.19.2",
     "turbo": "2.10.12",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.68.0",

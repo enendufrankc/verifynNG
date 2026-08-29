@@ -1,10 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, FormField } from '@verifyng/ui';
 
 export default function SetPasswordPage() {
+  return (
+    <Suspense>
+      <SetPasswordForm />
+    </Suspense>
+  );
+}
+
+function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -42,8 +50,8 @@ export default function SetPasswordPage() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-fg">Set your password</h2>
-        <p className="text-sm text-fg-muted">
+        <h2 className="text-fg text-lg font-semibold">Set your password</h2>
+        <p className="text-fg-muted text-sm">
           You&apos;ve been invited to join the team. Set a password to get
           started.
         </p>
@@ -51,7 +59,7 @@ export default function SetPasswordPage() {
 
       {error && (
         <div
-          className="rounded-md bg-v-flag-tint p-3 text-sm text-v-flag"
+          className="bg-v-flag-tint text-v-flag rounded-md p-3 text-sm"
           role="alert"
         >
           {error}

@@ -67,7 +67,7 @@ export function useAuth() {
     memberships: store.memberships,
     activeTenantId: store.activeTenantId,
     role: store.activeRole as 'owner' | 'operator' | 'viewer' | null,
-    platformRole: store.user?.platformRole,
+    platformRole: store.user?.platformRole ?? null,
     switchTenant: store.setActiveTenant,
     logout: store.clear,
     isAuthenticated: !!store.accessToken,

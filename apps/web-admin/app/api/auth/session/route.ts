@@ -3,18 +3,45 @@ import {
   createStubSession,
   validateStubRefresh,
   findUserByEmail,
+  STUB_USERS,
 } from '@/lib/api-stubs';
 
 export const dynamic = 'force-dynamic';
 
+interface SessionRequestBody {
+  action?: 'login' | 'mfa' | 'refresh' | 'switch-tenant';
+  email?: string;
+  password?: string;
+  mfaToken?: string;
+  tenantId?: string;
+}
+
+interface LoginApiResponse {
+  accessToken: string;
+  expiresIn: number;
+  refreshToken: string;
+  mfaRequired?: boolean;
+  mfaToken?: string;
+}
+
+interface RefreshApiResponse {
+  accessToken: string;
+  expiresIn: number;
+  refreshToken: string;
+}
+
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const body: SessionRequestBody = await req.json();
 
   // ── Login ─────────────────────────────────────────────────
   if (body.action === 'login' || body.email) {
     const { email, password } = body;
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    if (!email || !password)
+      return NextResponse.json(
+        { code: 'BAD_REQUEST', message: 'Email and password are required' },
+        { status: 400 },
+      );
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     try {
       const apiRes = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
@@ -22,7 +49,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ email, password }),
       });
       if (apiRes.ok) {
-        const data = await apiRes.json();
+        const data: LoginApiResponse = await apiRes.json();
         if (data.mfaRequired)
           return NextResponse.json({
             mfaRequired: true,
@@ -93,8 +120,7 @@ export async function POST(req: NextRequest) {
         { code: 'NO_REFRESH_TOKEN', message: 'No refresh token' },
         { status: 401 },
       );
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     try {
       const apiRes = await fetch(`${apiUrl}/auth/refresh`, {
         method: 'POST',
@@ -102,7 +128,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ refreshToken }),
       });
       if (apiRes.ok) {
-        const data = await apiRes.json();
+        const data: RefreshApiResponse = await apiRes.json();
         const response = NextResponse.json({
           accessToken: data.accessToken,
           expiresIn: data.expiresIn,
@@ -133,9 +159,7 @@ export async function POST(req: NextRequest) {
     }
     const newSession = createStubSession(session.userId);
     // Look up the stub user so a page reload repopulates the auth store.
-    const user = Object.values(STUB_USERS).find(
-      (u) => u.id === session.userId,
-    );
+    const user = Object.values(STUB_USERS).find((u) => u.id === session.userId);
     const response = NextResponse.json({
       accessToken: newSession.accessToken,
       expiresIn: 900,

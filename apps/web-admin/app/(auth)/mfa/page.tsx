@@ -1,11 +1,19 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Input, FormField } from '@verifyng/ui';
 import { useAuthStore } from '@/lib/auth-store';
 
 export default function MfaPage() {
+  return (
+    <Suspense>
+      <MfaForm />
+    </Suspense>
+  );
+}
+
+function MfaForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mfaToken = searchParams.get('mfaToken') || '';
@@ -60,10 +68,10 @@ export default function MfaPage() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold text-fg">
+        <h2 className="text-fg text-lg font-semibold">
           Two-factor authentication
         </h2>
-        <p className="text-sm text-fg-muted">
+        <p className="text-fg-muted text-sm">
           {useRecoveryCode
             ? 'Enter one of your recovery codes'
             : 'Enter the 6-digit code from your authenticator app'}
@@ -72,7 +80,7 @@ export default function MfaPage() {
 
       {error && (
         <div
-          className="rounded-md bg-v-flag-tint p-3 text-sm text-v-flag"
+          className="bg-v-flag-tint text-v-flag rounded-md p-3 text-sm"
           role="alert"
         >
           {error}
@@ -121,7 +129,7 @@ export default function MfaPage() {
           setUseRecoveryCode(!useRecoveryCode);
           setError('');
         }}
-        className="text-sm text-brand-text hover:underline"
+        className="text-brand-text text-sm hover:underline"
       >
         {useRecoveryCode ? 'Use authenticator code' : 'Use a recovery code'}
       </button>

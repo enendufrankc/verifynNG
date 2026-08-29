@@ -1,5 +1,11 @@
 import { useAuthStore } from './auth-store';
 
+interface ApiErrorBody {
+  code?: string;
+  message?: string;
+  details?: Array<{ field: string; message: string }>;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -29,7 +35,7 @@ async function refreshAccessToken(): Promise<string | null> {
         useAuthStore.getState().clear();
         return null;
       }
-      const data = await res.json();
+      const data = (await res.json()) as { accessToken: string };
       useAuthStore.getState().setAccessToken(data.accessToken);
       return data.accessToken;
     } catch {
@@ -78,7 +84,7 @@ async function request<T>(
         signal: options?.signal,
       });
       if (!retry.ok) {
-        const err = await retry.json().catch(() => ({}));
+        const err: ApiErrorBody = await retry.json().catch(() => ({}));
         throw new ApiError(
           retry.status,
           err.code ?? 'UNKNOWN',
@@ -86,12 +92,12 @@ async function request<T>(
           err.details,
         );
       }
-      return retry.json();
+      return (await retry.json()) as T;
     }
     throw new ApiError(401, 'SESSION_EXPIRED', 'Session expired');
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err: ApiErrorBody = await res.json().catch(() => ({}));
     throw new ApiError(
       res.status,
       err.code ?? 'UNKNOWN',
@@ -100,7 +106,7 @@ async function request<T>(
     );
   }
   if (res.status === 204) return undefined as T;
-  return res.json();
+  return (await res.json()) as T;
 }
 
 export const apiClient = {
