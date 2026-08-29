@@ -2,15 +2,16 @@
  * Quota HTTP controllers.
  */
 
-import { Controller, Get, Put, Body, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Req } from '@nestjs/common';
 import { QuotaService } from './quota.service.js';
+import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 
 @Controller('v1/quotas')
 export class QuotaController {
   constructor(private readonly quotaService: QuotaService) {}
 
   @Get()
-  async getAll(@Req() req: any) {
+  async getAll(@Req() req: AuthenticatedRequest) {
     const tenantId = req?.user?.tenantId ?? 'ivoryglow';
     return this.quotaService.getAllKinds(tenantId);
   }
@@ -22,11 +23,12 @@ export class SupportQuotaController {
 
   @Put(':tenantId')
   async upsert(
-    @Query('tenantId') tenantIdFromParam: string,
-    @Body() body: { kind: string; limit: number; window: string; note?: string },
+    @Param('tenantId') tenantId: string,
+    @Body()
+    body: { kind: string; limit: number; window: string; note?: string },
   ) {
     await this.quotaService.upsertOverride(
-      tenantIdFromParam,
+      tenantId,
       body.kind,
       body.limit,
       body.window as 'minute' | 'hour' | 'day',
@@ -45,18 +47,29 @@ export class DevQuotaController {
   constructor(private readonly quotaService: QuotaService) {}
 
   @Put('register')
-  async register(@Body() body: { kind: string; limit: number; window: string }) {
+  async register(
+    @Body() body: { kind: string; limit: number; window: string },
+  ) {
     this.quotaService.registerKind(body.kind, {
       defaultLimit: body.limit,
       window: body.window as 'minute' | 'hour' | 'day',
     });
-    return { ok: true, kind: body.kind, limit: body.limit, window: body.window };
+    return {
+      ok: true,
+      kind: body.kind,
+      limit: body.limit,
+      window: body.window,
+    };
   }
 
   @Post()
-  async check(@Req() req: any) {
+  async check(@Req() req: AuthenticatedRequest) {
     // Use x-tenant header or default to ivoryglow
-    const tenantId = req.headers['x-tenant'] ?? 'ivoryglow';
+    const tenantHeader = req.headers['x-tenant'];
+    const tenantId = String(
+      (Array.isArray(tenantHeader) ? tenantHeader[0] : tenantHeader) ??
+        'ivoryglow',
+    );
     await this.quotaService.assertWithinQuota(tenantId, 'demo_per_min');
     return { ok: true };
   }

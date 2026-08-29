@@ -25,6 +25,11 @@ interface OverrideCacheEntry {
   fetchedAt: number;
 }
 
+interface ResolvedOverride {
+  limit: number;
+  window: QuotaWindow;
+}
+
 @Injectable()
 export class QuotaService {
   private readonly logger = new Logger(QuotaService.name);
@@ -75,7 +80,14 @@ export class QuotaService {
       // Emit debounced event
       this.emitIfExpired(tenantId, kind, limit, used, window);
 
-      throw new QuotaExceededError(tenantId, kind, limit, used, resetsAt, opts?.key);
+      throw new QuotaExceededError(
+        tenantId,
+        kind,
+        limit,
+        used,
+        resetsAt,
+        opts?.key,
+      );
     }
   }
 
@@ -99,14 +111,14 @@ export class QuotaService {
     const redisKey = this.buildKey(tenantId, kind, key, window);
     const windowStart = this.windowStart(window);
 
-    const [used, ttl] = await this.redis
+    const results = await this.redis
       .multi()
       .get(redisKey)
       .pttl(redisKey)
       .exec();
+    const [used] = results ?? [];
 
-    const usedNum = (used?.[1] as number) ?? 0;
-    const ttlMs = (ttl?.[1] as number) ?? this.windowMs(window);
+    const usedNum = Number(used?.[1] ?? 0);
     const resetsAt = new Date(windowStart + this.windowMs(window));
 
     return { used: usedNum, limit, resetsAt };
@@ -159,11 +171,14 @@ export class QuotaService {
   private async getOverride(
     tenantId: string,
     kind: string,
-  ): Promise<QuotaKindConfig | null> {
+  ): Promise<ResolvedOverride | null> {
     const cacheKey = `${tenantId}:${kind}`;
     const cached = this.overrideCache.get(cacheKey);
-    if (cached && Date.now() - cached.fetchedAt < QuotaService.OVERRIDE_CACHE_TTL) {
-      return { defaultLimit: cached.limit, window: cached.window };
+    if (
+      cached &&
+      Date.now() - cached.fetchedAt < QuotaService.OVERRIDE_CACHE_TTL
+    ) {
+      return { limit: cached.limit, window: cached.window };
     }
 
     const override = await this.prisma.quotaOverride.findUnique({
@@ -176,7 +191,7 @@ export class QuotaService {
         window: override.window as QuotaWindow,
         fetchedAt: Date.now(),
       });
-      return { defaultLimit: override.limit, window: override.window as QuotaWindow };
+      return { limit: override.limit, window: override.window as QuotaWindow };
     }
 
     return null;
@@ -204,7 +219,13 @@ export class QuotaService {
       return used
     `;
 
-    const used = (await this.redis.eval(lua, 1, redisKey, cost, windowMs)) as number;
+    const used = (await this.redis.eval(
+      lua,
+      1,
+      redisKey,
+      cost,
+      windowMs,
+    )) as number;
     const resetsAt = new Date(this.windowStart(window) + windowMs);
 
     return { used, resetsAt };

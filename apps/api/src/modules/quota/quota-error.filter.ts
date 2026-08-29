@@ -2,12 +2,7 @@
  * QuotaExceededFilter — catches QuotaExceededError and returns 429 with Retry-After.
  */
 
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
 import { Response } from 'express';
 import { QuotaExceededError } from './quota-error.js';
 
@@ -19,9 +14,7 @@ export class QuotaExceededFilter implements ExceptionFilter {
 
     const retryAfterSeconds = Math.max(
       1,
-      Math.ceil(
-        (exception.resetsAt.getTime() - Date.now()) / 1000,
-      ),
+      Math.ceil((exception.resetsAt.getTime() - Date.now()) / 1000),
     );
 
     response.setHeader('Retry-After', retryAfterSeconds.toString());

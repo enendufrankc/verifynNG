@@ -4,6 +4,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY packages/core/package.json packages/core/
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
 COPY packages/db/prisma/schema.prisma packages/db/prisma/schema.prisma
@@ -11,6 +12,7 @@ COPY apps/api/package.json apps/api/
 
 RUN pnpm install --frozen-lockfile
 
+COPY packages/core/ packages/core/
 COPY packages/config/ packages/config/
 COPY packages/db/ packages/db/
 COPY apps/api/ apps/api/
@@ -18,6 +20,7 @@ COPY tsconfig.base.json ./
 
 # Build packages that the API depends on
 RUN pnpm --filter @verifynng/db prisma:generate
+RUN pnpm --filter @verifynng/core build
 RUN pnpm --filter @verifynng/config build
 RUN pnpm --filter @verifynng/db build
 RUN pnpm --filter @verifynng/api build

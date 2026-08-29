@@ -43,9 +43,7 @@ export class EnvFileSecrets implements SecretsPort {
     this.fileEntries = new Map();
 
     if (!existsSync(this.secretsFilePath)) {
-      this.logger.warn(
-        `Secrets file not found: ${this.secretsFilePath}`,
-      );
+      this.logger.warn(`Secrets file not found: ${this.secretsFilePath}`);
       return this.fileEntries;
     }
 
@@ -71,8 +69,9 @@ export class EnvFileSecrets implements SecretsPort {
 
         this.fileEntries.set(key, value);
       }
-    } catch (err: any) {
-      this.logger.error(`Failed to read secrets file: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to read secrets file: ${message}`);
     }
 
     return this.fileEntries;

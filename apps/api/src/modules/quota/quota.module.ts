@@ -4,15 +4,22 @@
 
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { QuotaService } from './quota.service.js';
 import { QuotaExceededFilter } from './quota-error.filter.js';
+import {
+  QuotaController,
+  SupportQuotaController,
+  DevQuotaController,
+} from './quota.controller.js';
 import { APP_FILTER } from '@nestjs/core';
 import Redis from 'ioredis';
-import { PrismaClient } from '@prisma/client';
+
+const devControllers =
+  process.env.NODE_ENV === 'production' ? [] : [DevQuotaController];
 
 @Global()
 @Module({
+  controllers: [QuotaController, SupportQuotaController, ...devControllers],
   providers: [
     {
       provide: 'REDIS_CLIENT',
