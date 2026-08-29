@@ -42,7 +42,7 @@ function LoginForm() {
       }
 
       if (data.mfaRequired) {
-        router.push(`/mfa?mfaToken=${data.mfaToken}`);
+        router.push(`/login/mfa?mfaToken=${data.mfaToken}`);
         return;
       }
 
