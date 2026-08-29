@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { prisma } from '@verifynng/db';
+import { TenantS3Service } from './s3.service';
 
 const requiredDocuments = ['cac_certificate', 'director_id'] as const;
 const slugify = (value: string) =>
@@ -23,6 +24,7 @@ export interface TenantPrincipal {
 
 @Injectable()
 export class TenantLifecycleService {
+  constructor(private readonly storage: TenantS3Service) {}
   async create(input: {
     ownerUserId: string;
     ownerEmail?: string;
@@ -53,39 +55,43 @@ export class TenantLifecycleService {
           statusChangedAt: new Date(),
         },
       });
-      await tx.membership.upsert({
+      const owner = await tx.user.upsert({
         where: {
-          tenantId_userId: { tenantId: created.id, userId: input.ownerUserId },
+          email: input.ownerEmail ?? `${input.ownerUserId}@local.verifyng`,
         },
-        update: { role: 'owner' },
+        update: { displayName: input.name },
         create: {
-          tenantId: created.id,
-          userId: input.ownerUserId,
-          role: 'owner',
+          email: input.ownerEmail ?? `${input.ownerUserId}@local.verifyng`,
+          displayName: input.name,
         },
+      });
+      await tx.membership.upsert({
+        where: { tenantId_userId: { tenantId: created.id, userId: owner.id } },
+        update: { role: 'owner' },
+        create: { tenantId: created.id, userId: owner.id, role: 'owner' },
       });
       await tx.policyAcceptance.createMany({
         data: [
           {
             tenantId: created.id,
-            userId: input.ownerUserId,
+            userId: owner.id,
             kind: 'aup',
             version: current.aup,
           },
           {
             tenantId: created.id,
-            userId: input.ownerUserId,
+            userId: owner.id,
             kind: 'tos',
             version: current.tos,
           },
         ],
       });
-      return created;
+      return { created, owner };
     });
     return {
-      tenant,
-      accessToken: this.token(input.ownerUserId, tenant.id),
-      refreshToken: this.token(input.ownerUserId, tenant.id),
+      tenant: tenant.created,
+      accessToken: this.token(tenant.owner.id, tenant.created.id),
+      refreshToken: this.token(tenant.owner.id, tenant.created.id),
     };
   }
 
@@ -157,7 +163,8 @@ export class TenantLifecycleService {
       throw new BadRequestException('slug_confirmation_mismatch');
     if (!['active', 'suspended', 'restricted'].includes(tenant.status))
       throw new ConflictException('invalid_status_transition');
-    const scheduled = new Date(Date.now() + 30 * 86400000);
+    const graceDays = Number(process.env.OFFBOARDING_GRACE_DAYS ?? 30);
+    const scheduled = new Date(Date.now() + graceDays * 86400000);
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
@@ -258,7 +265,11 @@ export class TenantLifecycleService {
     });
     return {
       documentId: document.id,
-      uploadUrl: `http://minio:9000/verifyng/${objectKey}`,
+      uploadUrl: await this.storage.presignPut(
+        objectKey,
+        input.contentType,
+        input.size,
+      ),
       objectKey,
     };
   }
@@ -267,6 +278,17 @@ export class TenantLifecycleService {
       where: { id: documentId, tenantId },
     });
     if (!document) throw new NotFoundException('document_not_found');
+    try {
+      const object = await this.storage.head(document.objectKey);
+      if (
+        (object.ContentLength ?? 0) > 10 * 1024 * 1024 ||
+        object.ContentType !== document.contentType
+      )
+        throw new BadRequestException('uploaded_document_mismatch');
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('document_not_uploaded');
+    }
     return prisma.verificationDocument.update({
       where: { id: documentId },
       data: { status: 'uploaded' },

@@ -70,7 +70,9 @@ export class TenantsController {
   ): Promise<any> {
     return this.lifecycle.verification(id);
   }
-  @Post('tenants/:tenantId/verification/documents') document(
+  @Post('tenants/:tenantId/verification/documents')
+  @RequireTenantStatus('pending', 'rejected', 'in_review', 'active')
+  document(
     @Param('tenantId') id: string,
     @Body()
     body: {
@@ -91,13 +93,16 @@ export class TenantsController {
     });
   }
   @Post('tenants/:tenantId/verification/documents/:documentId/complete')
+  @RequireTenantStatus('pending', 'rejected', 'in_review', 'active')
   complete(
     @Param('tenantId') id: string,
     @Param('documentId') documentId: string,
   ): Promise<any> {
     return this.lifecycle.completeDocument(id, documentId);
   }
-  @Delete('tenants/:tenantId/verification/documents/:documentId') remove(
+  @Delete('tenants/:tenantId/verification/documents/:documentId')
+  @RequireTenantStatus('pending', 'rejected')
+  remove(
     @Param('tenantId') id: string,
     @Param('documentId') documentId: string,
   ): Promise<any> {
@@ -144,16 +149,14 @@ export class TenantsController {
     return this.lifecycle.getExport(id);
   }
   @Get('policies/:kind/current') current(@Param('kind') kind: string) {
-    return (this.lifecycle as any)
-      .currentVersions()
-      .then((versions: any) => ({
-        kind,
-        version: versions[kind],
-        effectiveFrom: '2026-08-01',
-        markdown:
-          kind === 'aup'
-            ? 'Only authenticate goods for marks you own or are authorised to represent.'
-            : 'The platform may suspend accounts when there is evidence of counterfeiting.',
-      }));
+    return (this.lifecycle as any).currentVersions().then((versions: any) => ({
+      kind,
+      version: versions[kind],
+      effectiveFrom: '2026-08-01',
+      markdown:
+        kind === 'aup'
+          ? 'Only authenticate goods for marks you own or are authorised to represent.'
+          : 'The platform may suspend accounts when there is evidence of counterfeiting.',
+    }));
   }
 }
