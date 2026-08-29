@@ -1,18 +1,18 @@
 # E14 — Notifications
 
-| | |
-|---|---|
-| Wave | 1 |
-| Status | in-progress |
-| Owner | pi-agent |
-| GitHub Issue | [#15](https://github.com/enendufrankc/verifynNG/issues/15) |
-| Depends on | E00 |
-| Unblocks | E02 (password.reset, mfa.recovery), E03 (tenant.welcome), E04 (batch.minted), E05, E07, E08, E15 |
+|                 |                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 1                                                                                                                                                                                                                         |
+| Status          | in-progress                                                                                                                                                                                                               |
+| Owner           | pi-agent                                                                                                                                                                                                                  |
+| GitHub Issue    | [#15](https://github.com/enendufrankc/verifynNG/issues/15)                                                                                                                                                                |
+| Depends on      | E00                                                                                                                                                                                                                       |
+| Unblocks        | E02 (password.reset, mfa.recovery), E03 (tenant.welcome), E04 (batch.minted), E05, E07, E08, E15                                                                                                                          |
 | Readiness items | §6 transactional email · §6 SMS · §6 alert routing · §6 deliverability hygiene (bounce handling, suppression lists; SPF/DKIM/DMARC checklist) · §6 tenant-branded notifications (data model only, P2) · P0 summary item 8 |
 
 ## Goal
 
-One `NotificationService` that every other epic calls (or simply emits a domain event for) and that reliably turns a template id + data into an email, SMS or WhatsApp message — through an outbox, a BullMQ worker with retries, idempotency keys, delivery status, suppression on bounce, and per-tenant routing rules deciding which events reach which members on which channel. In compose every channel is real end-to-end against Mailpit and a fake SMS/WhatsApp service that also lets a developer *send* an inbound SMS into the platform. Without this an anomaly is a row nobody sees; alerts to tenant owners are the product's first promise.
+One `NotificationService` that every other epic calls (or simply emits a domain event for) and that reliably turns a template id + data into an email, SMS or WhatsApp message — through an outbox, a BullMQ worker with retries, idempotency keys, delivery status, suppression on bounce, and per-tenant routing rules deciding which events reach which members on which channel. In compose every channel is real end-to-end against Mailpit and a fake SMS/WhatsApp service that also lets a developer _send_ an inbound SMS into the platform. Without this an anomaly is a row nobody sees; alerts to tenant owners are the product's first promise.
 
 ## Scope
 
@@ -33,6 +33,7 @@ docs/notifications/**                             (templates.md, deliverability.
 ## Interfaces
 
 **Consumes**
+
 - E00: `prisma`, Redis/BullMQ connection, `loadEnv()`, compose `mailpit:1025` and `fake-sms:4101`.
 - E02: `UsersService.listMembers(tenantId, { roles })` for role-based routing recipients; `req.user` for the settings routes; `@Roles('owner')`.
 - E03 (optional): `Tenant.name`, `Tenant.logoUrl?` for branding; falls back to name only.
@@ -134,8 +135,8 @@ Default routing rules seeded per tenant on `tenant.activated` (and by `pnpm db:s
 
 ## Tasks
 
-- [ ] T1 `NotificationsModule` skeleton: ports, injection tokens, provider selection from env (section "E14": `MAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `SMS_PROVIDER`, `TERMII_*`, `FAKE_SMS_URL`, `WHATSAPP_PROVIDER`, `META_WA_*`, `NOTIFICATIONS_FROM`, `FAKE_WEBHOOK_SECRET`), compose defaults pointing at `mailpit`/`fake-sms`. `SmtpMailer` (nodemailer) and `FakeSms`/`FakeWhatsApp` adapters. Unit tests with the ports' contract test suite (one test file both real and fake adapters must pass).
-- [ ] T2 `tools/fakes/sms`: Fastify service, SQLite or in-memory store, Termii-shaped send endpoints, `GET /api/messages`, minimal server-rendered UI listing messages (channel, to, body, time), inbound simulation form (from number + text) POSTing to `API_URL/v1/verify/sms`, "simulate bounce" form POSTing a signed event to `API_URL/v1/webhooks/fake-mail`. Dockerfile + `/health`.
+- [x] T1 `NotificationsModule` skeleton: ports, injection tokens, provider selection from env (section "E14": `MAIL_PROVIDER`, `SMTP_*`, `RESEND_API_KEY`, `SMS_PROVIDER`, `TERMII_*`, `FAKE_SMS_URL`, `WHATSAPP_PROVIDER`, `META_WA_*`, `NOTIFICATIONS_FROM`, `FAKE_WEBHOOK_SECRET`), compose defaults pointing at `mailpit`/`fake-sms`. `SmtpMailer` (nodemailer) and `FakeSms`/`FakeWhatsApp` adapters. Unit tests with the ports' contract test suite (one test file both real and fake adapters must pass).
+- [x] T2 `tools/fakes/sms`: Fastify service, SQLite or in-memory store, Termii-shaped send endpoints, `GET /api/messages`, minimal server-rendered UI listing messages (channel, to, body, time), inbound simulation form (from number + text) POSTing to `API_URL/v1/verify/sms`, "simulate bounce" form POSTing a signed event to `API_URL/v1/webhooks/fake-mail`. Dockerfile + `/health`.
 - [ ] T3 Template engine: react-email components under `templates/`, a base layout taking `branding` (name, logo, colour, footer address, unsubscribe line), `TemplateRegistry` with typed `TemplateData` per id, plain-text and SMS variants for every id, snapshot tests, `pnpm notifications:preview` dev server (react-email preview) on port 4110 for authors. `docs/notifications/templates.md` lists ids, required data, owning epic.
 - [ ] T4 Outbox + worker: `NotificationService.send()` writes `NotificationOutbox` (idempotency: `idempotencyKey ?? sha256(templateId|recipient|canonical(data)|date-hour)`, duplicate → returns existing row), enqueues BullMQ `deliver`; worker renders, checks suppression, calls the port, records `NotificationDeliveryEvent`, retries with exponential backoff (5 attempts: 30 s → 16 min), marks `failed` and emits `notification.failed` after the last; emits `notification.sent`. Integration test against compose Redis + Mailpit API (`GET http://mailpit:8025/api/v1/messages`).
 - [ ] T5 `BrandingResolver` (Tenant name/logo → default platform sender; `TenantSenderIdentity` row overrides when `verified`) and `TenantSenderIdentity` migration. No UI.

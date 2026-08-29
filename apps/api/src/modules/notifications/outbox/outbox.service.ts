@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  Prisma,
   PrismaClient,
   NotificationChannel,
   OutboxStatus,
@@ -51,7 +52,7 @@ export class OutboxService {
         channel: params.channel,
         recipient: params.recipient,
         recipientUserId: params.recipientUserId,
-        data: params.data as Record<string, unknown>,
+        data: params.data as Prisma.InputJsonValue,
         renderedSubject: params.renderedSubject,
         idempotencyKey: key,
         status: OutboxStatus.queued,
@@ -154,7 +155,7 @@ export class OutboxService {
       data: {
         outboxId,
         type: type as never,
-        providerPayload: providerPayload as Record<string, unknown> | undefined,
+        providerPayload: providerPayload as Prisma.InputJsonValue | undefined,
       },
     });
   }

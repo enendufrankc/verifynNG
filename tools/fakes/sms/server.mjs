@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { createHmac } from 'node:crypto';
 
 const app = Fastify({ logger: true });
+await app.register((await import('@fastify/formbody')).default);
 const PORT = parseInt(process.env.PORT ?? '4101', 10);
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
