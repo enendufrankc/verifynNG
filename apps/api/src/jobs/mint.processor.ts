@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaClient } from '@prisma/client';
 import {
   generateCode,
@@ -22,6 +23,7 @@ export class MintProcessor extends WorkerHost {
     @Inject('PRISMA') private prisma: PrismaClient,
     private manifestService: ManifestService,
     private events: EventsService,
+    @InjectQueue('batch-exports') private exportsQueue: Queue,
   ) {
     super();
     const env = loadEnv();
@@ -137,5 +139,12 @@ export class MintProcessor extends WorkerHost {
       sha256,
       at: new Date(),
     });
+
+    // Kick off exports generation (QR ZIP, CSV, PDF, all-zip).
+    await this.exportsQueue.add(
+      'batch-exports',
+      { tenantId, batchId },
+      { removeOnComplete: true },
+    );
   }
 }

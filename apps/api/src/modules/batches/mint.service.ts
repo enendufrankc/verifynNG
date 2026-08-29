@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+// 'batch-exports' queue is registered in BullMQModule and re-exported, so
+// it is available to inject here without an extra module import.
 import { PrismaClient, Batch } from '@prisma/client';
 import {
   generateCode,
@@ -32,6 +34,7 @@ export class MintService {
     private manifestService: ManifestService,
     private events: EventsService,
     @InjectQueue('mint') private mintQueue: Queue,
+    @InjectQueue('batch-exports') private exportsQueue: Queue,
   ) {
     const env = loadEnv();
     this.ring = new StaticKeyRing(env.CORE_KEYS, env.CORE_ACTIVE_KID);
@@ -242,6 +245,13 @@ export class MintService {
       sha256,
       at: new Date(),
     });
+
+    // Kick off exports generation (QR ZIP, CSV, PDF, all-zip).
+    await this.exportsQueue.add(
+      'batch-exports',
+      { tenantId, batchId: batch.id },
+      { removeOnComplete: true },
+    );
 
     return { batch: mintedBatch, mode: 'sync' };
   }
