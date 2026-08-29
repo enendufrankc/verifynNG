@@ -2,6 +2,7 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
+  Logger,
   UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,6 +17,8 @@ import type { UserPrincipal } from '../types/principal';
 
 @Injectable()
 export class TenantContextGuard implements CanActivate {
+  private readonly logger = new Logger('AuditEvent');
+
   constructor(
     private reflector: Reflector,
     private tokenService: TokenService,
@@ -92,12 +95,17 @@ export class TenantContextGuard implements CanActivate {
         // Route param is authoritative
         request.tenantId = routeTenantId;
         if (isSupport) {
-          this.eventEmitter.emit('support.tenant.accessed', {
+          const event = {
             supportUserId: decoded.sub,
             tenantId: routeTenantId,
             route: request.originalUrl ?? request.url,
             at: new Date(),
-          });
+          };
+          this.eventEmitter.emit('support.tenant.accessed', event);
+          // E13 will subscribe to the event above for durable audit storage;
+          // this line is what makes the access visible in `docker compose logs api`
+          // in the meantime (and independently of E13 landing).
+          this.logger.log(`support.tenant.accessed ${JSON.stringify(event)}`);
         }
       } else {
         // Never confirm another tenant exists → 404
