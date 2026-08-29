@@ -97,6 +97,9 @@ importers:
       '@verifynng/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@verifynng/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@verifynng/db':
         specifier: workspace:*
         version: link:../../packages/db

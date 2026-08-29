@@ -7,6 +7,7 @@ import { PrismaModule } from './common/prisma.module';
 import { S3Module } from './common/s3.module';
 import { EventsModule } from './common/events.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { BatchesModule } from './modules/batches/batches.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
     S3Module,
     EventsModule,
     CatalogModule,
+    BatchesModule,
   ],
 })
 export class AppModule {
