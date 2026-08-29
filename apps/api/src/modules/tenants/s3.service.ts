@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   HeadObjectCommand,
+  GetObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -42,6 +43,23 @@ export class TenantS3Service {
   async head(key: string) {
     return this.client.send(
       new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+  }
+  async put(key: string, body: Buffer, contentType: string): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      }),
+    );
+  }
+  async presignGet(key: string, expiresIn = 86400): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { expiresIn },
     );
   }
 }
