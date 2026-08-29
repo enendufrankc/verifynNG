@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  VerdictEngine,
-  VerdictContext,
-  VerdictResult,
-} from './verdict-engine';
+import { VerdictEngine, VerdictContext, VerdictResult } from './verdict-engine';
 
 // ---------------------------------------------------------------------------
 // Context builder helper
@@ -44,11 +40,7 @@ type CtxOverrides = Partial<VerdictContext> & {
 
 function makeCtx(overrides: CtxOverrides = {}): VerdictContext {
   const tier = overrides.tier ?? 2;
-  const {
-    tier: _omitTier = undefined,
-    priorScanRegions,
-    ...rest
-  } = overrides;
+  const { tier: _omitTier = undefined, priorScanRegions, ...rest } = overrides;
   void _omitTier;
 
   const priorScans: VerdictContext['priorScans'] = (priorScanRegions ?? []).map(
@@ -248,6 +240,27 @@ describe('VerdictEngine', () => {
     expect(r.signals?.highCount).toBe(true);
   });
 
+  // 11b. AC2: the region-diversifying scan is the CURRENT one (not yet
+  // written to priorScans) — must be suspicious on this very call, not the
+  // next one.
+  it('returns suspicious when the current (unrecorded) scan is the second region', () => {
+    const priorScanRegions = Array.from({ length: 5 }, () => ({
+      city: 'Lagos',
+      country: 'NG',
+    }));
+    const r = engine.evaluate(
+      makeCtx({
+        priorScanRegions,
+        currentGeo: { city: 'Accra', country: 'GH' },
+      }),
+    );
+    expect(r.verdict).toBe('suspicious');
+    expect(r.severity).toBe('amber');
+    expect(r.reportable).toBe(true);
+    expect(r.history?.distinctRegions).toEqual(['Lagos, NG', 'Accra, GH']);
+    expect(r.signals?.multiRegion).toBe(true);
+  });
+
   // 12. Tier 2, flagged state → flagged even on first scan
   it('returns flagged (red, reportable) regardless of scan count', () => {
     const r = engine.evaluate(
@@ -354,8 +367,14 @@ describe('VerdictEngine', () => {
       }),
       makeCtx({
         priorScanRegions: [
-          ...Array.from({ length: 3 }, () => ({ city: 'Lagos', country: 'NG' })),
-          ...Array.from({ length: 3 }, () => ({ city: 'Paris', country: 'FR' })),
+          ...Array.from({ length: 3 }, () => ({
+            city: 'Lagos',
+            country: 'NG',
+          })),
+          ...Array.from({ length: 3 }, () => ({
+            city: 'Paris',
+            country: 'FR',
+          })),
         ],
       }),
       makeCtx({ unit: { ...baseUnit, state: 'flagged' } }),

@@ -71,7 +71,13 @@ export interface VerdictContext {
   } | null;
   product: { id: string; name: string; sku: string; gtin?: string } | null;
   batch: { id: string; oem?: string; commissionedAt: string } | null;
-  priorScans: Array<{ geoCity: string | null; geoCountry: string | null; createdAt: Date }>;
+  priorScans: Array<{
+    geoCity: string | null;
+    geoCountry: string | null;
+    createdAt: Date;
+  }>;
+  /** Geo of the scan being evaluated right now — not yet in `priorScans` (recorded after evaluation), but must count toward the region/suspicious decision and the response's `distinctRegions`. */
+  currentGeo?: { city: string | null; country: string | null } | null;
   redactedCode: string;
   brandDisplayName: string;
   brandSlug: string;
@@ -88,14 +94,12 @@ export const MESSAGES = {
     'This public code is not in our registry. If this was scanned on a bottle, the product line may be counterfeit.',
   unknownTier2:
     'This verification code does not exist in our registry. This product is likely counterfeit. Please report it.',
-  ok: (
-    brand: string,
-  ) => `This is a genuine ${brand} product line. For full unit authentication, find the hidden scratch-off code inside the pack.`,
-  authentic: 'You are the first person to verify this unit. Genuine, purchased new.',
-  alreadyVerified: (
-    date: string,
-    count: number,
-  ) => `This unit was first verified on ${date} and has been verified ${count} time(s). Normal for resale or shared use.`,
+  ok: (brand: string) =>
+    `This is a genuine ${brand} product line. For full unit authentication, find the hidden scratch-off code inside the pack.`,
+  authentic:
+    'You are the first person to verify this unit. Genuine, purchased new.',
+  alreadyVerified: (date: string, count: number) =>
+    `This unit was first verified on ${date} and has been verified ${count} time(s). Normal for resale or shared use.`,
   suspicious:
     'This code has been verified multiple times in different regions — possible counterfeit duplication. Treat with caution and report.',
   flagged:
@@ -124,19 +128,28 @@ function scanRegion(scan: {
   return null;
 }
 
-/** Distinct, order-preserving list of region strings from prior scans. */
+/**
+ * Distinct, order-preserving list of region strings from prior scans, plus
+ * the scan being evaluated right now (it isn't in `priorScans` yet — that
+ * row is only written after the verdict is decided).
+ */
 function distinctRegions(
   priorScans: VerdictContext['priorScans'],
+  currentGeo?: VerdictContext['currentGeo'],
 ): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const scan of priorScans) {
-    const region = scanRegion(scan);
+  const add = (region: string | null) => {
     if (region && !seen.has(region)) {
       seen.add(region);
       out.push(region);
     }
-  }
+  };
+  for (const scan of priorScans) add(scanRegion(scan));
+  if (currentGeo)
+    add(
+      scanRegion({ geoCity: currentGeo.city, geoCountry: currentGeo.country }),
+    );
   return out;
 }
 
@@ -229,7 +242,7 @@ export class VerdictEngine {
     }
 
     // From here on, a unit exists — attach brand / product / batch.
-    const regions = distinctRegions(ctx.priorScans);
+    const regions = distinctRegions(ctx.priorScans, ctx.currentGeo);
     const scanCount = ctx.priorScans.length + 1;
     const signals = {
       first: ctx.priorScans.length === 0,
