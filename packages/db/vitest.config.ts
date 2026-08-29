@@ -7,5 +7,11 @@ export default defineConfig({
     fileParallelism: false,
     include: ['src/**/*.test.ts'],
     exclude: ['**/dist/**'],
+    coverage: {
+      thresholds: {
+        lines: 80,
+        branches: 75,
+      },
+    },
   },
 });
