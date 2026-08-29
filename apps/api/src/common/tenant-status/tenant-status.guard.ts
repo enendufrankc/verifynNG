@@ -10,6 +10,7 @@ import { Reflector } from '@nestjs/core';
 import { prisma } from '@verifynng/db';
 import { PrincipalRequest } from '../principal';
 import { ALLOW_SUSPENDED_KEY, TENANT_STATUS_KEY } from './decorators';
+import { decidePolicyAcceptance } from './policy-acceptance';
 
 export type TenantStatusDecision =
   | { allowed: true }
@@ -76,6 +77,46 @@ export class TenantStatusGuard implements CanActivate {
       throw new GoneException({ error: decision.error });
     if (!decision.allowed)
       throw new ForbiddenException({ error: decision.error });
+
+    const isPolicyAcceptanceRoute = req.path.endsWith('/policies/accept');
+    if (
+      req.principal?.role === 'owner' &&
+      req.method !== 'GET' &&
+      !isPolicyAcceptanceRoute
+    ) {
+      const policies = await prisma.policyDocument.findMany({
+        where: { kind: { in: ['aup', 'tos'] } },
+        orderBy: { version: 'desc' },
+      });
+      const accepted = await prisma.policyAcceptance.findMany({
+        where: { tenantId, userId: req.principal.userId },
+        select: { kind: true, version: true },
+      });
+      const latest = new Map<string, string>();
+      for (const policy of policies) {
+        if (!latest.has(policy.kind)) latest.set(policy.kind, policy.version);
+      }
+      const pending = ['aup', 'tos'].filter((kind) => {
+        const version = latest.get(kind);
+        return (
+          version !== undefined &&
+          !accepted.some(
+            (item) => item.kind === kind && item.version === version,
+          )
+        );
+      });
+      const policyDecision = decidePolicyAcceptance(
+        req.principal.role,
+        req.method,
+        pending,
+        isPolicyAcceptanceRoute,
+      );
+      if (!policyDecision.allowed)
+        throw new ForbiddenException({
+          error: policyDecision.error,
+          pending: policyDecision.pending,
+        });
+    }
     return true;
   }
 }

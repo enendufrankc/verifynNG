@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Req,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrincipalRequest } from '../../common/principal';
 import {
@@ -44,21 +43,8 @@ export class TenantsController {
   }
   @Patch('tenants/:tenantId/settings')
   @RequireTenantStatus('pending', 'in_review', 'rejected', 'active')
-  update(
-    @Param('tenantId') id: string,
-    @Body() body: Record<string, unknown>,
-    @Req() req: PrincipalRequest,
-  ) {
-    return this.lifecycle
-      .pendingAcceptances(req.principal?.userId ?? 'development-user', id)
-      .then((pending) => {
-        if (pending.length)
-          throw new ForbiddenException({
-            error: 'policy_acceptance_required',
-            pending,
-          });
-        return this.lifecycle.updateSettings(id, body);
-      });
+  update(@Param('tenantId') id: string, @Body() body: Record<string, unknown>) {
+    return this.lifecycle.updateSettings(id, body);
   }
   @Post('tenants/:tenantId/verification/submit')
   @RequireTenantStatus('pending', 'rejected')
@@ -108,7 +94,10 @@ export class TenantsController {
   ): Promise<any> {
     return this.lifecycle.deleteDocument(id, documentId);
   }
-  @Post('tenants/:tenantId/policies/accept') @AllowWhenSuspended() accept(
+  @Post('tenants/:tenantId/policies/accept')
+  @RequireTenantStatus('pending', 'rejected', 'in_review', 'active')
+  @AllowWhenSuspended()
+  accept(
     @Param('tenantId') id: string,
     @Body() body: { kind: 'aup' | 'tos'; version: string },
     @Req() req: PrincipalRequest,
