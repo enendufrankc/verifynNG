@@ -10,7 +10,10 @@ import { Reflector } from '@nestjs/core';
 import { prisma } from '@verifynng/db';
 import { PrincipalRequest } from '../principal';
 import { ALLOW_SUSPENDED_KEY, TENANT_STATUS_KEY } from './decorators';
-import { decidePolicyAcceptance } from './policy-acceptance';
+import {
+  decidePolicyAcceptance,
+  pendingPolicyKinds,
+} from './policy-acceptance';
 
 export type TenantStatusDecision =
   | { allowed: true }
@@ -85,26 +88,18 @@ export class TenantStatusGuard implements CanActivate {
       !isPolicyAcceptanceRoute
     ) {
       const policies = await prisma.policyDocument.findMany({
-        where: { kind: { in: ['aup', 'tos'] } },
+        where: {
+          kind: { in: ['aup', 'tos'] },
+          effectiveFrom: { lte: new Date() },
+        },
         orderBy: { version: 'desc' },
+        select: { kind: true, version: true, effectiveFrom: true },
       });
       const accepted = await prisma.policyAcceptance.findMany({
         where: { tenantId, userId: req.principal.userId },
         select: { kind: true, version: true },
       });
-      const latest = new Map<string, string>();
-      for (const policy of policies) {
-        if (!latest.has(policy.kind)) latest.set(policy.kind, policy.version);
-      }
-      const pending = ['aup', 'tos'].filter((kind) => {
-        const version = latest.get(kind);
-        return (
-          version !== undefined &&
-          !accepted.some(
-            (item) => item.kind === kind && item.version === version,
-          )
-        );
-      });
+      const pending = pendingPolicyKinds(policies, accepted);
       const policyDecision = decidePolicyAcceptance(
         req.principal.role,
         req.method,

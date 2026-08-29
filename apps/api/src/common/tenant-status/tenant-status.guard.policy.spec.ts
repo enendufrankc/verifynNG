@@ -17,15 +17,11 @@ const db = prisma as unknown as {
   policyAcceptance: { findMany: ReturnType<typeof vi.fn> };
 };
 
-function executionContext(
-  request: Record<string, unknown>,
-  metadata?: string[],
-) {
+function executionContext(request: Record<string, unknown>) {
   return {
     switchToHttp: () => ({ getRequest: () => request }),
     getHandler: () => function handler() {},
     getClass: () => class Handler {},
-    metadata,
   } as never;
 }
 
@@ -43,12 +39,24 @@ describe('TenantStatusGuard policy bump enforcement', () => {
   it('selects the newest version and scopes acceptance to the authenticated user', async () => {
     db.tenant.findFirst.mockResolvedValue({ status: 'active' });
     db.policyDocument.findMany.mockResolvedValue([
-      { kind: 'tos', version: '2026-09-01' },
-      { kind: 'tos', version: '2026-08-01' },
-      { kind: 'aup', version: '2026-08-01' },
+      {
+        kind: 'tos',
+        version: '2026-08-28',
+        effectiveFrom: new Date('2026-08-28'),
+      },
+      {
+        kind: 'tos',
+        version: '2026-08-01',
+        effectiveFrom: new Date('2026-08-01'),
+      },
+      {
+        kind: 'aup',
+        version: '2026-08-01',
+        effectiveFrom: new Date('2026-08-01'),
+      },
     ]);
     db.policyAcceptance.findMany.mockResolvedValue([
-      { kind: 'tos', version: '2026-09-01' },
+      { kind: 'tos', version: '2026-08-28' },
     ]);
     const request = {
       path: '/tenants/tenant-a/settings',
@@ -68,12 +76,24 @@ describe('TenantStatusGuard policy bump enforcement', () => {
       where: { tenantId: 'tenant-a', userId: 'user-a' },
       select: { kind: true, version: true },
     });
+    expect(db.policyDocument.findMany).toHaveBeenCalledWith({
+      where: {
+        kind: { in: ['aup', 'tos'] },
+        effectiveFrom: { lte: expect.any(Date) },
+      },
+      orderBy: { version: 'desc' },
+      select: { kind: true, version: true, effectiveFrom: true },
+    });
   });
 
   it('returns the exact policy-required forbidden payload', async () => {
     db.tenant.findFirst.mockResolvedValue({ status: 'active' });
     db.policyDocument.findMany.mockResolvedValue([
-      { kind: 'tos', version: '2026-09-01' },
+      {
+        kind: 'tos',
+        version: '2026-08-28',
+        effectiveFrom: new Date('2026-08-28'),
+      },
     ]);
     db.policyAcceptance.findMany.mockResolvedValue([]);
     const request = {
@@ -168,9 +188,21 @@ describe('TenantStatusGuard policy bump enforcement', () => {
   it('allows an owner write when every current policy is accepted', async () => {
     db.tenant.findFirst.mockResolvedValue({ status: 'active' });
     db.policyDocument.findMany.mockResolvedValue([
-      { kind: 'tos', version: 'policy-b' },
-      { kind: 'tos', version: 'policy-a' },
-      { kind: 'aup', version: 'policy-a' },
+      {
+        kind: 'tos',
+        version: 'policy-b',
+        effectiveFrom: new Date('2026-08-28'),
+      },
+      {
+        kind: 'tos',
+        version: 'policy-a',
+        effectiveFrom: new Date('2026-08-01'),
+      },
+      {
+        kind: 'aup',
+        version: 'policy-a',
+        effectiveFrom: new Date('2026-08-01'),
+      },
     ]);
     db.policyAcceptance.findMany.mockResolvedValue([
       { kind: 'tos', version: 'policy-b' },
