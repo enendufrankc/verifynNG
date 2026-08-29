@@ -15,6 +15,7 @@
     "db:migrate": "pnpm --filter @verifynng/db db:migrate",
     "db:reset": "pnpm --filter @verifynng/db db:reset",
     "db:seed": "pnpm --filter @verifynng/db db:seed",
+    "db:seed:realistic": "pnpm --filter @verifynng/db db:seed:realistic",
     "prepare": "husky"
   },
   "devDependencies": {
