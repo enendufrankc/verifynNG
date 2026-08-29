@@ -143,10 +143,57 @@ model AuditLog {
   target    String
   payload   Json
   prevHash  String?
-  hash      String
+  hash      String   @unique
   createdAt DateTime @default(now())
+
+  // E13 — AuditLog extensions
+  seq          BigInt          @unique @default(autoincrement())
+  actorType    AuditActorType  @default(user)
+  actorIp      String?
+  requestId    String?
+  targetType   String          @default("")
+  targetId     String          @default("")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@index([targetType, targetId])
+}
+
+enum AuditActorType {
+  user
+  system
+  oem
+  support
+  apikey
+}
+
+// E13 — Audit chain verification checkpoints
+model AuditChainCheckpoint {
+  id            String   @id @default(cuid())
+  fromSeq       BigInt
+  toSeq         BigInt
+  headHash      String
+  ok            Boolean
+  rowsChecked   Int
+  firstBadSeq   BigInt?
+  triggeredById String?
+  createdAt     DateTime @default(now())
+}
+
+// E13 — Per-tenant quota overrides
+model QuotaOverride {
+  id          String   @id @default(cuid())
+  tenantId    String
+  kind        String
+  limit       Int
+  window      String
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, kind])
 }
