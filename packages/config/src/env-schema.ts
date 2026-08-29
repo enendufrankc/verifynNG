@@ -27,10 +27,27 @@ const e00Schema = z.object({
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:4000'),
 });
 
+// ── E02 Identity & Access ──────────────────────────────────────
+const e02Schema = e00Schema.extend({
+  JWT_KEYS: z
+    .string()
+    .default(
+      'k1:0000000000000000000000000000000000000000000000000000000000000000',
+    ),
+  JWT_ACTIVE_KID: z.string().default('k1'),
+  JWT_ACCESS_TTL: z.string().default('15m'),
+  REFRESH_TTL: z.string().default('30d'),
+  MFA_ENC_KEY: z.string().default('00000000000000000000000000000000'), // 32 hex chars = 16 bytes
+  ARGON2_M_COST: z.coerce.number().default(65536), // 64 MiB
+  ARGON2_T_COST: z.coerce.number().default(3),
+  ARGON2_P_COST: z.coerce.number().default(4),
+  INTERNAL_API_KEYS: z.string().default(''),
+  APP_BASE_URL: z.string().default('http://localhost:3001'),
+});
+
 // ── Sections for other epics will be added here ────────────────
-// E02 will add JWT_SECRET, etc.
 // E14 will add EMAIL_FROM, etc.
 
-export const envSchema = e00Schema;
+export const envSchema = e02Schema;
 
 export type Env = z.infer<typeof envSchema>;

@@ -142,6 +142,17 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      # ── E02 Identity & Access ──
+      JWT_KEYS: k1:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2,k2:f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5
+      JWT_ACTIVE_KID: k1
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TTL: 30d
+      MFA_ENC_KEY: aabbccdd11223344aabbccdd11223344
+      ARGON2_M_COST: '65536'
+      ARGON2_T_COST: '3'
+      ARGON2_P_COST: '4'
+      INTERNAL_API_KEYS: fake-sms:keysms1234,fake-pay:keypay1234,fake-geo:keygeo1234,worker:keywork1234
+      APP_BASE_URL: http://localhost:3001
     depends_on:
       postgres:
         condition: service_healthy
