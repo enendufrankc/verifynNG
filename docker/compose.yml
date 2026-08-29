@@ -142,6 +142,16 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: api
+      LOKI_URL: http://loki:3100
+      PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
+      PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OPS_ALERT_EMAILS: ${OPS_ALERT_EMAILS:-ops@verifynng.local}
+      ALERT_WEBHOOK_SECRET: ${ALERT_WEBHOOK_SECRET:-alert-webhook-secret-local}
+      METRICS_PORT: '9464'
+      VERIFY_ARTIFICIAL_DELAY_MS: ${VERIFY_ARTIFICIAL_DELAY_MS:-0}
     depends_on:
       postgres:
         condition: service_healthy
@@ -212,9 +222,12 @@ services:
 
   # ── Observability stack (profile: observability) ───────────
   grafana:
-    image: grafana/grafana:11
+    image: grafana/grafana:11.6.0
     profiles:
       - observability
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     ports:
       - '${GRAFANA_PORT:-3100}:3000'
     volumes:
