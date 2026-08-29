@@ -10,6 +10,8 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { NotificationService } from './notifications.service';
@@ -187,6 +189,7 @@ export class WebhooksController {
   @Post('fake-mail')
   @HttpCode(HttpStatus.OK)
   async fakeMailWebhook(
+    @Headers('x-fake-signature') signature: string,
     @Body()
     body: {
       type: 'bounce' | 'complaint';
@@ -194,6 +197,10 @@ export class WebhooksController {
       reason?: string;
     },
   ) {
+    const raw = JSON.stringify(body);
+    if (!this.webhooksService.verifyFakeMailSignature(raw, signature ?? '')) {
+      throw new UnauthorizedException('Invalid fake-mail webhook signature');
+    }
     await this.webhooksService.handleFakeMailWebhook(body);
     return { ok: true };
   }

@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaClient, NotificationChannel, SuppressionReason } from '@prisma/client';
+import {
+  PrismaClient,
+  NotificationChannel,
+  SuppressionReason,
+} from '@prisma/client';
 import { SuppressionsService } from '../suppressions/suppressions.service';
 import { OutboxService } from '../outbox/outbox.service';
 
@@ -25,8 +29,11 @@ export class WebhooksService {
   verifyFakeMailSignature(payload: string, signature: string): boolean {
     const expected = createHmac('sha256', this.fakeWebhookSecret)
       .update(payload)
-      .digest('hex');
-    return expected === signature;
+      .digest();
+    const received = Buffer.from(signature, 'hex');
+    return (
+      received.length === expected.length && timingSafeEqual(received, expected)
+    );
   }
 
   /** Process a fake-mail bounce/complaint webhook */
@@ -50,7 +57,11 @@ export class WebhooksService {
 
       // Find any outbox row for this recipient and update status
       const outboxRows = await this.prisma.notificationOutbox.findMany({
-        where: { recipient: body.recipient, channel, status: { in: ['queued', 'sending'] } },
+        where: {
+          recipient: body.recipient,
+          channel,
+          status: { in: ['queued', 'sending'] },
+        },
       });
 
       for (const row of outboxRows) {
@@ -109,7 +120,11 @@ export class WebhooksService {
         where: { providerMessageId: body.message_id },
       });
       if (outboxRow) {
-        await this.outboxService.addDeliveryEvent(outboxRow.id, 'delivered', body);
+        await this.outboxService.addDeliveryEvent(
+          outboxRow.id,
+          'delivered',
+          body,
+        );
       }
     }
   }
