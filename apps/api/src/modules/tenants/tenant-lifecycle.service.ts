@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { prisma } from '@verifynng/db';
 import { TenantS3Service } from './s3.service';
+import { TenantEventBus } from './tenant-events';
 
 const requiredDocuments = ['cac_certificate', 'director_id'] as const;
 const slugify = (value: string) =>
@@ -24,7 +25,10 @@ export interface TenantPrincipal {
 
 @Injectable()
 export class TenantLifecycleService {
-  constructor(private readonly storage: TenantS3Service) {}
+  constructor(
+    private readonly storage: TenantS3Service,
+    private readonly events: TenantEventBus,
+  ) {}
   async create(input: {
     ownerUserId: string;
     ownerEmail?: string;
@@ -88,6 +92,13 @@ export class TenantLifecycleService {
       });
       return { created, owner };
     });
+    this.events.emit('tenant.created', {
+      tenantId: tenant.created.id,
+      slug: tenant.created.slug,
+      ownerUserId: tenant.owner.id,
+      country: tenant.created.country,
+      at: new Date().toISOString(),
+    });
     return {
       tenant: tenant.created,
       accessToken: this.token(tenant.owner.id, tenant.created.id),
@@ -118,7 +129,7 @@ export class TenantLifecycleService {
     const tenant = await this.get(tenantId);
     if (tenant.status !== 'pending' && tenant.status !== 'rejected')
       throw new ConflictException('invalid_status_transition');
-    return prisma.tenant.update({
+    const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         status: 'in_review',
@@ -126,23 +137,30 @@ export class TenantLifecycleService {
         statusReason: null,
       },
     });
+    this.events.emit('tenant.submitted', {
+      tenantId,
+      documentKinds: [...kinds],
+      at: new Date().toISOString(),
+    });
+    return updated;
   }
   async transition(
     tenantId: string,
-    status: 'active' | 'rejected' | 'suspended' | 'restricted',
+    status: 'active' | 'pending' | 'rejected' | 'suspended' | 'restricted',
     by: string,
     reason?: string,
   ): Promise<any> {
     const tenant = await this.get(tenantId);
     const legal: Record<string, string[]> = {
       active: ['in_review', 'suspended', 'restricted'],
+      pending: ['in_review'],
       rejected: ['in_review'],
       suspended: ['active', 'restricted'],
       restricted: ['active', 'suspended'],
     };
     if (!legal[status]?.includes(tenant.status))
       throw new ConflictException('invalid_status_transition');
-    return prisma.tenant.update({
+    const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         status,
@@ -152,6 +170,21 @@ export class TenantLifecycleService {
         suspendedAt: status === 'suspended' ? new Date() : undefined,
       },
     });
+    const eventName =
+      status === 'suspended'
+        ? 'tenant.suspended'
+        : status === 'pending' || status === 'rejected'
+          ? 'tenant.rejected'
+          : tenant.status === 'suspended'
+            ? 'tenant.reactivated'
+            : 'tenant.verified';
+    this.events.emit(eventName, {
+      tenantId,
+      by,
+      ...(reason ? { reason } : {}),
+      at: new Date().toISOString(),
+    });
+    return updated;
   }
   async offboard(
     tenantId: string,
@@ -176,6 +209,12 @@ export class TenantLifecycleService {
     });
     const exportRecord = await prisma.tenantExport.create({
       data: { tenantId, status: 'queued' },
+    });
+    this.events.emit('tenant.offboarded', {
+      tenantId,
+      by,
+      scheduledDeletionAt: scheduled.toISOString(),
+      at: new Date().toISOString(),
     });
     return {
       tenant: updated,
@@ -211,11 +250,19 @@ export class TenantLifecycleService {
     const current = await this.currentVersions();
     if (current[kind] !== version)
       throw new BadRequestException('outdated_policy_version');
-    return prisma.policyAcceptance.upsert({
+    const acceptance = await prisma.policyAcceptance.upsert({
       where: { tenantId_kind_version: { tenantId, kind, version } },
       update: { userId, acceptedAt: new Date() },
       create: { tenantId, userId, kind, version },
     });
+    this.events.emit('policy.accepted', {
+      tenantId,
+      userId,
+      kind,
+      version,
+      at: new Date().toISOString(),
+    });
+    return acceptance;
   }
   async updateSettings(
     tenantId: string,
@@ -230,6 +277,15 @@ export class TenantLifecycleService {
     return prisma.verificationDocument.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'asc' },
+    });
+  }
+  async addReviewNote(
+    tenantId: string,
+    authorId: string,
+    body: string,
+  ): Promise<any> {
+    return prisma.tenantReviewNote.create({
+      data: { tenantId, authorId, body },
     });
   }
   async createDocument(
