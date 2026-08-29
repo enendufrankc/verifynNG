@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 → 3 (cross-cutting; starts with wave 1, owns the CI matrix to the end) |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | frank.enendu |
 | GitHub Issue | [#22](https://github.com/enendufrankc/verifynNG/issues/22) |
 | Depends on | E00 (test tooling, `createTestDatabase()`, CI skeleton); consumes every feature epic as it lands |
 | Unblocks | every epic's demo (realistic seed), E15/E16/E18/E20 acceptance flows, release gate |
