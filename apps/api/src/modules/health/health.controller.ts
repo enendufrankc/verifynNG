@@ -1,13 +1,17 @@
 import { Controller, Get } from '@nestjs/common';
-import { HealthCheckResult } from '@nestjs/terminus';
 import { HealthService } from './health.service';
 
-@Controller('health')
+@Controller()
 export class HealthController {
   constructor(private healthService: HealthService) {}
 
-  @Get()
-  check(): Promise<HealthCheckResult> {
-    return this.healthService.check();
+  @Get('health')
+  getHealth() {
+    return this.healthService.getLiveness();
+  }
+
+  @Get('ready')
+  getReady() {
+    return this.healthService.getReadiness();
   }
 }

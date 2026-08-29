@@ -1,0 +1,77 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: platform-alerts
+    folder: Platform
+    interval: 30s
+    rules:
+      - uid: verify_error_rate_high
+        title: VerifyErrorRateHigh
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            model:
+              expr: sum(rate(verify_verdicts_total{verdict="error"}[5m])) / sum(rate(verify_verdicts_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: Verify 5xx error rate exceeds 1% over 5m
+
+      - uid: verify_latency_p95_high
+        title: VerifyLatencyP95High
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            model:
+              expr: histogram_quantile(0.95, sum(rate(verify_latency_ms_bucket[5m])) by (le)) > 500
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Verify p95 latency exceeds 500ms over 10m
+
+      - uid: queue_lag_high
+        title: QueueLagHigh
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            model:
+              expr: histogram_quantile(0.95, sum(rate(queue_lag_ms_bucket[5m])) by (le)) > 60000
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Oldest waiting job lag exceeds 60s over 5m
+
+      - uid: probe_failing
+        title: ProbeFailing
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            model:
+              expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Synthetic uptime probe failing for 2 consecutive cycles
+
+      - uid: readiness_failing
+        title: ReadinessFailing
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: Prometheus
+            model:
+              expr: probe_success{target="verify-api"} == 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: API /ready failing for 1m
