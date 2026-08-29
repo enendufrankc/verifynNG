@@ -24,7 +24,7 @@ export function loadManifest(): SeedManifest {
   if (_manifest) return _manifest;
   const path = resolve(
     __dirname,
-    '../../../../packages/db/prisma/seed/realistic/manifest.json',
+    '../../../packages/db/prisma/seed/realistic/manifest.json',
   );
   const raw = readFileSync(path, 'utf-8');
   _manifest = JSON.parse(raw);
