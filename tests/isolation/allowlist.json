@@ -1,0 +1,24 @@
+{
+  "publicRoutes": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "justification": "Health check endpoint — no tenant data"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/verify/*",
+      "justification": "Public verification endpoint — stateless, no tenant data exposed"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/public/*",
+      "justification": "Public API routes — explicitly public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/docs",
+      "justification": "OpenAPI documentation — no tenant data"
+    }
+  ]
+}
