@@ -1,8 +1,12 @@
 import 'reflect-metadata';
+import { startOtel } from './telemetry/otel';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { loadEnv } from '@verifynng/config';
+
+// Bootstrap OTel before Nest — must be first
+startOtel();
 
 async function bootstrap() {
   const env = loadEnv();
