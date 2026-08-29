@@ -58,7 +58,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
       useFactory: (config: ConfigService) => {
         switch (config.get('MAIL_PROVIDER')) {
           case 'resend':
-            return new ResendMailer();
+            return new ResendMailer(config);
           default:
             return new SmtpMailer(config);
         }
@@ -70,7 +70,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
       useFactory: (config: ConfigService) => {
         switch (config.get('SMS_PROVIDER')) {
           case 'termii':
-            return new TermiiSms();
+            return new TermiiSms(config);
           default:
             return new FakeSms(config);
         }
