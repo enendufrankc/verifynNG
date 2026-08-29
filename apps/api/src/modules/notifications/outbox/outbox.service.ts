@@ -59,6 +59,8 @@ export class OutboxService {
       },
     });
 
+    await this.addDeliveryEvent(row.id, 'queued');
+
     return { id: row.id, status: row.status, isDuplicate: false };
   }
 

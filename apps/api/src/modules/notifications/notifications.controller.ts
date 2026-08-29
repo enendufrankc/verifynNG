@@ -34,8 +34,18 @@ export class NotificationsController {
     private prisma: PrismaClient,
   ) {}
 
+  private async resolveTenantId(tenantId: string): Promise<string> {
+    if (tenantId !== 'ivoryglow') return tenantId;
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { slug: 'ivoryglow' },
+      select: { id: true },
+    });
+    return tenant?.id ?? tenantId;
+  }
+
   @Get('rules')
   async getRules(@TenantId() tenantId: string) {
+    tenantId = await this.resolveTenantId(tenantId);
     return this.prisma.notificationRoutingRule.findMany({
       where: { tenantId },
       orderBy: { eventName: 'asc' },
@@ -54,6 +64,7 @@ export class NotificationsController {
       enabled?: boolean;
     }>,
   ) {
+    tenantId = await this.resolveTenantId(tenantId);
     await this.prisma.notificationRoutingRule.deleteMany({
       where: { tenantId },
     });
@@ -84,6 +95,7 @@ export class NotificationsController {
     @Query('templateId') templateId?: string,
     @Query('cursor') cursor?: string,
   ) {
+    tenantId = await this.resolveTenantId(tenantId);
     return this.outboxService.listOutbox({
       tenantId,
       status: status as never,
@@ -96,7 +108,7 @@ export class NotificationsController {
   @Post('outbox/:id/retry')
   @HttpCode(HttpStatus.OK)
   async retryOutbox(@Param('id') id: string) {
-    await this.outboxService.retryOutboxRow(id);
+    await this.notificationService.retry(id);
     return { ok: true };
   }
 
@@ -105,6 +117,7 @@ export class NotificationsController {
     @TenantId() tenantId: string,
     @Query('channel') channel?: string,
   ) {
+    tenantId = await this.resolveTenantId(tenantId);
     return this.suppressionsService.listSuppressions({
       tenantId,
       channel: channel as never,
@@ -121,6 +134,7 @@ export class NotificationsController {
       reason: SuppressionReason;
     },
   ) {
+    tenantId = await this.resolveTenantId(tenantId);
     return this.suppressionsService.addSuppression({
       tenantId,
       channel: body.channel,
@@ -142,6 +156,7 @@ export class NotificationsController {
     @TenantId() tenantId: string,
     @Body() body: { channel?: 'email' | 'sms' },
   ) {
+    tenantId = await this.resolveTenantId(tenantId);
     const user = await this.prisma.user.findFirst({
       where: { tenantId },
     });
