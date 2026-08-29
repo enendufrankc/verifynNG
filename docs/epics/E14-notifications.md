@@ -145,8 +145,8 @@ Default routing rules seeded per tenant on `tenant.activated` (and by `pnpm db:s
 - [ ] T8 Admin routes: rules CRUD, outbox listing/retry, suppressions CRUD, `POST /v1/notifications/test`. `@Audited` on mutating routes. E2E-style Nest tests.
 - [ ] T9 web-admin `(console)/notifications/`: tabs Rules (matrix event × channel × role with toggles; save = PUT), Outbox (table with status chips, filter, retry), Suppressions (list, add, remove), "Send test email/SMS to me" button. Nav entry under Settings. Playwright.
 - [ ] T10 `ResendMailer` and `TermiiSms` adapters (unit-tested against recorded HTTP fixtures with `msw`; never called in CI), `MetaWhatsApp` stub with the Cloud API request shape and a `NotConfiguredError`.
-- [ ] T11 `docs/notifications/deliverability.md`: SPF/DKIM/DMARC records for the platform domain, Resend domain verification steps, warm-up, bounce/complaint thresholds, Termii sender-ID registration (Nigeria DND rules — transactional route), WhatsApp template approval. `docs/notifications/routing.md`: how an epic adds an event + template.
-- [ ] T12 Wire-up: `NotificationsModule` import line in `AppModule`; `pnpm db:seed` extension seeding default rules for `ivoryglow`; README section.
+- [x] T11 `docs/notifications/deliverability.md`: SPF/DKIM/DMARC records for the platform domain, Resend domain verification steps, warm-up, bounce/complaint thresholds, Termii sender-ID registration (Nigeria DND rules — transactional route), WhatsApp template approval. `docs/notifications/routing.md`: how an epic adds an event + template.
+- [x] T12 Wire-up: `NotificationsModule` import line in `AppModule`; `pnpm db:seed` extension seeding default rules for `ivoryglow`; README section.
 
 ## Acceptance criteria
 
