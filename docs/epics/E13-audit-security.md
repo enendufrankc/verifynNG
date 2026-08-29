@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | enendufrankc |
 | GitHub Issue | [#14](https://github.com/enendufrankc/verifynNG/issues/14) |
 | Depends on | E00 |
 | Unblocks | E04, E05, E06, E07, E08, E16, E18 (every epic with a mutating route or a quota) |
