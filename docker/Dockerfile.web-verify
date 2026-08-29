@@ -12,6 +12,7 @@ COPY apps/web-verify/ apps/web-verify/
 COPY packages/config/ packages/config/
 COPY tsconfig.base.json ./
 
+RUN pnpm --filter @verifynng/config build
 RUN pnpm --filter @verifynng/web-verify build
 
 # ── Production stage ───────────────────────────────────────────
