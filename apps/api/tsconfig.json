@@ -8,6 +8,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "target": "ES2022",
+    "jsx": "react-jsx",
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
