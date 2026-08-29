@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { validateGtin } from './products.service';
+import { describe, it, expect, vi } from 'vitest';
+import { validateGtin, ProductsService } from './products.service';
 
 describe('validateGtin', () => {
   it('accepts valid GTIN-8', () => expect(validateGtin('96385074')).toBe(true));
@@ -15,8 +15,24 @@ describe('validateGtin', () => {
   it('rejects non-numeric', () =>
     expect(validateGtin('abcdefghijklmn')).toBe(false));
   it('rejects empty', () => expect(validateGtin('')).toBe(false));
-  it('accepts GTIN with leading/trailing whitespace', () =>
-    expect(validateGtin(' 01234567890128 ')).toBe(true));
+  it('rejects GTIN with leading/trailing whitespace', () =>
+    expect(validateGtin(' 01234567890128 ')).toBe(false));
   it('rejects GTIN-13 with bad check digit', () =>
     expect(validateGtin('0123456789013')).toBe(false));
+});
+
+describe('ProductsService events', () => {
+  it('emits product.created after creating a product', async () => {
+    const product = { id: 'p1', tenantId: 't1', sku: 'SKU1' };
+    const prisma = { product: { create: async () => product } } as never;
+    const events = { emit: vi.fn().mockResolvedValue(undefined) };
+    const service = new ProductsService(prisma, events as never);
+
+    await service.create('t1', { sku: 'SKU1', name: 'Product' });
+
+    expect(events.emit).toHaveBeenCalledWith(
+      'product.created',
+      expect.objectContaining({ tenantId: 't1', productId: 'p1', sku: 'SKU1' }),
+    );
+  });
 });

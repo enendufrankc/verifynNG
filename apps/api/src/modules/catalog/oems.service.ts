@@ -5,10 +5,14 @@ import {
   Inject,
 } from '@nestjs/common';
 import { PrismaClient, Oem, Prisma } from '@prisma/client';
+import { EventsService } from '../../common/events.service';
 
 @Injectable()
 export class OemsService {
-  constructor(@Inject('PRISMA') private prisma: PrismaClient) {}
+  constructor(
+    @Inject('PRISMA') private prisma: PrismaClient,
+    private events: EventsService,
+  ) {}
 
   async list(tenantId: string): Promise<Oem[]> {
     return this.prisma.oem.findMany({
@@ -38,7 +42,7 @@ export class OemsService {
     },
   ): Promise<Oem> {
     try {
-      return await this.prisma.oem.create({
+      const oem = await this.prisma.oem.create({
         data: {
           tenantId,
           name: dto.name.trim(),
@@ -50,6 +54,14 @@ export class OemsService {
           notes: dto.notes,
         },
       });
+      await this.events.emit('oem.created', {
+        tenantId,
+        oemId: oem.id,
+        name: oem.name,
+        country: oem.country ?? undefined,
+        at: new Date(),
+      });
+      return oem;
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -104,10 +116,18 @@ export class OemsService {
     oemId: string,
     status: 'active' | 'suspended',
   ): Promise<Oem> {
-    await this.get(tenantId, oemId);
-    return this.prisma.oem.update({
+    const existing = await this.get(tenantId, oemId);
+    const oem = await this.prisma.oem.update({
       where: { id: oemId },
       data: { status },
     });
+    await this.events.emit('oem.status.changed', {
+      tenantId,
+      oemId,
+      from: existing.status,
+      to: status,
+      at: new Date(),
+    });
+    return oem;
   }
 }

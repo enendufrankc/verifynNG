@@ -5,6 +5,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { PrismaClient, Product, Prisma } from '@prisma/client';
+import { EventsService } from '../../common/events.service';
 
 /**
  * Validate a GTIN check digit (GS1 mod-10).
@@ -12,7 +13,7 @@ import { PrismaClient, Product, Prisma } from '@prisma/client';
  * Returns true if valid, false otherwise.
  */
 export function validateGtin(gtin: string): boolean {
-  const digits = gtin.trim();
+  const digits = gtin;
   if (!/^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(digits)) return false;
   const len = digits.length;
   let sum = 0;
@@ -27,7 +28,10 @@ export function validateGtin(gtin: string): boolean {
 
 @Injectable()
 export class ProductsService {
-  constructor(@Inject('PRISMA') private prisma: PrismaClient) {}
+  constructor(
+    @Inject('PRISMA') private prisma: PrismaClient,
+    private events: EventsService,
+  ) {}
 
   async list(tenantId: string): Promise<Product[]> {
     return this.prisma.product.findMany({
@@ -56,7 +60,7 @@ export class ProductsService {
   ): Promise<Product> {
     const sku = dto.sku.trim();
     const name = dto.name.trim();
-    let gtin = dto.gtin?.trim() || undefined;
+    const gtin = dto.gtin || undefined;
 
     if (gtin) {
       if (!validateGtin(gtin)) {
@@ -65,11 +69,10 @@ export class ProductsService {
           message: 'gtin_check_digit',
         });
       }
-      gtin = gtin.replace(/\s/g, '');
     }
 
     try {
-      return await this.prisma.product.create({
+      const product = await this.prisma.product.create({
         data: {
           tenantId,
           sku,
@@ -79,6 +82,14 @@ export class ProductsService {
           category: dto.category,
         },
       });
+      await this.events.emit('product.created', {
+        tenantId,
+        productId: product.id,
+        sku: product.sku,
+        gtin: product.gtin ?? undefined,
+        at: new Date(),
+      });
+      return product;
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -112,7 +123,7 @@ export class ProductsService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.gtin !== undefined) {
-      const gtin = dto.gtin.trim();
+      const gtin = dto.gtin;
       if (gtin === '') {
         data.gtin = null;
       } else {
@@ -122,15 +133,22 @@ export class ProductsService {
             message: 'gtin_check_digit',
           });
         }
-        data.gtin = gtin.replace(/\s/g, '');
+        data.gtin = gtin;
       }
     }
 
     try {
-      return await this.prisma.product.update({
+      const product = await this.prisma.product.update({
         where: { id: productId },
         data,
       });
+      await this.events.emit('product.updated', {
+        tenantId,
+        productId,
+        changed: Object.keys(data),
+        at: new Date(),
+      });
+      return product;
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -148,9 +166,16 @@ export class ProductsService {
 
   async archive(tenantId: string, productId: string): Promise<Product> {
     await this.get(tenantId, productId);
-    return this.prisma.product.update({
+    const product = await this.prisma.product.update({
       where: { id: productId },
       data: { archivedAt: new Date() },
     });
+    await this.events.emit('product.updated', {
+      tenantId,
+      productId,
+      changed: ['archivedAt'],
+      at: new Date(),
+    });
+    return product;
   }
 }
