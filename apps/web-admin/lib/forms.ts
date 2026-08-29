@@ -1,6 +1,11 @@
 'use client';
 
-import { useForm, type FieldValues, type DefaultValues } from 'react-hook-form';
+import {
+  useForm,
+  type FieldValues,
+  type DefaultValues,
+  type Path,
+} from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type ZodSchema } from 'zod';
 import { ApiError } from './api-client';
@@ -11,7 +16,7 @@ export function setServerErrors<T extends FieldValues>(
 ) {
   if (error instanceof ApiError && error.details) {
     for (const detail of error.details) {
-      form.setError(detail.field as keyof T, {
+      form.setError(detail.field as Path<T>, {
         type: 'server',
         message: detail.message,
       });

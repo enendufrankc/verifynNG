@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { NAV, NAV_SECTIONS, type NavEntry } from '@/app/(console)/nav.config';
+import { NAV_SECTIONS, type NavEntry } from '@/app/(console)/nav.config';
 import { filterNavByRole } from '@/lib/role-utils';
 import { useAuth } from '@/lib/auth-store';
 import { PanelLeftCloseIcon, PanelLeftIcon } from 'lucide-react';
@@ -27,17 +27,17 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex h-full flex-col border-r border-border bg-surface transition-all',
+        'border-border bg-surface flex h-full flex-col border-r transition-all',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
-      <div className="flex items-center justify-between border-b border-border px-3 py-3">
+      <div className="border-border flex items-center justify-between border-b px-3 py-3">
         {!collapsed && (
-          <span className="text-sm font-semibold text-fg">Verify Admin</span>
+          <span className="text-fg text-sm font-semibold">Verify Admin</span>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded-md p-1.5 text-fg-muted hover:bg-surface-sunken"
+          className="text-fg-muted hover:bg-surface-sunken rounded-md p-1.5"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (
@@ -48,14 +48,11 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav
-        className="flex-1 overflow-y-auto py-2"
-        aria-label="Main navigation"
-      >
+      <nav className="flex-1 overflow-y-auto py-2" aria-label="Main navigation">
         {groupedBySection.map((group) => (
           <div key={group.key} className="mb-3">
             {!collapsed && (
-              <div className="px-3 pb-1 text-xs font-medium uppercase tracking-wider text-fg-faint">
+              <div className="text-fg-faint px-3 pb-1 text-xs font-medium tracking-wider uppercase">
                 {group.label}
               </div>
             )}
@@ -70,7 +67,7 @@ export function Sidebar() {
                   key={entry.id}
                   href={entry.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-md mx-2 px-2 py-1.5 text-sm transition-colors',
+                    'mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
                     isActive
                       ? 'bg-surface-sunken text-fg font-medium'
                       : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
