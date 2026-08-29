@@ -4,10 +4,11 @@
  * Used by AC1 to test @Audited() and chain integrity.
  */
 
-import { Controller, Post, Get, Req, Res } from '@nestjs/common';
+import { Controller, Post, Get, Req } from '@nestjs/common';
 import { Audited } from './audited.decorator.js';
 import { AuditService } from './audit.service.js';
 import { AuditChainService } from './audit-chain.service.js';
+import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 
 @Controller('v1/_dev/audit-demo')
 export class DevAuditController {
@@ -18,16 +19,16 @@ export class DevAuditController {
 
   @Post()
   @Audited('demo.touch')
-  async touch(@Req() req: any) {
+  async touch() {
     // The @Audited decorator handles the audit recording.
     // Return a simple confirmation.
     return { ok: true, message: 'demo.touch recorded' };
   }
 
   @Get()
-  async list(@Req() req: any) {
+  async list(@Req() req: AuthenticatedRequest) {
     return this.auditService.query({
-      tenantId: req?.user?.tenantId ?? 'ivoryglow',
+      tenantId: req?.user?.tenantId,
       limit: 50,
     });
   }

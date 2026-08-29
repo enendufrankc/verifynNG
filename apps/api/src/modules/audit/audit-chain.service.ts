@@ -39,11 +39,11 @@ export class AuditChainService {
     const maxSeqRow = await this.prisma.auditLog.aggregate({
       _max: { seq: true },
     });
-    const rangeEnd = opts?.toSeq ?? (maxSeqRow._max.seq ?? 0n);
+    const rangeEnd = opts?.toSeq ?? maxSeqRow._max.seq ?? 0n;
 
     if (rangeEnd < rangeStart || rangeEnd === 0n) {
       // No rows to check
-      const checkpoint = await this.prisma.auditChainCheckpoint.create({
+      await this.prisma.auditChainCheckpoint.create({
         data: {
           fromSeq: rangeStart,
           toSeq: rangeEnd,

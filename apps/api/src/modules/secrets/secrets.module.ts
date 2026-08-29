@@ -4,13 +4,17 @@
 
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SECRETS_TOKEN, SecretsPort } from './secrets.port.js';
+import { SECRETS_TOKEN } from './secrets.port.js';
 import { EnvFileSecrets } from './env-file-secrets.js';
 import { SecretsKeyRing } from './secrets-key-ring.js';
-import type { KeyRing } from '@verifynng/core';
+import { DevSecretsController } from './dev-secrets.controller.js';
+
+const devControllers =
+  process.env.NODE_ENV === 'production' ? [] : [DevSecretsController];
 
 @Global()
 @Module({
+  controllers: [...devControllers],
   providers: [
     {
       provide: SECRETS_TOKEN,
@@ -26,7 +30,11 @@ import type { KeyRing } from '@verifynng/core';
         const coreKeysJson = configService.get<string>('CORE_KEYS_JSON')!;
         const legacyCoreKeys = configService.get<string>('CORE_KEYS');
         const legacyActiveKid = configService.get<string>('CORE_ACTIVE_KID');
-        return new SecretsKeyRing(coreKeysJson, legacyCoreKeys, legacyActiveKid);
+        return new SecretsKeyRing(
+          coreKeysJson,
+          legacyCoreKeys,
+          legacyActiveKid,
+        );
       },
       inject: [ConfigService],
     },
@@ -37,7 +45,11 @@ import type { KeyRing } from '@verifynng/core';
         const coreKeysJson = configService.get<string>('CORE_KEYS_JSON')!;
         const legacyCoreKeys = configService.get<string>('CORE_KEYS');
         const legacyActiveKid = configService.get<string>('CORE_ACTIVE_KID');
-        return new SecretsKeyRing(coreKeysJson, legacyCoreKeys, legacyActiveKid);
+        return new SecretsKeyRing(
+          coreKeysJson,
+          legacyCoreKeys,
+          legacyActiveKid,
+        );
       },
       inject: [ConfigService],
     },

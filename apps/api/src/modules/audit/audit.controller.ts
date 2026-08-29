@@ -2,17 +2,10 @@
  * Audit HTTP controllers — query, chain verification, dev demo.
  */
 
-import {
-  Controller,
-  Get,
-  Post,
-  Query,
-  UseGuards,
-  Req,
-  Headers,
-} from '@nestjs/common';
+import { Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { AuditService } from './audit.service.js';
 import { AuditChainService } from './audit-chain.service.js';
+import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 
 @Controller('v1/audit')
 export class AuditController {
@@ -29,10 +22,11 @@ export class AuditController {
     @Query('to') to?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
-    @Req() req?: any,
+    @Req() req?: AuthenticatedRequest,
   ) {
-    // E13 stub: tenantId from @TenantId() when E02 ships
-    const resolvedTenantId = tenantId ?? req?.user?.tenantId ?? 'ivoryglow';
+    // E13 stub: tenantId from @TenantId() when E02 ships. No forced default —
+    // pre-auth there is no tenant context, so an unscoped query returns everything.
+    const resolvedTenantId = tenantId ?? req?.user?.tenantId;
 
     return this.auditService.query({
       tenantId: resolvedTenantId,
@@ -58,7 +52,7 @@ export class AuditChainController {
   }
 
   @Post('verify')
-  async verifyChain(@Req() req?: any) {
+  async verifyChain(@Req() req?: AuthenticatedRequest) {
     const result = await this.chainService.verifyChain({
       triggeredById: req?.user?.id,
     });

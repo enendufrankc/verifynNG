@@ -6,13 +6,18 @@
  */
 
 import { SetMetadata } from '@nestjs/common';
+import type { Response } from 'express';
+import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 
 export const AUDITED_KEY = 'audited';
 
 export interface AuditedOptions {
   action: string;
   /** Custom target resolver. Defaults to { type: controllerName, id: req.params.id } */
-  target?: (req: any, res: any) => { type: string; id: string };
+  target?: (
+    req: AuthenticatedRequest,
+    res: Response,
+  ) => { type: string; id: string };
   /** Additional keys to redact from the payload */
   redact?: string[];
 }

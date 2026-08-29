@@ -46,10 +46,11 @@ export class SecretsKeyRing implements KeyRing {
         `Loaded ${this.keys.size} keys, active: ${this.activeKid}`,
       );
       return;
-    } catch (err: any) {
+    } catch (err) {
       if (!legacyCoreKeys) {
+        const message = err instanceof Error ? err.message : String(err);
         throw new Error(
-          `Failed to parse CORE_KEYS_JSON and no CORE_KEYS fallback: ${err.message}`,
+          `Failed to parse CORE_KEYS_JSON and no CORE_KEYS fallback: ${message}`,
         );
       }
     }

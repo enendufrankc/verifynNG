@@ -4,8 +4,13 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { loadEnv, corsAllowlist } from '@verifynng/config';
 import helmet from 'helmet';
-import Redis from 'ioredis';
-import { PrismaClient } from '@prisma/client';
+import { QuotaService } from './modules/quota/quota.service.js';
+
+// AuditLog.seq and AuditChainCheckpoint's seq fields are Postgres BIGINTs; JSON.stringify
+// can't serialize a native BigInt without this.
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
+  return this.toString();
+};
 
 async function bootstrap() {
   const env = loadEnv();
@@ -23,7 +28,10 @@ async function bootstrap() {
   );
 
   // CORS
-  const corsOpts = corsAllowlist('api', process.env as Record<string, string | undefined>);
+  const corsOpts = corsAllowlist(
+    'api',
+    process.env as Record<string, string | undefined>,
+  );
   if (corsOpts.origin === false) {
     // No CORS origins configured — disable CORS entirely
     app.enableCors({ origin: false });
@@ -45,41 +53,24 @@ async function bootstrap() {
     }),
   );
 
-  // Provide Redis and Prisma to the DI container
-  const prisma = new PrismaClient();
-  const redis = new Redis(env.REDIS_URL);
-
-  // Initialize audit_chain_head table if needed
-  try {
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "audit_chain_head" (
-        "id" INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-        "prevHash" TEXT NOT NULL DEFAULT 'GENESIS',
-        "lastSeq" BIGINT NOT NULL DEFAULT 0
-      );
-      INSERT INTO "audit_chain_head" ("id", "prevHash", "lastSeq")
-      VALUES (1, 'GENESIS', 0)
-      ON CONFLICT ("id") DO NOTHING;
-    `);
-  } catch (err: any) {
-    Logger.warn(`audit_chain_head init skipped: ${err.message}`);
-  }
-
   // Register default quota kinds
-  const quotaService = app.get('QuotaService' as any, { strict: false });
-  if (quotaService?.registerKind) {
-    quotaService.registerKind('mints_per_day', { defaultLimit: 50000, window: 'day' });
-    quotaService.registerKind('scans_per_min', { defaultLimit: 600, window: 'minute' });
-    quotaService.registerKind('api_calls_per_min', { defaultLimit: 300, window: 'minute' });
-    quotaService.registerKind('demo_per_min', { defaultLimit: 10, window: 'minute' });
-  }
-
-  // Hide dev controllers in production
-  if (env.NODE_ENV === 'production') {
-    // DevAuditController, DevQuotaController, DevSecretsController
-    // are registered but their routes should be hidden.
-    // In production, we'll filter them at the router level.
-  }
+  const quotaService = app.get(QuotaService, { strict: false });
+  quotaService.registerKind('mints_per_day', {
+    defaultLimit: 50000,
+    window: 'day',
+  });
+  quotaService.registerKind('scans_per_min', {
+    defaultLimit: 600,
+    window: 'minute',
+  });
+  quotaService.registerKind('api_calls_per_min', {
+    defaultLimit: 300,
+    window: 'minute',
+  });
+  quotaService.registerKind('demo_per_min', {
+    defaultLimit: 10,
+    window: 'minute',
+  });
 
   await app.listen(env.API_PORT);
   Logger.log(`API running on http://localhost:${env.API_PORT}`, 'Bootstrap');

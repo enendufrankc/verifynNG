@@ -7,7 +7,7 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { PrismaClient, AuditLog, AuditActorType } from '@prisma/client';
+import { PrismaClient, AuditLog, AuditActorType, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { canonicalize } from '@verifynng/core';
 import crypto from 'node:crypto';
@@ -69,6 +69,10 @@ export class AuditService {
 
       const prevHash = head[0].prevHash;
       const seq = head[0].lastSeq + 1n;
+      // Fixed at compute time and persisted verbatim below — verifyChain() recomputes
+      // the hash from the stored row, so the hash input and the stored createdAt must
+      // be the exact same value, not two separate `now()` calls.
+      const createdAt = new Date();
 
       // Compute hash: sha256(prevHash || canonicalize(fields))
       const hashInput = {
@@ -82,7 +86,7 @@ export class AuditService {
         targetType: entry.target.type,
         targetId: entry.target.id,
         payload: redacted,
-        createdAt: new Date().toISOString(),
+        createdAt: createdAt.toISOString(),
       };
       const hash = crypto
         .createHash('sha256')
@@ -96,10 +100,11 @@ export class AuditService {
           actorId: entry.actor.id,
           action: entry.action,
           target: `${entry.target.type}:${entry.target.id}`,
-          payload: redacted as any,
+          payload: redacted as Prisma.InputJsonValue,
           prevHash,
           hash,
           seq,
+          createdAt,
           actorType: entry.actor.type as AuditActorType,
           actorIp: entry.actor.ip,
           requestId: entry.requestId,
@@ -144,7 +149,7 @@ export class AuditService {
   }): Promise<AuditPage> {
     const limit = Math.min(filter.limit ?? 50, 200);
 
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
     if (filter.tenantId) where.tenantId = filter.tenantId;
     if (filter.actorId) where.actorId = filter.actorId;
     if (filter.action) where.action = { contains: filter.action };
@@ -183,9 +188,7 @@ export class AuditService {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       if (
-        REDACT_KEYS.some((k) =>
-          key.toLowerCase().includes(k.toLowerCase()),
-        )
+        REDACT_KEYS.some((k) => key.toLowerCase().includes(k.toLowerCase()))
       ) {
         result[key] = '[REDACTED]';
       } else if (
