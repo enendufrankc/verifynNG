@@ -12,6 +12,7 @@ COPY apps/web-admin/ apps/web-admin/
 COPY packages/config/ packages/config/
 COPY tsconfig.base.json ./
 
+RUN pnpm --filter @verifynng/config build
 RUN pnpm --filter @verifynng/web-admin build
 
 # ── Production stage ───────────────────────────────────────────

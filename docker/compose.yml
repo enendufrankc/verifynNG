@@ -142,6 +142,8 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      CORS_ORIGINS_ADMIN: http://localhost:${WEB_ADMIN_PORT:-3001}
+      CORS_ORIGINS_VERIFY: http://localhost:${WEB_VERIFY_PORT:-3000}
     depends_on:
       postgres:
         condition: service_healthy
