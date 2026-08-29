@@ -201,7 +201,7 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health']
+      test: ['CMD-SHELL', 'pgrep -f worker.js || exit 1']
       interval: 10s
       timeout: 5s
       retries: 10
