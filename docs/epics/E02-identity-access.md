@@ -1,13 +1,13 @@
 # E02 — Identity & Access
 
-| | |
-|---|---|
-| Wave | 1 |
-| Status | in-progress |
-| Owner | enendufrankc |
-| GitHub Issue | [#3](https://github.com/enendufrankc/verifynNG/issues/3) |
-| Depends on | E01 (token hashing helpers), E00 |
-| Unblocks | E03, E11, E13, E16, E18, E19, E20 — and every tenant-scoped route in every epic |
+|                 |                                                                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 1                                                                                                                                                                                                                               |
+| Status          | in-progress                                                                                                                                                                                                                     |
+| Owner           | enendufrankc                                                                                                                                                                                                                    |
+| GitHub Issue    | [#3](https://github.com/enendufrankc/verifynNG/issues/3)                                                                                                                                                                        |
+| Depends on      | E01 (token hashing helpers), E00                                                                                                                                                                                                |
+| Unblocks        | E03, E11, E13, E16, E18, E19, E20 — and every tenant-scoped route in every epic                                                                                                                                                 |
 | Readiness items | `production-readiness.md` §1 all P0/P1 rows (tenant-aware authN, real IdP, RBAC, password reset + session revocation, service-to-service auth, MFA option) · §2 "cross-tenant isolation tests in CI" · `architecture.md` step 7 |
 
 ## Goal
@@ -18,7 +18,7 @@ The console stops being a shared password. When this epic is done a person regis
 
 **In:** registration, login, argon2id password hashing, JWT access (15 min) + opaque refresh tokens (30 d, rotated on every use, family-revoked on reuse), TOTP MFA with recovery codes, RBAC per tenant, platform-level `support` role, password reset via email, session/device list + revoke, `@TenantId()` decorator backed by `TenantContextGuard`, `@Roles()` guard, `@Public()` escape hatch, service-to-service auth (`ApiClient` keys for jobs/fakes/OEM endpoints), the cross-tenant isolation test harness in `packages/db`, member management routes, domain events.
 
-**Out:** tenant creation/verification/status (E03 — but E02 creates the `Membership` row when E03 calls `MembershipService.addOwner`), the login/MFA/reset *screens* (E11 — E02 ships the routes and a Postman/HTTP-file collection only), SSO and per-tenant MFA-enforcement policy (E20), email templates and the real `Mailer` (E14 — E02 uses a minimal SMTP adapter against Mailpit behind E14's port), audit logging of auth events (E13 subscribes to E02 events), support impersonation (E18 — E02 only defines the `support` platform role and `@PlatformRole('support')` guard), public tenant API keys with scopes (E16 — builds on `ApiClient`).
+**Out:** tenant creation/verification/status (E03 — but E02 creates the `Membership` row when E03 calls `MembershipService.addOwner`), the login/MFA/reset _screens_ (E11 — E02 ships the routes and a Postman/HTTP-file collection only), SSO and per-tenant MFA-enforcement policy (E20), email templates and the real `Mailer` (E14 — E02 uses a minimal SMTP adapter against Mailpit behind E14's port), audit logging of auth events (E13 subscribes to E02 events), support impersonation (E18 — E02 only defines the `support` platform role and `@PlatformRole('support')` guard), public tenant API keys with scopes (E16 — builds on `ApiClient`).
 
 ## Owned paths
 
@@ -36,6 +36,7 @@ apps/api/http/auth.http                     (REST Client / httpyac request colle
 ## Interfaces
 
 **Consumes**
+
 - E00: `prisma`, `createTestDatabase()`, `loadEnv()`, `AppModule` (one import line each for `AuthModule`, `MembersModule`), base `User` and `Tenant` models.
 - E01: `hashForStorage()` (refresh-token and API-key hashing — tokens are stored hashed, never raw), `StaticKeyRing` pattern for JWT signing key rotation (`JWT_KEYS="k1:hex,k2:hex"`, `JWT_ACTIVE_KID`).
 - E14 (interface only): `Mailer` port — `interface Mailer { send(msg: { to: string; template: 'password-reset' | 'mfa-enabled' | 'new-device-login'; vars: Record<string, string> }): Promise<void> }`. E02 provides `SmtpMailer` (nodemailer → Mailpit on `mailpit:1025`) under the same Nest token `MAILER` until E14 ships its implementation and replaces the provider in `AppModule`.
@@ -43,6 +44,7 @@ apps/api/http/auth.http                     (REST Client / httpyac request colle
 **Exposes**
 
 Nest providers (exported from `AuthModule`):
+
 ```ts
 TenantContextGuard          // global APP_GUARD: resolves principal + tenant, 401/403/404 semantics below
 RolesGuard                  // global APP_GUARD: enforces @Roles()
@@ -60,12 +62,14 @@ ApiClientService            // create(name, tenantId?, scopes[]) → { id, rawKe
 ```
 
 Tenant resolution contract (the rule every epic inherits):
+
 1. Access JWT claims: `sub` (userId), `tid` (active tenantId), `role`, `prole` (platform role), `sid` (sessionId), `kid` header.
 2. `tid` is set server-side at login (single membership → that tenant; multiple → the last-used, switchable via `POST /auth/switch-tenant`), **after** the membership row is confirmed to exist.
 3. `TenantContextGuard` sets `req.tenantId = claims.tid`. If the route has a `:tenantId` param and it differs from `claims.tid`, respond **404** (not 403 — never confirm another tenant exists). `@PlatformRole('support')` routes are the only exception: there `:tenantId` is authoritative and the access is emitted as `support.tenant.accessed` for E13/E18.
 4. Anything reading `tenantId` from a body, query string, or header is a bug; the isolation harness catches it.
 
 HTTP routes (all JSON, all under `apps/api`):
+
 ```
 POST   /auth/register                     { email, password, displayName }            → 201 { user }            (creates User only; E03 creates the tenant)
 POST   /auth/login                        { email, password }                         → 200 { accessToken, refreshToken, expiresIn } | 200 { mfaRequired: true, mfaToken }
@@ -95,6 +99,7 @@ DELETE /internal/api-clients/:id                                                
 ```
 
 Domain events (Nest `EventEmitter2`, names are stable):
+
 ```ts
 'user.registered'       { userId, email, at }
 'user.login'            { userId, tenantId | null, sessionId, ipHash, userAgent, mfaUsed: boolean, at }
@@ -110,6 +115,7 @@ Domain events (Nest `EventEmitter2`, names are stable):
 ```
 
 Test harness (`packages/db/src/testing/tenant-isolation.ts`):
+
 ```ts
 createTwoTenants(prisma): Promise<{ a: TenantFixture; b: TenantFixture }>
 // TenantFixture = { tenant, owner: { user, accessToken }, operator: {...}, viewer: {...} }
@@ -198,18 +204,18 @@ model ApiClient {                  // service-to-service + OEM/fake credentials;
 
 ## Tasks
 
-- [ ] T1 Schema + migration `E02_identity`: models above, backfill Membership from `User.tenantId`; env section (`JWT_KEYS`, `JWT_ACTIVE_KID`, `JWT_ACCESS_TTL=15m`, `REFRESH_TTL=30d`, `MFA_ENC_KEY`, `INTERNAL_API_KEYS`, `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `APP_BASE_URL=http://localhost:3001`) with compose defaults.
-- [ ] T2 `PasswordService` (argon2id, `needsRehash` on parameter change) + `POST /auth/register` + `user.registered` event; zxcvbn-style minimum (length ≥ 12 or score ≥ 3) enforced in DTO.
-- [ ] T3 `TokenService`: JWT access with `kid` header from `JWT_KEYS` ring, opaque 256-bit refresh tokens stored hashed in `Session`, rotation with family-reuse detection, `POST /auth/login`, `/auth/refresh`, `/auth/logout`, brute-force lockout (10 failures → 15 min), `user.login` / `user.login.failed` / `session.revoked` events.
-- [ ] T4 `TenantContextGuard` + `RolesGuard` as global `APP_GUARD`s; `@TenantId()`, `@Principal()`, `@Roles()`, `@Public()`; remove E00's placeholder decorator; `GET /auth/me`; `POST /auth/switch-tenant`; 404-not-403 rule for mismatched `:tenantId`.
-- [ ] T5 `MembersModule`: list/invite/change-role/remove with last-owner protection; `MembershipService.addOwner()` for E03; invite flow issues a `PasswordResetToken` and sends `set-password` mail; `member.*` events.
-- [ ] T6 `MfaService` with `otplib`: setup/enable/disable/recovery-code rotate, `mfaToken` short-lived (5 min) intermediate JWT for the challenge step, secret encrypted at rest, recovery codes hashed; `user.mfa.enabled/disabled` events.
-- [ ] T7 Password reset/change: `SmtpMailer` behind `MAILER` token (nodemailer → Mailpit), `/auth/password/forgot|reset|change`, constant-time 202 on forgot, all sessions revoked on reset.
-- [ ] T8 Sessions API: list with `current` flag, revoke one / all-others; `lastSeenAt` touched at most once per minute on refresh.
-- [ ] T9 `ApiClientService` + `@InternalOnly(scope)`: bearer `vk_<prefix>_<secret>` keys, hashed at rest, `INTERNAL_API_KEYS` env seeds platform clients for `fake-sms`, `fake-pay`, `fake-geo`, `worker` at boot (idempotent); `/internal/api-clients` routes for `support`.
-- [ ] T10 `@PlatformRole('support')` guard: route param `:tenantId` authoritative, emits `support.tenant.accessed`; `pnpm db:seed` gains `support@verifyng.local` with `platformRole=support`.
-- [ ] T11 Isolation harness in `packages/db/src/testing/tenant-isolation.ts` + `apps/api/test/isolation/E02.isolation.spec.ts` covering members routes; document usage in `docs/auth.md` so wave-1 epics adopt it in the same wave.
-- [ ] T12 `apps/api/http/auth.http` request collection + `docs/auth.md` (token lifetimes, rotation, 404 rule, how to add a protected route, how to run a job with an `ApiClient`); seed adds `owner@ivoryglow.local` / `operator@…` / `viewer@…` (password `Passw0rd!Passw0rd!`) as members of `ivoryglow`.
+- [x] T1 Schema + migration `E02_identity`: models above, backfill Membership from `User.tenantId`; env section (`JWT_KEYS`, `JWT_ACTIVE_KID`, `JWT_ACCESS_TTL=15m`, `REFRESH_TTL=30d`, `MFA_ENC_KEY`, `WORKER_KEY`/`FAKE_SMS_KEY`/`FAKE_PAY_KEY`/`FAKE_GEO_KEY` in place of a combined `INTERNAL_API_KEYS` string — see Notes, `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `APP_BASE_URL=http://localhost:3001`) with compose defaults.
+- [x] T2 `PasswordService` (argon2id, `needsRehash` on parameter change) + `POST /auth/register` + `user.registered` event; `@MinLength(12)` enforced in DTO (satisfies the length branch of the length≥12-or-score≥3 rule; no zxcvbn dependency added).
+- [x] T3 `TokenService`: JWT access with `kid` header from `JWT_KEYS` ring, opaque 256-bit refresh tokens stored hashed in `Session`, rotation with family-reuse detection, `POST /auth/login`, `/auth/refresh`, `/auth/logout`, brute-force lockout (10 failures → 15 min), `user.login` / `user.login.failed` / `session.revoked` events.
+- [x] T4 `TenantContextGuard` + `RolesGuard` as global `APP_GUARD`s; `@TenantId()`, `@Principal()`, `@Roles()`, `@Public()`; remove E00's placeholder decorator; `GET /auth/me`; `POST /auth/switch-tenant`; 404-not-403 rule for mismatched `:tenantId`.
+- [x] T5 `MembersModule`: list/invite/change-role/remove with last-owner protection; `MembershipService.addOwner()` for E03; invite flow issues a `PasswordResetToken` and sends `set-password` mail; `member.*` events.
+- [x] T6 `MfaService` with `otplib`: setup/enable/disable/recovery-code rotate, `mfaToken` short-lived (5 min) intermediate JWT for the challenge step, secret encrypted at rest, recovery codes hashed; `user.mfa.enabled/disabled` events.
+- [x] T7 Password reset/change: `SmtpMailer` behind `MAILER` token (nodemailer → Mailpit), `/auth/password/forgot|reset|change`, constant-time 202 on forgot, all sessions revoked on reset.
+- [x] T8 Sessions API: list with `current` flag, revoke one / all-others; `lastSeenAt` touched at most once per minute on refresh.
+- [x] T9 `ApiClientService` + `@InternalOnly(scope)`: bearer `vk_<prefix>_<secret>` keys, hashed at rest, `WORKER_KEY`/`FAKE_SMS_KEY`/`FAKE_PAY_KEY`/`FAKE_GEO_KEY` env seed platform clients for `worker`/`fake-sms`/`fake-pay`/`fake-geo` at boot (idempotent); `/internal/api-clients` routes for `support`.
+- [x] T10 `@PlatformRole('support')` guard: route param `:tenantId` authoritative, emits `support.tenant.accessed`. Extended beyond the original write-up: a `platformRole=support` principal gets the same `:tenantId`-authoritative + audit-event treatment on **any** route (not just `@PlatformRole`-decorated ones), and `RolesGuard` lets `support` satisfy any `@Roles(...)` check — otherwise AC9's `GET /tenants/<any>/members` (a plain `@Roles('viewer')` route) would 404 for support the same as for anyone else. `pnpm db:seed` gains `support@verifyng.local` with `platformRole=support`.
+- [x] T11 Isolation harness in `packages/db/src/testing/tenant-isolation.ts` + `apps/api/test/isolation/E02.isolation.spec.ts` covering members routes; document usage in `docs/auth.md` so wave-1 epics adopt it in the same wave.
+- [x] T12 `apps/api/http/auth.http` request collection + `docs/auth.md` (token lifetimes, rotation, 404 rule, how to add a protected route, how to run a job with an `ApiClient`); seed adds `owner@ivoryglow.local` / `operator@…` / `viewer@…` (password `Passw0rd!Passw0rd!`) as members of `ivoryglow`.
 
 ## Acceptance criteria
 
@@ -219,7 +225,7 @@ model ApiClient {                  // service-to-service + OEM/fake credentials;
 - [ ] AC4 Password reset: `POST /auth/password/forgot {"email":"owner@ivoryglow.local"}` → 202; open `http://localhost:8025`, the mail's link contains a token; `POST /auth/password/reset` → 204; old access token's session is gone (`/auth/me` → 401); forgot for `nobody@x.io` also returns 202 with no mail.
 - [ ] AC5 Tenant context is server-derived: as `owner@ivoryglow.local`, `GET /tenants/<ivoryglow-id>/members` → 200 list; `GET /tenants/<other-tenant-id>/members` → 404; `GET /tenants/<ivoryglow-id>/members -H 'X-Tenant-Id: <other>'` → still ivoryglow's data (header ignored). As `viewer@ivoryglow.local`, `POST …/members/invite` → 403.
 - [ ] AC6 RBAC edge: demoting or removing the only owner → 409 `{"error":"last_owner"}`; inviting `new@x.io` as `operator` sends a set-password mail visible in Mailpit and creates a `Membership` row.
-- [ ] AC7 Service auth: `curl -H "Authorization: Bearer $(grep WORKER_KEY docker/.env.compose | cut -d= -f2)" localhost:4000/internal/whoami` → `{ "apiClientId": …, "scopes": [...] }`; a made-up key → 401; a revoked key → 401.
+- [ ] AC7 Service auth: `curl -H "Authorization: Bearer $(grep WORKER_KEY docker/compose.yml | awk '{print $2}')" localhost:4000/internal/whoami` → `{ "apiClientId": …, "scopes": [...] }`; a made-up key → 401; a revoked key → 401. (Deviation from the original write-up: AGENTS.md forbids committing any `.env*` file, "key material" included, even obviously-fake dev values — so the deterministic dev keys live inline in `docker/compose.yml`'s `api` service, not a separate `docker/.env.compose`.)
 - [ ] AC8 Isolation harness: `pnpm --filter @verifyng/api test test/isolation` runs `createTwoTenants()` and asserts every E02 route cross-tenant → 404/403 with zero row changes; the spec fails (proving it works) when a route is temporarily changed to read `tenantId` from the query string.
 - [ ] AC9 `support@verifyng.local` can `GET /tenants/<any>/members` → 200 and an event `support.tenant.accessed` is logged (visible in api logs at `docker compose logs api | grep support.tenant.accessed`); `owner@ivoryglow.local` calling `/internal/api-clients` → 403.
 
@@ -232,7 +238,7 @@ model ApiClient {                  // service-to-service + OEM/fake credentials;
 
 ## Compose services added
 
-None. Uses `mailpit` (SMTP 1025, UI 8025) from E00. Adds a committed `docker/.env.compose` block with deterministic dev-only `JWT_KEYS`, `MFA_ENC_KEY`, and the four `INTERNAL_API_KEYS` so fakes can authenticate to the API without setup (values are obviously fake; production values come from E13's secrets abstraction).
+None. Uses `mailpit` (SMTP 1025, UI 8025) from E00. Adds deterministic dev-only `JWT_KEYS`, `MFA_ENC_KEY`, `WORKER_KEY`, `FAKE_SMS_KEY`, `FAKE_PAY_KEY`, `FAKE_GEO_KEY` inline in `docker/compose.yml`'s `api` service (not a separate `.env.compose` file — AGENTS.md's "never commit `.env*`, key material" guardrail applies even to obviously-fake dev-only values) so fakes can authenticate to the API without setup; production values come from E13's secrets abstraction.
 
 ## Notes and decisions
 
@@ -241,3 +247,8 @@ None. Uses `mailpit` (SMTP 1025, UI 8025) from E00. Adds a committed `docker/.en
 - Tenant mismatch returns 404, not 403, so an attacker cannot use the console API to confirm tenant IDs. Support-role routes are the documented exception.
 - `Membership` replaces `User.tenantId`; a user may belong to several tenants (agencies managing several brands were an explicit ask in the mental model's "Shopify of authenticity" framing).
 - The `Mailer` port is E14's; E02 ships the smallest possible SMTP implementation so wave 1 is not blocked. When E14 lands, E14 swaps the provider binding — E02 code does not change.
+- Support-role bypass of the 404 rule (and of `@Roles(...)` checks) is decided at the `platformRole` claim, not per-route: any authenticated principal with `platformRole=support` gets `:tenantId` treated as authoritative on _any_ route, not only ones explicitly decorated `@PlatformRole('support')`. The original write-up scoped this to `@PlatformRole` routes only, which is right for genuinely support-only endpoints (`/internal/api-clients`) but can't satisfy AC9, which demonstrates support access against `MembersController`'s ordinary `@Roles('viewer')` route. `@PlatformRole('support')` still exists and still means "only support may call this at all" for the dedicated internal endpoints.
+- `HealthController`'s `GET /health` is marked `@Public()`. It wasn't before this epic — E02's global `TenantContextGuard`/`RolesGuard` make every unmarked route require auth by default, which silently broke `docker/compose.yml`'s own healthcheck (and therefore every dependent service) until this one-line fix.
+- `INTERNAL_API_KEYS` (single `"name:key,name:key"` string) was replaced with four separate env vars (`WORKER_KEY`, `FAKE_SMS_KEY`, `FAKE_PAY_KEY`, `FAKE_GEO_KEY`). Reasons: (1) AGENTS.md forbids committing any `.env*` file including key material, so the originally-specified `docker/.env.compose` file can't exist — the values have to live inline in `docker/compose.yml`, and four named vars read far better there than one long delimited string; (2) it matches AC7's exact demonstration shape (grep one named key out of a committed file). The original WIP's seeded dev keys (`keysms1234`, etc.) also didn't have the `vk_` prefix `InternalOnlyGuard` requires, so they were never actually reachable — fixed as part of this change.
+- `TokenService.rotateRefreshToken`: reuse detection is done by retiring the presented session row (`revokedReason: 'rotated'`) and inserting a new row in the same `familyId`, rather than overwriting the hash in place. A hash that resolves to an already-`'rotated'` row is unambiguously a replay of a superseded token, which is what makes the family-wide revocation in AC2 correct — comparing timestamps on a single mutated row (an earlier draft of this) can't distinguish "stale" from "replayed" reliably.
+- `TokenService.isSessionRevoked` treats a `sid` that doesn't resolve to any `Session` row as revoked (not as "not revoked"). A token can never outlive its session row this way, including one that was hard-deleted rather than soft-revoked.
