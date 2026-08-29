@@ -2,6 +2,9 @@ import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { loadEnv, envSchema } from '@verifynng/config';
 import { HealthModule } from './health/health.module';
+import { DatabaseModule } from './modules/database/database.module';
+import { VerifyModule } from './modules/verify/verify.module';
+import { VerifySmsModule } from './modules/verify-sms/verify-sms.module';
 import { RequestIdMiddleware } from './common/request-id.middleware';
 
 @Module({
@@ -12,6 +15,9 @@ import { RequestIdMiddleware } from './common/request-id.middleware';
       load: [() => loadEnv()],
     }),
     HealthModule,
+    DatabaseModule,
+    VerifyModule,
+    VerifySmsModule,
   ],
 })
 export class AppModule {

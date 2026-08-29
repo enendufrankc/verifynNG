@@ -9,21 +9,27 @@
     "start:prod": "node dist/main",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi:generate": "nest g openapi --dry-run 2>/dev/null; node scripts/generate-openapi.mjs",
+    "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code apps/api/openapi/verify.v1.json"
   },
   "dependencies": {
     "@nestjs/common": "11.2.3",
     "@nestjs/config": "4.0.4",
     "@nestjs/core": "11.2.3",
+    "@nestjs/event-emitter": "^12.0.0",
     "@nestjs/platform-express": "11.2.3",
+    "@nestjs/swagger": "^11.2.0",
     "@nestjs/terminus": "11.1.1",
     "@verifynng/config": "workspace:*",
+    "@verifynng/core": "workspace:*",
     "@verifynng/db": "workspace:*",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "ioredis": "5.7.0",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
+    "ua-parser-js": "^2.0.3",
     "uuid": "11.1.0"
   },
   "devDependencies": {

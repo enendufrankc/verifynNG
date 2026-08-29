@@ -142,6 +142,22 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      # E06 Verification & Scan Events
+      RATE_LIMIT_IP_PER_MIN: '20'
+      RATE_LIMIT_CODE_PER_MIN: '10'
+      RATE_LIMIT_TENANT_DEFAULT_PER_MIN: '600'
+      ENUMERATION_INVALID_THRESHOLD: '15'
+      ENUMERATION_WINDOW_SEC: '300'
+      ENUMERATION_BLOCK_SEC: '900'
+      IP_HASH_SALT: verifynng-ip-salt-dev
+      GEOIP_PROVIDER: fake
+      GEOIP_URL: http://fake-geo:4103
+      TRUST_PROXY: 'true'
+      SMS_PROVIDER: fake
+      SMS_URL: http://fake-sms:4101
+      FAKE_SMS_KEY: fake-sms-key
+      CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
+      CORE_ACTIVE_KID: k1
     depends_on:
       postgres:
         condition: service_healthy
