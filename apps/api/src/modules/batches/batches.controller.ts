@@ -27,7 +27,11 @@ export class BatchesController {
   }
 
   @Post()
-  async create(@TenantId() tenantId: string, @Body() dto: CreateBatchDto) {
+  async create(
+    @TenantId() tenantId: string,
+    @Body() dto: CreateBatchDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.mintService.mint({
       tenantId,
       productId: dto.productId,
@@ -37,6 +41,7 @@ export class BatchesController {
       requestedBy: 'placeholder',
       note: dto.note,
     });
+    if (result.existing) res.status(200);
     if (result.mode === 'job') {
       return { batch: result.batch, jobId: result.jobId };
     }

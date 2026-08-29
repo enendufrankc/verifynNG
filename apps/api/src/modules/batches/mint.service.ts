@@ -48,7 +48,12 @@ export class MintService {
     idempotencyKey: string;
     requestedBy: string;
     note?: string;
-  }): Promise<{ batch: Batch; mode: 'sync' | 'job'; jobId?: string }> {
+  }): Promise<{
+    batch: Batch;
+    mode: 'sync' | 'job';
+    jobId?: string;
+    existing?: boolean;
+  }> {
     const {
       tenantId,
       productId,
@@ -76,6 +81,7 @@ export class MintService {
         batch: existing,
         mode: existing.jobId ? 'job' : 'sync',
         jobId: existing.jobId ?? undefined,
+        existing: true,
       };
     }
 
