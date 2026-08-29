@@ -22,6 +22,7 @@
     "@playwright/test": "1.62.1",
     "@prisma/client": "6.19.3",
     "depcheck": "1.4.7",
+    "dotenv": "17.4.2",
     "eslint": "9.35.0",
     "eslint-config-prettier": "10.1.8",
     "husky": "9.1.7",

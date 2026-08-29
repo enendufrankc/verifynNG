@@ -52,6 +52,8 @@ pnpm db:migrate | db:reset | db:seed
 
 Verification before claiming done = those commands green **and** the epic's acceptance criteria demonstrated on the compose stack.
 
+**Ports are per-worktree.** `scripts/epic start EXX` writes a `.env` (and `docker/.env`) into the worktree with its own `COMPOSE_PROJECT_NAME` and host ports offset by `103 × epic-number`, so many worktrees can run `docker compose up` at the same time. Never assume 3000/3001/4000/5432 — read `.env` or run `scripts/epic ports EXX`. Container-internal ports (used in `CROSS-EPIC-REQUESTS.md`, healthchecks, service-to-service URLs) are unchanged. The main clone with no `.env` uses the defaults.
+
 ## Guardrails
 
 - Never commit `.env*` (except `.env.example`), key material, `data/` dumps, or anything under `legacy/*/data`.
