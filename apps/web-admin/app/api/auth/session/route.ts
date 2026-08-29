@@ -3,7 +3,7 @@ import {
   createStubSession,
   validateStubRefresh,
   findUserByEmail,
-  STUB_USERS,
+  findUserById,
 } from '@/lib/api-stubs';
 
 export const dynamic = 'force-dynamic';
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
     }
     const newSession = createStubSession(session.userId);
     // Look up the stub user so a page reload repopulates the auth store.
-    const user = Object.values(STUB_USERS).find((u) => u.id === session.userId);
+    const user = findUserById(session.userId);
     const response = NextResponse.json({
       accessToken: newSession.accessToken,
       expiresIn: 900,
@@ -190,10 +190,27 @@ export async function POST(req: NextRequest) {
 
   // ── Switch tenant ─────────────────────────────────────────
   if (body.action === 'switch-tenant' && body.tenantId) {
-    const session = createStubSession('stub_switched');
+    const refreshToken = req.cookies.get('vg_refresh')?.value;
+    const currentSession = refreshToken
+      ? validateStubRefresh(refreshToken)
+      : null;
+    const user = currentSession
+      ? findUserById(currentSession.userId)
+      : undefined;
+    const membership = user?.memberships.find(
+      (m) => m.tenantId === body.tenantId,
+    );
+    if (!user || !membership)
+      return NextResponse.json(
+        { code: 'FORBIDDEN', message: 'Not a member of that tenant' },
+        { status: 403 },
+      );
+    const session = createStubSession(user.id);
     const response = NextResponse.json({
       accessToken: session.accessToken,
       expiresIn: 900,
+      activeTenantId: membership.tenantId,
+      activeRole: membership.role,
     });
     response.cookies.set('vg_refresh', session.refreshToken, {
       httpOnly: true,
