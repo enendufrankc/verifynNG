@@ -11,7 +11,18 @@ export const STUB_USERS = {
     platformRole: null as string | null,
     mfaEnabled: false,
     memberships: [
-      { tenantId: 'tnt_ivoryglow', tenantName: 'IVORY GLOW', tenantSlug: 'ivoryglow', role: 'owner' as const },
+      {
+        tenantId: 'tnt_ivoryglow',
+        tenantName: 'IVORY GLOW',
+        tenantSlug: 'ivoryglow',
+        role: 'owner' as const,
+      },
+      {
+        tenantId: 'tnt_acme_pilot',
+        tenantName: 'ACME Pilot',
+        tenantSlug: 'acme-pilot',
+        role: 'operator' as const,
+      },
     ],
   },
   'operator@ivoryglow.local': {
@@ -22,7 +33,12 @@ export const STUB_USERS = {
     platformRole: null as string | null,
     mfaEnabled: false,
     memberships: [
-      { tenantId: 'tnt_ivoryglow', tenantName: 'IVORY GLOW', tenantSlug: 'ivoryglow', role: 'operator' as const },
+      {
+        tenantId: 'tnt_ivoryglow',
+        tenantName: 'IVORY GLOW',
+        tenantSlug: 'ivoryglow',
+        role: 'operator' as const,
+      },
     ],
   },
   'viewer@ivoryglow.local': {
@@ -33,7 +49,12 @@ export const STUB_USERS = {
     platformRole: null as string | null,
     mfaEnabled: false,
     memberships: [
-      { tenantId: 'tnt_ivoryglow', tenantName: 'IVORY GLOW', tenantSlug: 'ivoryglow', role: 'viewer' as const },
+      {
+        tenantId: 'tnt_ivoryglow',
+        tenantName: 'IVORY GLOW',
+        tenantSlug: 'ivoryglow',
+        role: 'viewer' as const,
+      },
     ],
   },
   'support@verifyng.local': {
@@ -44,7 +65,12 @@ export const STUB_USERS = {
     platformRole: 'support' as const,
     mfaEnabled: false,
     memberships: [
-      { tenantId: 'tnt_ivoryglow', tenantName: 'IVORY GLOW', tenantSlug: 'ivoryglow', role: 'viewer' as const },
+      {
+        tenantId: 'tnt_ivoryglow',
+        tenantName: 'IVORY GLOW',
+        tenantSlug: 'ivoryglow',
+        role: 'viewer' as const,
+      },
     ],
   },
 } as const;
@@ -72,4 +98,8 @@ export function validateStubRefresh(refreshToken: string) {
 
 export function findUserByEmail(email: string): StubUser | undefined {
   return STUB_USERS[email as keyof typeof STUB_USERS];
+}
+
+export function findUserById(userId: string): StubUser | undefined {
+  return Object.values(STUB_USERS).find((u) => u.id === userId);
 }
