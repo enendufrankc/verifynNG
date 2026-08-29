@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
-          path: '/api/auth',
+          path: '/',
           maxAge: 30 * 24 * 60 * 60,
         });
         return response;
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/api/auth',
+      path: '/',
       maxAge: 30 * 24 * 60 * 60,
     });
     return response;
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
-          path: '/api/auth',
+          path: '/',
           maxAge: 30 * 24 * 60 * 60,
         });
         return response;
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/api/auth',
+      path: '/',
       maxAge: 30 * 24 * 60 * 60,
     });
     return response;
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path: '/api/auth',
+      path: '/',
       maxAge: 30 * 24 * 60 * 60,
     });
     return response;
