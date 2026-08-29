@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | enendufrankc |
 | GitHub Issue | [#12](https://github.com/enendufrankc/verifynNG/issues/12) |
 | Depends on | E02 (interfaces: `/auth/*` routes, JWT claims, `memberships`, roles), E00 (web-admin skeleton hand-off) |
 | Unblocks | every epic with a console screen: E03, E04, E07, E08, E10, E12, E13, E15, E18, E19; E21 (Playwright fixtures, axe in CI) |
