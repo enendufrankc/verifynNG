@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HealthCheckService } from '@nestjs/terminus';
+import { prisma } from '@verifynng/db';
 import { PrismaHealthIndicator } from './prisma.health';
 import { RedisHealthIndicator } from './redis.health';
 import { MigrationsHealthIndicator } from './migrations.health';
@@ -28,6 +29,7 @@ export class HealthService {
   getReadiness() {
     return this.health.check([
       () => this.prismaHealth.isHealthy('db'),
+      () => this.migrationsHealth.isHealthy('migrations', prisma),
       () => this.redisHealth.isHealthy('redis'),
       () => this.storageHealth.isHealthy('storage'),
       () => this.workersHealth.isHealthy('workers'),

@@ -1,44 +1,68 @@
 import { metrics, Counter, Histogram, UpDownCounter } from '@opentelemetry/api';
 
-const meter = metrics.getMeter('verifynng-api', '1.0.0');
+/**
+ * Instruments are created lazily on first use (not at module-load time).
+ * `startOtel()` registers the real MeterProvider before any HTTP request is
+ * handled, but AppModule (and therefore this module) is required before
+ * `startOtel()` runs — creating instruments eagerly at import time would
+ * bind them to the no-op provider and drop every recorded data point.
+ */
+function getMeter() {
+  return metrics.getMeter('verifynng-api', '1.0.0');
+}
+
+let _verifyLatency: Histogram | undefined;
+let _verifyVerdicts: Counter | undefined;
+let _rateLimitHits: Counter | undefined;
+let _queueDepth: UpDownCounter | undefined;
+let _queueLag: Histogram | undefined;
+let _dbPoolInUse: UpDownCounter | undefined;
+let _probeSuccess: UpDownCounter | undefined;
 
 export class Metrics {
-  static verifyLatency: Histogram = meter.createHistogram('verify_latency_ms', {
-    description: 'Latency of unit code verification in milliseconds',
-    unit: 'ms',
-  });
+  static get verifyLatency(): Histogram {
+    return (_verifyLatency ??= getMeter().createHistogram('verify_latency_ms', {
+      description: 'Latency of unit code verification in milliseconds',
+      unit: 'ms',
+    }));
+  }
 
-  static verifyVerdicts: Counter = meter.createCounter(
-    'verify_verdicts_total',
-    {
-      description: 'Total number of verification attempts by verdict',
-    },
-  );
+  static get verifyVerdicts(): Counter {
+    return (_verifyVerdicts ??= getMeter().createCounter(
+      'verify_verdicts_total',
+      { description: 'Total number of verification attempts by verdict' },
+    ));
+  }
 
-  static rateLimitHits: Counter = meter.createCounter('rate_limit_hits_total', {
-    description: 'Total number of rate limit hits',
-  });
+  static get rateLimitHits(): Counter {
+    return (_rateLimitHits ??= getMeter().createCounter(
+      'rate_limit_hits_total',
+      { description: 'Total number of rate limit hits' },
+    ));
+  }
 
-  static queueDepth: UpDownCounter = meter.createUpDownCounter('queue_depth', {
-    description: 'Current depth of BullMQ queue',
-  });
+  static get queueDepth(): UpDownCounter {
+    return (_queueDepth ??= getMeter().createUpDownCounter('queue_depth', {
+      description: 'Current depth of BullMQ queue',
+    }));
+  }
 
-  static queueLag: Histogram = meter.createHistogram('queue_lag_ms', {
-    description: 'Oldest waiting job lag in BullMQ queue',
-    unit: 'ms',
-  });
+  static get queueLag(): Histogram {
+    return (_queueLag ??= getMeter().createHistogram('queue_lag_ms', {
+      description: 'Oldest waiting job lag in BullMQ queue',
+      unit: 'ms',
+    }));
+  }
 
-  static dbPoolInUse: UpDownCounter = meter.createUpDownCounter(
-    'db_pool_in_use',
-    {
+  static get dbPoolInUse(): UpDownCounter {
+    return (_dbPoolInUse ??= getMeter().createUpDownCounter('db_pool_in_use', {
       description: 'Active database connections in pool',
-    },
-  );
+    }));
+  }
 
-  static probeSuccess: UpDownCounter = meter.createUpDownCounter(
-    'probe_success',
-    {
+  static get probeSuccess(): UpDownCounter {
+    return (_probeSuccess ??= getMeter().createUpDownCounter('probe_success', {
       description: 'Synthetic probe success state (1=ok, 0=failed)',
-    },
-  );
+    }));
+  }
 }

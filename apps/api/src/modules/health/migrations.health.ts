@@ -26,7 +26,7 @@ export class MigrationsHealthIndicator extends HealthIndicator {
       try {
         const migrationsPath = join(
           __dirname,
-          '../../../../packages/db/prisma/migrations',
+          '../../../../../packages/db/prisma/migrations',
         );
         migrationDirs = readdirSync(migrationsPath, { withFileTypes: true })
           .filter((dirent) => dirent.isDirectory())
