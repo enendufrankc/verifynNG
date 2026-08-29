@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | pi (frank.enendu) |
 | GitHub Issue | [#5](https://github.com/enendufrankc/verifynNG/issues/5) |
 | Depends on | E01 (`generateCode`, `hashForStorage`, `deriveBatchWatermark`, `signManifest`), E00; soft: E02 (`@Roles`), E03 (`S3` provider, `TenantStatusGuard`) |
 | Unblocks | E05 (manifest delivery + batch states), E06 (units to verify), E07 (unit lifecycle), E10 (product pages), E12 (minted-units metering), E15 (`EntitlementPolicy` replacement), E16 (public minting API) |
