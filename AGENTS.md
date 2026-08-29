@@ -8,6 +8,18 @@ The Verify Platform: a multi-tenant product-authenticity SaaS. Brands mint crypt
 
 Current state: **planning complete, code not yet started.** `legacy/verify-platform/` is the milestone-1 JavaScript prototype — read it for behaviour, never import it. The TypeScript rewrite is being built epic by epic.
 
+## Definition of done (read this twice)
+
+An epic is **not done** when the code is written. It is done when **all** of these are true:
+
+1. Branch pushed to `origin` and a PR into `main` is open (title carries the epic id).
+2. Pre-push checks passed (`pnpm lint && pnpm typecheck && pnpm test && pnpm build`), and `pnpm test:e2e` passed against `docker compose up` where the epic has UI.
+3. Every acceptance criterion in the epic file was demonstrated **from a fresh clone** and the command output is pasted as a comment on the epic's GitHub issue.
+4. The PR is merged into `main` (ask the human to merge if you can't).
+5. The epic file says `Status: done`, and the issue is closed.
+
+If you stop before step 5, say so explicitly in your last message — "code complete locally, not pushed" — never "done".
+
 ## Work is organised as epics
 
 `docs/epics/README.md` is the map: stack, repo layout, 22 epics in 4 waves, dependency graph, the working agreement, and the shared hot-spot rules. **Read it before picking anything up.** Each epic is a file `docs/epics/EXX-*.md` and a GitHub Issue labelled `epic`.
@@ -18,7 +30,8 @@ The working agreement in short:
 2. `git worktree add ../verifynNG-EXX -b epic/EXX-<slug> main` — one epic, one worktree, one branch.
 3. Stay inside the epic's **Owned paths**. Shared files follow the hot-spot rules in the README.
 4. Small PRs into `main`; CI green; `main` always `docker compose up`s cleanly.
-> **Temporary (from 2026-08-28): GitHub Actions is unavailable (account billing lock), so `main` has no required CI checks.** Until it's restored, "CI green" means: you ran `pnpm lint && pnpm typecheck && pnpm test && pnpm build` and `pnpm test:e2e` against `docker compose up` locally and pasted the output in the PR. A Husky `pre-push` hook enforces the first four. CI becomes required again before the wave-1 fan-out; this note is deleted then.
+
+   > **Temporary (from 2026-08-28): GitHub Actions is unavailable (account billing lock), so `main` has no required CI checks.** Until it's restored, "CI green" means: you ran `pnpm lint && pnpm typecheck && pnpm test && pnpm build` and `pnpm test:e2e` against `docker compose up` locally and pasted the output in the PR. A Husky `pre-push` hook enforces the first four. CI becomes required again before the wave-1 fan-out; this note is deleted then.
 
 5. Build against published **Interfaces** of other epics; stub behind them if upstream hasn't shipped.
 6. Tests are in scope. Integration tests hit real Postgres. Don't mock what we own.
