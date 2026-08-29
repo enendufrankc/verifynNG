@@ -3,6 +3,7 @@
 #   scripts/epic start E06      → creates ../verifynNG-E06 on branch epic/E06-<slug>, writes its .env (own ports), prints prompt
 #   scripts/epic ports E06      → print the host ports this epic's worktree uses
 #   scripts/epic status         → all epics: issue, state, assignee, branch
+#   scripts/epic handoff E06    → snapshot+push WIP, post handoff summary on the issue, print resume prompt
 #   scripts/epic done E06       → removes the worktree (after its issue is closed and branch merged)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -99,6 +100,69 @@ EOF
     [[ -n "$id" ]] || { echo "usage: scripts/epic ports EXX"; exit 1; }
     print_ports "$ROOT/../verifynNG-$id"
     ;;
+  handoff)
+    # Snapshot an agent's in-flight work so a different agent can take over.
+    [[ -n "$id" ]] || { echo "usage: scripts/epic handoff EXX"; exit 1; }
+    f="$(file_for "$id")"; num="$(issue_for "$id")"; wt="$ROOT/../verifynNG-$id"
+    [[ -d "$wt" ]] || { echo "no worktree at $wt"; exit 1; }
+    br="$(git -C "$wt" branch --show-current)"
+    unc="$(git -C "$wt" status --short | wc -l | tr -d ' ')"
+    if [[ "$unc" != "0" ]]; then
+      # WIP may not lint or build yet; the snapshot is a save-point, not a PR. Hooks are skipped
+      # deliberately here and only here — the resuming agent must make it green before opening a PR.
+      git -C "$wt" add -A
+      git -C "$wt" -c user.name="epic-handoff" -c user.email="handoff@local" commit -q --no-verify \
+        -m "wip($id): handoff snapshot — uncommitted work at agent stop (may not build)"
+    fi
+    git -C "$wt" push -q --no-verify -u origin "$br" 2>/dev/null || git -C "$wt" push -q --no-verify --force-with-lease -u origin "$br"
+    ahead="$(git -C "$wt" rev-list --count origin/main..HEAD)"
+    plan="$( { ls "$wt"/docs/superpowers/plans/*"$(echo "$id" | tr 'A-Z' 'a-z')"* 2>/dev/null || true; } | head -1 | sed "s#^$wt/##")"
+    summary="$(cat <<EOF
+## Handoff snapshot — $(date -u +%Y-%m-%dT%H:%MZ)
+
+Previous agent stopped mid-flight. State saved on branch \`$br\` ($ahead commits ahead of \`main\`, pushed).
+$( [[ "$unc" != "0" ]] && echo "The last commit is a **WIP snapshot of $unc uncommitted files** (hooks skipped) — it may not lint/build." )
+
+### Commits since main
+\`\`\`
+$(git -C "$wt" log --oneline origin/main..HEAD)
+\`\`\`
+
+### Files touched vs main
+\`\`\`
+$(git -C "$wt" diff --stat origin/main..HEAD | tail -25)
+\`\`\`
+
+### Epic checklist (unticked = remaining)
+$(grep -E "^- \[[ x]\] (T|AC)" "$wt/docs/epics/$(basename "$f")" | head -60)
+
+$( [[ -n "$plan" ]] && echo "### Agent's plan doc" && echo "\`$plan\`" )
+
+### For the next agent
+1. \`git log origin/main..HEAD\` and \`git show --stat HEAD\` — see what exists.
+2. \`pnpm install\`, then \`pnpm lint && pnpm typecheck && pnpm test && pnpm build\` — make it green first.
+3. Reconcile the WIP against the checklist above; tick what is actually done, finish the rest per the epic file.
+EOF
+)"
+    printf '%s\n' "$summary" | gh issue comment "$num" -R "$REPO" -F - >/dev/null && echo "handoff posted on issue #$num; branch $br pushed ($ahead commits)"
+    cat <<EOF
+
+────────────────────────────────────────────────────────────────
+Resume prompt for the NEW agent — open a terminal in: $wt
+────────────────────────────────────────────────────────────────
+You are taking over epic $id mid-flight from another agent that stopped. Read AGENTS.md
+(especially "Definition of done"), docs/epics/README.md, docs/epics/$(basename "$f"), your
+section of docs/epics/CROSS-EPIC-REQUESTS.md, and the latest "Handoff snapshot" comment on
+GitHub issue #$num — it lists what exists on this branch.
+Start by inspecting the work: git log origin/main..HEAD and git show --stat HEAD. The last
+commit may be a WIP snapshot that does not build. Run pnpm install, then make lint, typecheck,
+test and build green before anything else. Then reconcile the WIP against the epic checklist,
+tick what is truly done in the epic file, and continue the remaining tasks in order with
+small PRs into main. Rebase on main before each PR. Use this worktree's Docker ports (.env;
+scripts/epic ports $id). Branch: $br.
+────────────────────────────────────────────────────────────────
+EOF
+    ;;
   status)
     printf "%-4s %-6s %-12s %-18s %s\n" ID ISSUE STATE ASSIGNEE TITLE
     for f in "$ROOT"/docs/epics/E*.md; do
@@ -115,5 +179,5 @@ EOF
     [[ -f "$wt/docker/compose.yml" ]] && (cd "$wt" && docker compose -f docker/compose.yml down -v --remove-orphans >/dev/null 2>&1 || true)
     git -C "$ROOT" worktree remove --force "$wt" && echo "removed worktree for $id"
     ;;
-  *) sed -n '2,7p' "$0";;
+  *) sed -n '2,8p' "$0";;
 esac
