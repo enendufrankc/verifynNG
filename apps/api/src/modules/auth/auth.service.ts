@@ -7,12 +7,13 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type User } from '@prisma/client';
 import { hashForStorage } from '@verifynng/core';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
 import { MfaService } from './services/mfa.service';
 import { MAILER, type Mailer } from './mailer/mailer.interface';
+import { toSafeUser } from './utils/safe-user';
 
 @Injectable()
 export class AuthService {
@@ -44,8 +45,7 @@ export class AuthService {
       at: new Date(),
     });
 
-    const { passwordHash: _ph, mfaSecret: _ms, recoveryCodes: _rc, ...result } = user;
-    return result;
+    return { user: toSafeUser(user) };
   }
 
   // ── Login ────────────────────────────────────────────────
@@ -72,7 +72,10 @@ export class AuthService {
       throw new UnauthorizedException('Account locked');
     }
 
-    const valid = await this.passwordService.verify(password, user.passwordHash);
+    const valid = await this.passwordService.verify(
+      password,
+      user.passwordHash,
+    );
     if (!valid) {
       await this.handleFailedLogin(user, ip);
       throw new UnauthorizedException('Invalid credentials');
@@ -87,7 +90,7 @@ export class AuthService {
     return this.completeLogin(user, userAgent, ip);
   }
 
-  private async handleFailedLogin(user: any, ip?: string) {
+  private async handleFailedLogin(user: User, ip?: string) {
     const newCount = user.failedLoginCount + 1;
     const lockUntil =
       newCount >= 10 ? new Date(Date.now() + 15 * 60 * 1000) : null;
@@ -109,7 +112,7 @@ export class AuthService {
   }
 
   private async completeLogin(
-    user: any,
+    user: User,
     userAgent?: string,
     ip?: string,
     mfaUsed = false,
@@ -164,7 +167,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 900,
+      expiresIn: this.tokenService.getAccessTokenTtlSeconds(),
     };
   }
 
@@ -198,7 +201,7 @@ export class AuthService {
     return {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
-      expiresIn: 900,
+      expiresIn: this.tokenService.getAccessTokenTtlSeconds(),
     };
   }
 
@@ -222,7 +225,7 @@ export class AuthService {
 
   // ── Me / Switch Tenant ───────────────────────────────────
 
-  async me(userId: string) {
+  async me(userId: string, activeTenantId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -231,15 +234,9 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
 
-    const {
-      passwordHash: _ph,
-      mfaSecret: _ms,
-      recoveryCodes: _rc,
-      ...safe
-    } = user;
-
     return {
-      ...safe,
+      user: toSafeUser(user),
+      activeTenantId: activeTenantId || null,
       mfaEnabled: user.mfaEnabled,
       memberships: user.memberships.map((m) => ({
         tenantId: m.tenantId,
@@ -313,7 +310,7 @@ export class AuthService {
       throw new UnauthorizedException('MFA not set up');
     }
 
-    const valid = this.mfaService.verifyTotp(code, user.mfaSecret);
+    const valid = await this.mfaService.verifyTotp(code, user.mfaSecret);
     if (!valid) {
       throw new UnauthorizedException('Invalid TOTP code');
     }
@@ -348,7 +345,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid password');
     }
 
-    const validCode = this.mfaService.verifyTotp(code, user.mfaSecret!);
+    const validCode = await this.mfaService.verifyTotp(code, user.mfaSecret!);
     if (!validCode) {
       throw new UnauthorizedException('Invalid TOTP code');
     }
@@ -391,7 +388,7 @@ export class AuthService {
         data: { recoveryCodes: result.remaining },
       });
     } else if (code) {
-      const valid = this.mfaService.verifyTotp(code, user.mfaSecret!);
+      const valid = await this.mfaService.verifyTotp(code, user.mfaSecret!);
       if (!valid) {
         this.eventEmitter.emit('user.login.failed', {
           emailHash: hashForStorage(user.email),
@@ -414,7 +411,7 @@ export class AuthService {
       throw new UnauthorizedException('MFA not enabled');
     }
 
-    const valid = this.mfaService.verifyTotp(code, user.mfaSecret);
+    const valid = await this.mfaService.verifyTotp(code, user.mfaSecret);
     if (!valid) {
       throw new UnauthorizedException('Invalid TOTP code');
     }
@@ -461,11 +458,7 @@ export class AuthService {
       where: { tokenHash },
     });
 
-    if (
-      !resetToken ||
-      resetToken.usedAt ||
-      resetToken.expiresAt < new Date()
-    ) {
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired reset token');
     }
 
@@ -555,11 +548,7 @@ export class AuthService {
     }));
   }
 
-  async revokeSessionById(
-    userId: string,
-    sessionId: string,
-    currentSessionId: string,
-  ) {
+  async revokeSessionById(userId: string, sessionId: string) {
     await this.tokenService.revokeSession(userId, sessionId, 'user');
     this.eventEmitter.emit('session.revoked', {
       userId,
@@ -569,10 +558,7 @@ export class AuthService {
     });
   }
 
-  async revokeAllOtherSessions(
-    userId: string,
-    currentSessionId: string,
-  ) {
+  async revokeAllOtherSessions(userId: string, currentSessionId: string) {
     await this.tokenService.revokeAllSessions(userId, currentSessionId, 'user');
   }
 }

@@ -12,6 +12,7 @@ import { ApiClientService } from '../services/api-client.service';
 import { Principal } from '../decorators/principal.decorator';
 import { InternalOnly } from '../decorators/internal-only.decorator';
 import { PlatformRole } from '../decorators/platform-role.decorator';
+import type { ApiClientPrincipal } from '../types/principal';
 
 @Controller('internal')
 export class InternalController {
@@ -19,7 +20,7 @@ export class InternalController {
 
   @Get('whoami')
   @InternalOnly()
-  whoami(@Principal() principal: any) {
+  whoami(@Principal() principal: ApiClientPrincipal) {
     return {
       apiClientId: principal.apiClientId,
       tenantId: principal.tenantId,
@@ -29,7 +30,9 @@ export class InternalController {
 
   @Post('api-clients')
   @PlatformRole('support')
-  async createApiClient(@Body() body: { name: string; tenantId?: string; scopes?: string[] }) {
+  async createApiClient(
+    @Body() body: { name: string; tenantId?: string; scopes?: string[] },
+  ) {
     return this.apiClientService.create(body.name, body.tenantId, body.scopes);
   }
 

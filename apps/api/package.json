@@ -7,8 +7,8 @@
     "dev": "nest start --watch",
     "start": "nest start",
     "start:prod": "node dist/main",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ test/",
+    "typecheck": "tsc --noEmit -p tsconfig.spec.json",
     "test": "vitest run"
   },
   "dependencies": {
@@ -17,7 +17,6 @@
     "@nestjs/core": "11.2.3",
     "@nestjs/event-emitter": "^12.0.0",
     "@nestjs/jwt": "^12.0.1",
-    "@nestjs/passport": "^12.0.0",
     "@nestjs/platform-express": "11.2.3",
     "@nestjs/terminus": "11.1.1",
     "@verifynng/config": "workspace:*",
@@ -27,11 +26,8 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "ioredis": "5.7.0",
-    "jsonwebtoken": "^9.0.3",
     "nodemailer": "^9.0.6",
     "otplib": "^13.5.0",
-    "passport": "^0.7.0",
-    "passport-jwt": "^4.0.1",
     "qrcode": "^1.5.4",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
@@ -40,12 +36,13 @@
   "devDependencies": {
     "@nestjs/cli": "11.0.24",
     "@nestjs/schematics": "11.0.2",
+    "@nestjs/testing": "11.2.3",
     "@types/express": "5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^8.0.1",
-    "@types/passport-jwt": "^4.0.1",
     "@types/qrcode": "^1.5.6",
+    "@types/supertest": "^6.0.3",
     "@types/uuid": "10.0.0",
+    "supertest": "^7.1.4",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
   }
