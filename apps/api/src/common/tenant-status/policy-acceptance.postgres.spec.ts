@@ -2,15 +2,19 @@ import {
   createTestDatabase,
   disconnectTestHelper,
   dropTestSchema,
+  prisma,
 } from '@verifynng/db';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ForbiddenException } from '@nestjs/common';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   decidePolicyAcceptance,
   pendingPolicyKinds,
 } from './policy-acceptance';
+import { TenantStatusGuard } from './tenant-status.guard';
 
 describe('policy acceptance gate with Postgres', () => {
-  let testDb: Awaited<ReturnType<typeof createTestDatabase>>;
+  let testDb: Awaited<ReturnType<typeof createTestDatabase>> | undefined;
+  const schemaName = `test_policy_acceptance_${process.pid}`;
   const tenantId = 'tenant-policy-bump';
   const userId = 'user-policy-owner';
 
@@ -61,12 +65,68 @@ describe('policy acceptance gate with Postgres', () => {
   afterAll(async () => {
     if (testDb) {
       await dropTestSchema(testDb.schemaName, testDb.prisma);
-      await disconnectTestHelper();
+    } else {
+      await prisma.$executeRawUnsafe(
+        `DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`,
+      );
     }
+    await disconnectTestHelper();
+    await prisma.$disconnect();
   });
 
   it('blocks the owner after a current policy bump, then clears the gate after acceptance', async () => {
+    if (!testDb) throw new Error('test database was not initialized');
     const now = new Date();
+    const future = new Date(now.getTime() + 24 * 60 * 60 * 1_000);
+    await testDb.prisma.policyDocument.create({
+      data: {
+        kind: 'tos',
+        version: '2099-01-01',
+        markdown: 'Future ToS',
+        effectiveFrom: future,
+      },
+    });
+
+    const reflector = {
+      get: vi.fn(() => undefined),
+    } as never;
+    const guard = new TenantStatusGuard(reflector);
+    const context = () =>
+      ({
+        switchToHttp: () => ({
+          getRequest: () => ({
+            path: `/tenants/${tenantId}/settings`,
+            params: { tenantId },
+            method: 'PATCH',
+            principal: { userId, role: 'owner', tenantId },
+          }),
+        }),
+        getHandler: () => function handler() {},
+        getClass: () => class Handler {},
+      }) as never;
+    const tenantFindFirst = vi
+      .spyOn(prisma.tenant, 'findFirst')
+      .mockImplementation((args) => testDb!.prisma.tenant.findFirst(args));
+    const policyFindMany = vi
+      .spyOn(prisma.policyDocument, 'findMany')
+      .mockImplementation((args) =>
+        testDb!.prisma.policyDocument.findMany(args),
+      );
+    const acceptanceFindMany = vi
+      .spyOn(prisma.policyAcceptance, 'findMany')
+      .mockImplementation((args) =>
+        testDb!.prisma.policyAcceptance.findMany(args),
+      );
+
+    await expect(guard.canActivate(context())).resolves.toBe(true);
+    expect(policyFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          effectiveFrom: { lte: expect.any(Date) },
+        }),
+      }),
+    );
+
     await testDb.prisma.policyDocument.create({
       data: {
         kind: 'tos',
@@ -91,6 +151,12 @@ describe('policy acceptance gate with Postgres', () => {
       error: 'policy_acceptance_required',
       pending: ['tos'],
     });
+    await expect(guard.canActivate(context())).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(guard.canActivate(context())).rejects.toMatchObject({
+      response: { error: 'policy_acceptance_required', pending: ['tos'] },
+    });
 
     await testDb.prisma.policyAcceptance.create({
       data: { tenantId, userId, kind: 'tos', version: '2026-09-01' },
@@ -107,5 +173,11 @@ describe('policy acceptance gate with Postgres', () => {
         false,
       ),
     ).toEqual({ allowed: true });
+
+    await expect(guard.canActivate(context())).resolves.toBe(true);
+    expect(acceptanceFindMany).toHaveBeenCalled();
+    tenantFindFirst.mockRestore();
+    policyFindMany.mockRestore();
+    acceptanceFindMany.mockRestore();
   });
 });
