@@ -4,9 +4,18 @@ import { Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import { Writable } from 'node:stream';
 import crypto from 'node:crypto';
+import * as React from 'react';
 import { toBuffer as qrToBuffer } from 'qrcode';
 import { ZipArchive } from 'archiver';
-import PDFDocument from 'pdfkit';
+import {
+  Document,
+  Image,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+  renderToBuffer,
+} from '@react-pdf/renderer';
 import { S3Service } from '../common/s3.service';
 import { ManifestService } from '../modules/batches/manifest.service';
 import { EventsService } from '../common/events.service';
@@ -45,6 +54,70 @@ const PALETTE = {
 };
 
 type ArtefactKind = 'qr-zip' | 'tier1-csv' | 'sheet-pdf' | 'all-zip';
+
+const sheetStyles = StyleSheet.create({
+  page: {
+    padding: 24,
+    backgroundColor: PALETTE.background,
+  },
+  title: {
+    fontSize: 16,
+    color: PALETTE.dark,
+  },
+  subtitle: {
+    fontSize: 10,
+    color: PALETTE.muted,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  card: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: PALETTE.gold,
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 12,
+  },
+  serial: {
+    fontSize: 8,
+    color: PALETTE.muted,
+    width: 16,
+  },
+  col: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  qr: {
+    width: 72,
+    height: 72,
+  },
+  label: {
+    fontSize: 7,
+    color: PALETTE.dark,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  sublabel: {
+    fontSize: 6,
+    color: PALETTE.sub,
+    textAlign: 'center',
+  },
+  divider: {
+    width: 1,
+    alignSelf: 'stretch',
+    borderLeftWidth: 1,
+    borderLeftColor: PALETTE.gold,
+    borderStyle: 'dashed',
+    marginHorizontal: 6,
+  },
+});
 
 @Processor('batch-exports', { concurrency: 1 })
 @Injectable()
@@ -217,136 +290,76 @@ export class BatchExportsProcessor extends WorkerHost {
       cards.push({ serial: unit.serial, tier1, tier2 });
     }
 
-    return new Promise<Buffer>((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      const doc = new PDFDocument({
-        size: 'A4',
-        margin: 24,
-        info: { Title: `${tenantName} — QR Application Sheet` },
-      });
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+    const cardElements = cards.map((card) =>
+      React.createElement(
+        View,
+        { key: card.serial, style: sheetStyles.card, wrap: false },
+        React.createElement(
+          Text,
+          { style: sheetStyles.serial },
+          `#${card.serial}`,
+        ),
+        React.createElement(
+          View,
+          { style: sheetStyles.col },
+          React.createElement(Image, {
+            src: card.tier1,
+            style: sheetStyles.qr,
+          }),
+          React.createElement(
+            Text,
+            { style: sheetStyles.label },
+            'TIER 1 · PUBLIC',
+          ),
+          React.createElement(
+            Text,
+            { style: sheetStyles.sublabel },
+            'print on bottle',
+          ),
+        ),
+        React.createElement(View, { style: sheetStyles.divider }),
+        React.createElement(
+          View,
+          { style: sheetStyles.col },
+          React.createElement(Image, {
+            src: card.tier2,
+            style: sheetStyles.qr,
+          }),
+          React.createElement(
+            Text,
+            { style: sheetStyles.label },
+            'TIER 2 · HIDDEN',
+          ),
+          React.createElement(
+            Text,
+            { style: sheetStyles.sublabel },
+            'scratch-off label',
+          ),
+        ),
+      ),
+    );
 
-      // Warm background page colour.
-      doc
-        .rect(0, 0, doc.page.width, doc.page.height)
-        .fillColor(PALETTE.background)
-        .fill();
-
-      // Header
-      doc
-        .fontSize(16)
-        .fillColor(PALETTE.dark)
-        .text(`${tenantName} — QR Application Sheet`, 24, 24);
-      doc
-        .fontSize(10)
-        .fillColor(PALETTE.muted)
-        .text(
+    const doc = React.createElement(
+      Document,
+      { title: `${tenantName} — QR Application Sheet` },
+      React.createElement(
+        Page,
+        { size: 'A4', style: sheetStyles.page },
+        React.createElement(
+          Text,
+          { style: sheetStyles.title },
+          `${tenantName} — QR Application Sheet`,
+        ),
+        React.createElement(
+          Text,
+          { style: sheetStyles.subtitle },
           `Batch ${batch.id.substring(0, 8)} · ${batch.product?.name || ''} · ${units.length} units · OEM: ${batch.oem?.name || 'N/A'}`,
-          24,
-          46,
-        );
-      doc.y = 70;
+        ),
+        React.createElement(View, { style: sheetStyles.grid }, ...cardElements),
+      ),
+    );
 
-      const pageWidth = doc.page.width - 48; // accounting for 24pt side margins
-      const cardHeight = 130;
-      const cardGap = 12;
-
-      for (const card of cards) {
-        // Start a fresh page (with header) if the next card won't fit.
-        if (doc.y > doc.page.height - 24 - cardHeight - 8) {
-          doc.addPage({ size: 'A4', margin: 24 });
-          doc
-            .rect(0, 0, doc.page.width, doc.page.height)
-            .fillColor(PALETTE.background)
-            .fill();
-          doc
-            .fontSize(10)
-            .fillColor(PALETTE.muted)
-            .text(`${tenantName} — continued`, 24, 24);
-          doc.y = 48;
-        }
-
-        const startY = doc.y;
-
-        // Card border
-        doc
-          .save()
-          .roundedRect(24, startY, pageWidth, cardHeight, 6)
-          .lineWidth(1)
-          .strokeColor(PALETTE.gold)
-          .stroke()
-          .restore();
-
-        // Serial badge (top-left)
-        doc
-          .fontSize(9)
-          .fillColor(PALETTE.muted)
-          .text(`#${card.serial}`, 32, startY + 6);
-
-        const qrSize = 88;
-        const leftQrX = 40;
-        const rightQrX = 24 + pageWidth - qrSize - 56;
-        const qrY = startY + 18;
-
-        // Tier 1 QR — PUBLIC · print on bottle
-        doc.image(card.tier1, leftQrX, qrY, {
-          width: qrSize,
-          height: qrSize,
-        });
-        doc
-          .fontSize(7)
-          .fillColor(PALETTE.dark)
-          .text('TIER 1 · PUBLIC', leftQrX, qrY + qrSize + 2, {
-            width: qrSize,
-            align: 'center',
-          });
-        doc
-          .fontSize(6)
-          .fillColor(PALETTE.sub)
-          .text('print on bottle', leftQrX, qrY + qrSize + 12, {
-            width: qrSize,
-            align: 'center',
-          });
-
-        // Tier 2 QR — HIDDEN · scratch-off label
-        doc.image(card.tier2, rightQrX, qrY, {
-          width: qrSize,
-          height: qrSize,
-        });
-        doc
-          .fontSize(7)
-          .fillColor(PALETTE.dark)
-          .text('TIER 2 · HIDDEN', rightQrX, qrY + qrSize + 2, {
-            width: qrSize,
-            align: 'center',
-          });
-        doc
-          .fontSize(6)
-          .fillColor(PALETTE.sub)
-          .text('scratch-off label', rightQrX, qrY + qrSize + 12, {
-            width: qrSize,
-            align: 'center',
-          });
-
-        // Dashed gold separator between the two QR codes.
-        const sepX = leftQrX + qrSize + (rightQrX - (leftQrX + qrSize)) / 2;
-        doc
-          .save()
-          .dash(3, { space: 3 })
-          .moveTo(sepX, startY + 12)
-          .lineTo(sepX, startY + cardHeight - 12)
-          .lineWidth(1)
-          .strokeColor(PALETTE.gold)
-          .stroke()
-          .restore();
-
-        doc.y = startY + cardHeight + cardGap;
-      }
-
-      doc.end();
-    });
+    return renderToBuffer(doc);
   }
 
   private async generateAllZip(
