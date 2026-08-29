@@ -56,20 +56,18 @@ export async function seedBatches(
         ? 'minted'
         : seededWeightedPick(rng, BATCH_STATUSES);
 
-      const created = await prisma.batch.create({
-        data: {
-          tenantId,
-          productId,
-          oemId,
-          count,
-          status,
-          createdAt: new Date(
-            SEED_NOW.getTime() - seededInt(rng, 0, 18 * 30) * 86400000,
-          ),
-        },
+      const key = `${tenantSlug}_batch_${batchIndex}`;
+      const createdAt = new Date(
+        SEED_NOW.getTime() - seededInt(rng, 0, 18 * 30) * 86400000,
+      );
+      // Deterministic id so re-running the seed updates instead of duplicating.
+      const id = `seed_${key}`;
+      const created = await prisma.batch.upsert({
+        where: { id },
+        create: { id, tenantId, productId, oemId, count, status, createdAt },
+        update: { tenantId, productId, oemId, count, status, createdAt },
       });
 
-      const key = `${tenantSlug}_batch_${batchIndex}`;
       manifest.batches[key] = { id: created.id, tenantSlug };
       batchIndex++;
     }

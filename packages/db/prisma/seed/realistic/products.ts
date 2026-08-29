@@ -102,14 +102,14 @@ export async function seedProducts(
   for (const oemDef of OEMS) {
     const tenantId = manifest.tenants[oemDef.tenantSlug]?.id;
     if (!tenantId) continue;
-    const created = await prisma.oem.create({
-      data: {
-        name: oemDef.name,
-        country: oemDef.country,
-        tenantId,
-      },
-    });
     const key = oemDef.name.toLowerCase().replace(/\s+/g, '_');
+    // Deterministic id so re-running the seed updates instead of duplicating.
+    const id = `seed_oem_${oemDef.tenantSlug}_${key}`;
+    const created = await prisma.oem.upsert({
+      where: { id },
+      create: { id, name: oemDef.name, country: oemDef.country, tenantId },
+      update: { name: oemDef.name, country: oemDef.country, tenantId },
+    });
     manifest.oems[key] = {
       id: created.id,
       name: oemDef.name,

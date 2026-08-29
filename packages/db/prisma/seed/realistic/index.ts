@@ -1,4 +1,11 @@
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+
+// Per-worktree overrides first (.env, written by scripts/epic start), then repo defaults.
+config({ path: resolve(__dirname, '../../../../../.env') });
+config({ path: resolve(__dirname, '../../../../../.env.example') });
+
 import { seededRng, DEFAULT_SEED, SEED_NOW } from './lib/rng.js';
 import { emptyManifest, writeManifest } from './lib/manifest.js';
 import { seedTenants } from './tenants.js';

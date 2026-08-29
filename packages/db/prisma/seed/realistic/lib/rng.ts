@@ -3,7 +3,7 @@ export {
   seededInt,
   seededPick,
   seededWeightedPick,
-} from '../../../src/testing/seeded-rng.js';
+} from '../../../../src/testing/seeded-rng.js';
 
 /** Default seed for reproducibility */
 export const DEFAULT_SEED = 42;
