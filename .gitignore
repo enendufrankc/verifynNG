@@ -9,9 +9,11 @@ coverage/
 !.env.example
 .DS_Store
 legacy/verify-platform/data/
+packages/db/prisma/seed/realistic/manifest.json
 legacy/verify-platform/exports/
 docs/design/*.zip
 .vitest/
 playwright-report/
 test-results/
+tools/load/results/
 *.tsbuildinfo

@@ -194,7 +194,23 @@ services:
       retries: 10
       start_period: 30s
 
+  # ── Load testing (profile: load) ────────────────────────
+  k6:
+    image: grafana/k6:0.54
+    profiles:
+      - load
+    volumes:
+      - ../tools/load:/scripts:ro
+      - load-results:/results
+    environment:
+      API_URL: http://api:4000
+    entrypoint: ['/scripts/docker-entrypoint.sh']
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
   miniodata:
+  load-results:
