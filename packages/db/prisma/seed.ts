@@ -43,9 +43,21 @@ async function main() {
     });
   }
 
-  console.log(
-    `Seeded tenant ${tenant.name} with ${products.length} products`,
-  );
+  // Create the Guiba OEM (E04)
+  await prisma.oem.upsert({
+    where: {
+      tenantId_name: { tenantId: tenant.id, name: 'Guiba OEM (China)' },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      name: 'Guiba OEM (China)',
+      country: 'CN',
+      status: 'active',
+    },
+  });
+
+  console.log(`Seeded tenant ${tenant.name} with ${products.length} products`);
 }
 
 main()

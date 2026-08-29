@@ -27,10 +27,31 @@ const e00Schema = z.object({
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:4000'),
 });
 
+// ── E04 Catalog & Minting ──────────────────────────────────────
+const e04Schema = e00Schema.extend({
+  CORE_KEYS: z
+    .string()
+    .default(
+      'k1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    ),
+  CORE_ACTIVE_KID: z.string().default('k1'),
+  MINT_SYNC_MAX: z.coerce.number().default(5000),
+  MINT_CHUNK: z.coerce.number().default(1000),
+  MINT_MAX_COUNT: z.coerce.number().default(1000000),
+  MANIFEST_ENC_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/)
+    .default(
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    ),
+  VERIFY_BASE_URL: z.string().default('http://localhost:3000'),
+  WORKER: z.enum(['true', 'false']).default('false'),
+  WORKER_INLINE: z.enum(['true', 'false']).default('true'),
+});
+
 // ── Sections for other epics will be added here ────────────────
-// E02 will add JWT_SECRET, etc.
 // E14 will add EMAIL_FROM, etc.
 
-export const envSchema = e00Schema;
+export const envSchema = e04Schema;
 
-export type Env = z.infer<typeof envSchema>;
+export type Env = z.infer<typeof e04Schema>;
