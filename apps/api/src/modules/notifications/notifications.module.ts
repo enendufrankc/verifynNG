@@ -31,6 +31,19 @@ import { WebhooksService } from './webhooks/webhooks.service';
 
 @Module({
   imports: [
+    BullModule.forRootAsync({
+      useFactory: (config: ConfigService) => {
+        const redisUrl = new URL(config.get<string>('REDIS_URL')!);
+        return {
+          connection: {
+            host: redisUrl.hostname,
+            port: Number(redisUrl.port || 6379),
+            maxRetriesPerRequest: null,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
     BullModule.registerQueue({ name: 'notifications' }),
     EventEmitterModule.forRoot(),
   ],
