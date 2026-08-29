@@ -3,6 +3,28 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.policyDocument.upsert({
+    where: { kind_version: { kind: 'aup', version: '2026-08-01' } },
+    update: {},
+    create: {
+      kind: 'aup',
+      version: '2026-08-01',
+      effectiveFrom: new Date('2026-08-01T00:00:00Z'),
+      markdown:
+        'Only authenticate goods for marks you own or are authorised to represent. The platform may suspend accounts when there is evidence of counterfeiting.',
+    },
+  });
+  await prisma.policyDocument.upsert({
+    where: { kind_version: { kind: 'tos', version: '2026-08-01' } },
+    update: {},
+    create: {
+      kind: 'tos',
+      version: '2026-08-01',
+      effectiveFrom: new Date('2026-08-01T00:00:00Z'),
+      markdown:
+        'The platform may suspend service on evidence of counterfeiting, abuse, or unlawful use. You remain responsible for the marks and goods you submit.',
+    },
+  });
   // Create the ivoryglow tenant
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'ivoryglow' },
@@ -11,6 +33,8 @@ async function main() {
       slug: 'ivoryglow',
       name: 'IVORY GLOW',
       legalName: 'Tunnel Light Global Concept Ltd',
+      trademarkNumber: 'NG/TM/O/2020/11950',
+      country: 'NG',
       status: 'active',
     },
   });
@@ -43,9 +67,7 @@ async function main() {
     });
   }
 
-  console.log(
-    `Seeded tenant ${tenant.name} with ${products.length} products`,
-  );
+  console.log(`Seeded tenant ${tenant.name} with ${products.length} products`);
 }
 
 main()
