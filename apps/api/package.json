@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",
+    "notifications:preview": "email dev --dir src/modules/notifications/templates/preview --port 4110",
     "start": "nest start",
     "start:prod": "node dist/main",
     "lint": "eslint src/",
@@ -20,6 +21,7 @@
     "@nestjs/platform-express": "11.2.3",
     "@nestjs/terminus": "11.1.1",
     "@react-email/components": "^1.0.12",
+    "@react-email/ui": "^6.9.3",
     "@verifynng/config": "workspace:*",
     "@verifynng/db": "workspace:*",
     "bullmq": "^6.3.2",
