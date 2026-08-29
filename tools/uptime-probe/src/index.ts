@@ -1,7 +1,7 @@
 import { createServer } from 'http';
-import { Register, Gauge } from 'prom-client';
+import { Registry, Gauge } from 'prom-client';
 
-const register = new Register();
+const register = new Registry();
 
 const probeSuccessGauge = new Gauge({
   name: 'probe_success',

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { prisma, PrismaClient } from '@verifynng/db';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -21,7 +21,7 @@ export class StatusService {
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
-    dbClient?: PrismaClient,
+    @Optional() dbClient?: PrismaClient,
   ) {
     this.db = dbClient || prisma;
   }

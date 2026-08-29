@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   NestInterceptor,
   ExecutionContext,
@@ -8,9 +9,12 @@ import { Observable } from 'rxjs';
 import { trace } from '@opentelemetry/api';
 import { randomUUID } from 'crypto';
 import { runWithContext, RequestContext } from './context';
+import { AppLogger, APP_LOGGER } from './logger';
 
 @Injectable()
 export class RequestContextInterceptor implements NestInterceptor {
+  constructor(@Inject(APP_LOGGER) private readonly logger: AppLogger) {}
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     if (context.getType() !== 'http') {
       return next.handle();
@@ -42,12 +46,31 @@ export class RequestContextInterceptor implements NestInterceptor {
       spanId: spanContext?.spanId,
     };
 
+    const start = performance.now();
+    const logCompletion = () => {
+      this.logger.log(
+        {
+          method: req.method,
+          path: req.originalUrl ?? req.url,
+          statusCode: res.statusCode,
+          durationMs: Math.round(performance.now() - start),
+        },
+        'request completed',
+      );
+    };
+
     return new Observable((observer) => {
       runWithContext(ctx, () => {
         next.handle().subscribe({
           next: (val) => observer.next(val),
-          error: (err) => observer.error(err),
-          complete: () => observer.complete(),
+          error: (err) => {
+            logCompletion();
+            observer.error(err);
+          },
+          complete: () => {
+            logCompletion();
+            observer.complete();
+          },
         });
       });
     });

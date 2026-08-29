@@ -2,6 +2,7 @@ import { Injectable, LoggerService } from '@nestjs/common';
 import pino, { Logger as PinoLogger } from 'pino';
 import { getContext } from './context';
 import { redactLogObject } from './redaction';
+import { LokiStream } from './loki-stream';
 
 export const APP_LOGGER = 'APP_LOGGER';
 
@@ -10,29 +11,38 @@ export class AppLogger implements LoggerService {
   private logger: PinoLogger;
 
   constructor() {
-    this.logger = pino({
-      level: process.env.LOG_LEVEL || 'info',
-      formatters: {
-        level(label) {
-          return { level: label };
+    const serviceName = process.env.OTEL_SERVICE_NAME || 'api';
+    const lokiStream = new LokiStream(
+      process.env.LOKI_URL || 'http://loki:3100',
+      serviceName,
+    );
+
+    this.logger = pino(
+      {
+        level: process.env.LOG_LEVEL || 'info',
+        formatters: {
+          level(label) {
+            return { level: label };
+          },
+        },
+        base: {
+          service: serviceName,
+          version: process.env.npm_package_version || '0.0.0',
+        },
+        mixin() {
+          const ctx = getContext();
+          if (!ctx) return {};
+          return {
+            requestId: ctx.requestId,
+            tenantId: ctx.tenantId,
+            userId: ctx.userId,
+            traceId: ctx.traceId,
+            spanId: ctx.spanId,
+          };
         },
       },
-      base: {
-        service: process.env.OTEL_SERVICE_NAME || 'api',
-        version: process.env.npm_package_version || '0.0.0',
-      },
-      mixin() {
-        const ctx = getContext();
-        if (!ctx) return {};
-        return {
-          requestId: ctx.requestId,
-          tenantId: ctx.tenantId,
-          userId: ctx.userId,
-          traceId: ctx.traceId,
-          spanId: ctx.spanId,
-        };
-      },
-    });
+      lokiStream,
+    );
   }
 
   log(message: unknown, ...optionalParams: unknown[]) {

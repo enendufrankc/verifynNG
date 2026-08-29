@@ -29,9 +29,7 @@ const e00Schema = z.object({
 
 // ── E17 Observability ───────────────────────────────────────────
 const e17Schema = z.object({
-  OTEL_EXPORTER_OTLP_ENDPOINT: z
-    .string()
-    .default('http://localhost:4317'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4317'),
   OTEL_TRACES_SAMPLER: z.string().default('always_on'),
   OTEL_TRACES_SAMPLER_ARG: z.string().optional(),
   OTEL_SERVICE_NAME: z.string().default('api'),
@@ -40,9 +38,7 @@ const e17Schema = z.object({
   PROBE_FIXTURE_CODE: z.string().default('PROBE_TIER1_OK'),
   SENTRY_DSN: z.string().optional(),
   OPS_ALERT_EMAILS: z.string().default('ops@verifynng.local'),
-  ALERT_WEBHOOK_SECRET: z
-    .string()
-    .default('alert-webhook-secret-local'),
+  ALERT_WEBHOOK_SECRET: z.string().default('alert-webhook-secret-local'),
   GRAFANA_PORT: z.coerce.number().default(3100),
   LOKI_PORT: z.coerce.number().default(3101),
   TEMPO_PORT: z.coerce.number().default(3102),
@@ -50,6 +46,7 @@ const e17Schema = z.object({
   OTEL_COLLECTOR_PORT: z.coerce.number().default(3104),
   UPTIME_PROBE_PORT: z.coerce.number().default(3105),
   METRICS_PORT: z.coerce.number().default(9464),
+  LOKI_URL: z.string().default('http://loki:3100'),
   VERIFY_ARTIFICIAL_DELAY_MS: z.coerce.number().default(0),
 });
 
