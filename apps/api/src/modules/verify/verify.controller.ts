@@ -99,24 +99,29 @@ export class VerifyController {
   schema(): Record<string, unknown> {
     // Placeholder JSON schema — replaced by generated OpenAPI once the
     // openapi:generate pipeline is wired.
+    const verdicts = [
+      'invalid',
+      'unknown',
+      'ok',
+      'authentic',
+      'already-verified',
+      'suspicious',
+      'flagged',
+      'decommissioned',
+      'rate-limited',
+    ];
     return {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       title: 'VerifyResponse',
       type: 'object',
+      // Not a standard JSON Schema keyword — surfaced at the top level so
+      // consumers (and CI) can enumerate every verdict this response is
+      // discriminated on without walking into `properties.verdict.enum`.
+      discriminator: verdicts,
       properties: {
         verdict: {
           type: 'string',
-          enum: [
-            'invalid',
-            'unknown',
-            'ok',
-            'authentic',
-            'already-verified',
-            'suspicious',
-            'flagged',
-            'decommissioned',
-            'rate-limited',
-          ],
+          enum: verdicts,
         },
         severity: {
           type: 'string',

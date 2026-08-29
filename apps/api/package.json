@@ -10,8 +10,8 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "openapi:generate": "nest g openapi --dry-run 2>/dev/null; node scripts/generate-openapi.mjs",
-    "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code apps/api/openapi/verify.v1.json"
+    "openapi:generate": "node scripts/generate-openapi.mjs",
+    "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code -- openapi/verify.v1.json"
   },
   "dependencies": {
     "@nestjs/common": "11.2.3",
@@ -37,6 +37,7 @@
     "@nestjs/schematics": "11.0.2",
     "@types/express": "5.0.3",
     "@types/uuid": "10.0.0",
+    "dotenv": "17.4.2",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
   }
