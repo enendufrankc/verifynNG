@@ -24,6 +24,17 @@ import {
 import { ManifestService } from './manifest.service';
 import { EventsService } from '../../common/events.service';
 
+const MAX_COLLISION_RETRIES = 5;
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'P2002'
+  );
+}
+
 @Injectable()
 export class MintService {
   private ring: StaticKeyRing;
@@ -171,41 +182,54 @@ export class MintService {
       const chunkEnd = Math.min(chunkStart + chunkSize, count);
       const chunkNumber = Math.floor(chunkStart / chunkSize);
 
-      const units: Array<{
-        tenantId: string;
-        batchId: string;
-        tier1Code: string;
-        tier2Hash: string;
-        serial: number;
-        productId: string;
-      }> = [];
-      for (let i = chunkStart; i < chunkEnd; i++) {
-        const serial = i + 1;
-        const { code: tier1Code } = generateCode(this.ring, {
-          tenant: tenantId,
-          tier: 1 as Tier,
-          watermark,
-        });
-        const { code: tier2Code } = generateCode(this.ring, {
-          tenant: tenantId,
-          tier: 2 as Tier,
-          watermark,
-        });
-        const tier2Hash = hashForStorage(tier2Code);
-        tier2Codes.push(tier2Code);
-        units.push({
-          tenantId,
-          batchId: batch.id,
-          tier1Code,
-          tier2Hash,
-          serial,
-          productId,
-        });
-      }
+      let inserted = false;
+      let lastCollision: unknown;
+      for (let attempt = 0; attempt < MAX_COLLISION_RETRIES; attempt++) {
+        const units: Array<{
+          tenantId: string;
+          batchId: string;
+          tier1Code: string;
+          tier2Hash: string;
+          serial: number;
+          productId: string;
+        }> = [];
+        const chunkTier2Codes: string[] = [];
+        for (let i = chunkStart; i < chunkEnd; i++) {
+          const serial = i + 1;
+          const { code: tier1Code } = generateCode(this.ring, {
+            tenant: tenantId,
+            tier: 1 as Tier,
+            watermark,
+          });
+          const { code: tier2Code } = generateCode(this.ring, {
+            tenant: tenantId,
+            tier: 2 as Tier,
+            watermark,
+          });
+          chunkTier2Codes.push(tier2Code);
+          units.push({
+            tenantId,
+            batchId: batch.id,
+            tier1Code,
+            tier2Hash: hashForStorage(tier2Code),
+            serial,
+            productId,
+          });
+        }
 
-      await this.prisma.$transaction(async (tx) => {
-        await tx.unit.createMany({ data: units, skipDuplicates: true });
-      });
+        try {
+          await this.prisma.$transaction(async (tx) => {
+            await tx.unit.createMany({ data: units });
+          });
+          tier2Codes.push(...chunkTier2Codes);
+          inserted = true;
+          break;
+        } catch (error) {
+          if (!isUniqueConstraintError(error)) throw error;
+          lastCollision = error;
+        }
+      }
+      if (!inserted) throw lastCollision;
 
       mintedCount += chunkEnd - chunkStart;
       await this.prisma.batch.update({
