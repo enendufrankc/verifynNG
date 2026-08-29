@@ -11,6 +11,34 @@ import { prisma } from '@verifynng/db';
 import { PrincipalRequest } from '../principal';
 import { ALLOW_SUSPENDED_KEY, TENANT_STATUS_KEY } from './decorators';
 
+export type TenantStatusDecision =
+  | { allowed: true }
+  | {
+      allowed: false;
+      error: 'tenant_not_active' | 'tenant_suspended' | 'tenant_offboarded';
+    };
+
+export function decideTenantStatus(
+  status: string,
+  method: string,
+  required: string[] | undefined,
+  allowSuspended: boolean,
+  isExport = false,
+): TenantStatusDecision {
+  if (required?.includes(status)) return { allowed: true };
+  if (status === 'offboarded')
+    return method === 'GET' && isExport
+      ? { allowed: true }
+      : { allowed: false, error: 'tenant_offboarded' };
+  if (status === 'suspended' || status === 'restricted') {
+    if (allowSuspended || method === 'GET') return { allowed: true };
+    return { allowed: false, error: 'tenant_suspended' };
+  }
+  if (status !== 'active' && method !== 'GET')
+    return { allowed: false, error: 'tenant_not_active' };
+  return { allowed: true };
+}
+
 @Injectable()
 export class TenantStatusGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
@@ -36,26 +64,18 @@ export class TenantStatusGuard implements CanActivate {
       TENANT_STATUS_KEY,
       context.getHandler(),
     );
-    if (allowed?.includes(tenant.status)) return true;
-    if (
-      tenant.status === 'offboarded' &&
-      req.method === 'GET' &&
-      req.path.endsWith('/export')
-    )
-      return true;
-    if (tenant.status === 'offboarded')
-      throw new GoneException({ error: 'tenant_offboarded' });
-    if (tenant.status === 'suspended' || tenant.status === 'restricted') {
-      if (
-        this.reflector.get<boolean>(ALLOW_SUSPENDED_KEY, context.getHandler())
-      )
-        return true;
-      if (req.method === 'GET') return true;
-      throw new ForbiddenException({ error: 'tenant_suspended' });
-    }
-    if (tenant.status !== 'active' && req.method !== 'GET') {
-      throw new ForbiddenException({ error: 'tenant_not_active' });
-    }
+    const decision = decideTenantStatus(
+      tenant.status,
+      req.method,
+      allowed,
+      this.reflector.get<boolean>(ALLOW_SUSPENDED_KEY, context.getHandler()) ??
+        false,
+      req.path.endsWith('/export'),
+    );
+    if (!decision.allowed && decision.error === 'tenant_offboarded')
+      throw new GoneException({ error: decision.error });
+    if (!decision.allowed)
+      throw new ForbiddenException({ error: decision.error });
     return true;
   }
 }
