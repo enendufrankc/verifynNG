@@ -1,0 +1,59 @@
+import {
+  LayoutDashboard,
+  Package,
+  Factory,
+  Layers,
+  ScanLine,
+  Activity,
+  ShieldAlert,
+  MessageSquareWarning,
+  BarChart3,
+  Users,
+  ScrollText,
+  CreditCard,
+  Settings,
+  LifeBuoy,
+  type LucideIcon,
+} from 'lucide-react';
+
+export type NavEntry = {
+  id: string;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  section:
+    | 'overview'
+    | 'catalog'
+    | 'monitoring'
+    | 'organization'
+    | 'platform';
+  minRole?: 'viewer' | 'operator' | 'owner';
+  platformRole?: 'support';
+  badge?: () => Promise<number | null>;
+  order: number;
+};
+
+export const NAV: NavEntry[] = [
+  { id: 'overview.dashboard', label: 'Dashboard', href: '/', icon: LayoutDashboard, section: 'overview', order: 1 },
+  { id: 'catalog.products', label: 'Products', href: '/products', icon: Package, section: 'catalog', order: 10 },
+  { id: 'catalog.oems', label: 'OEMs', href: '/oems', icon: Factory, section: 'catalog', order: 20 },
+  { id: 'catalog.batches', label: 'Batches', href: '/batches', icon: Layers, section: 'catalog', order: 30 },
+  { id: 'monitoring.units', label: 'Units', href: '/units', icon: ScanLine, section: 'monitoring', order: 10 },
+  { id: 'monitoring.anomalies', label: 'Anomalies', href: '/anomalies', icon: ShieldAlert, section: 'monitoring', order: 20 },
+  { id: 'monitoring.reports', label: 'Reports', href: '/reports', icon: MessageSquareWarning, section: 'monitoring', order: 30 },
+  { id: 'monitoring.scans', label: 'Scans', href: '/scans', icon: Activity, section: 'monitoring', order: 40 },
+  { id: 'monitoring.analytics', label: 'Analytics', href: '/analytics', icon: BarChart3, section: 'monitoring', order: 50 },
+  { id: 'organization.team', label: 'Team', href: '/team', icon: Users, section: 'organization', order: 10 },
+  { id: 'organization.audit', label: 'Audit log', href: '/audit', icon: ScrollText, section: 'organization', minRole: 'owner', order: 20 },
+  { id: 'organization.billing', label: 'Billing', href: '/billing', icon: CreditCard, section: 'organization', minRole: 'owner', order: 30 },
+  { id: 'organization.settings', label: 'Settings', href: '/settings', icon: Settings, section: 'organization', order: 40 },
+  { id: 'platform.support', label: 'Support', href: '/support', icon: LifeBuoy, section: 'platform', platformRole: 'support', order: 10 },
+];
+
+export const NAV_SECTIONS: Record<NavEntry['section'], { label: string; order: number }> = {
+  overview: { label: 'Overview', order: 1 },
+  catalog: { label: 'Catalog', order: 2 },
+  monitoring: { label: 'Monitoring', order: 3 },
+  organization: { label: 'Organization', order: 4 },
+  platform: { label: 'Platform', order: 5 },
+};
