@@ -212,7 +212,7 @@ services:
 
   # ── Load testing (profile: load) ────────────────────────
   k6:
-    image: grafana/k6:0.54
+    image: grafana/k6:0.54.0
     profiles:
       - load
     volumes:
