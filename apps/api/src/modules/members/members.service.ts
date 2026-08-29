@@ -5,7 +5,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, TenantRole } from '@prisma/client';
 import { hashForStorage } from '@verifynng/core';
 import { MAILER, type Mailer } from '../auth/mailer/mailer.interface';
 import crypto from 'node:crypto';
@@ -43,7 +43,7 @@ export class MembershipService {
   async invite(
     tenantId: string,
     email: string,
-    role: string,
+    role: TenantRole,
     invitedBy: string,
   ) {
     let user = await this.prisma.user.findUnique({ where: { email } });
@@ -61,7 +61,7 @@ export class MembershipService {
     }
 
     const membership = await this.prisma.membership.create({
-      data: { userId: user.id, tenantId, role: role as any },
+      data: { userId: user.id, tenantId, role },
     });
 
     const token = crypto.randomUUID() + crypto.randomUUID();
@@ -98,7 +98,7 @@ export class MembershipService {
   async setRole(
     tenantId: string,
     userId: string,
-    newRole: string,
+    newRole: TenantRole,
     changedBy: string,
   ) {
     const membership = await this.prisma.membership.findUnique({
@@ -120,7 +120,7 @@ export class MembershipService {
     const oldRole = membership.role;
     const updated = await this.prisma.membership.update({
       where: { id: membership.id },
-      data: { role: newRole as any },
+      data: { role: newRole },
     });
 
     this.eventEmitter.emit('member.role.changed', {

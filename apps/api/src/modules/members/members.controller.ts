@@ -15,6 +15,7 @@ import { ChangeRoleDto } from './dto/change-role.dto';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { TenantId } from '../auth/decorators/tenant-id.decorator';
 import { Principal } from '../auth/decorators/principal.decorator';
+import type { UserPrincipal } from '../auth/types/principal';
 
 @Controller('tenants/:tenantId/members')
 export class MembersController {
@@ -30,7 +31,7 @@ export class MembersController {
   @Roles('owner')
   async invite(
     @TenantId() tenantId: string,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
     @Body() dto: InviteDto,
   ) {
     return this.membersService.invite(
@@ -46,7 +47,7 @@ export class MembersController {
   async changeRole(
     @TenantId() tenantId: string,
     @Param('userId') userId: string,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
     @Body() dto: ChangeRoleDto,
   ) {
     return this.membersService.setRole(
@@ -63,7 +64,7 @@ export class MembersController {
   async remove(
     @TenantId() tenantId: string,
     @Param('userId') userId: string,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
     return this.membersService.remove(tenantId, userId, principal.userId);
   }

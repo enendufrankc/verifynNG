@@ -37,11 +37,18 @@ const e02Schema = e00Schema.extend({
   JWT_ACTIVE_KID: z.string().default('k1'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   REFRESH_TTL: z.string().default('30d'),
-  MFA_ENC_KEY: z.string().default('00000000000000000000000000000000'), // 32 hex chars = 16 bytes
+  MFA_ENC_KEY: z
+    .string()
+    .default(
+      '0000000000000000000000000000000000000000000000000000000000000000',
+    ), // 64 hex chars = 32 bytes (aes-256-gcm key)
   ARGON2_M_COST: z.coerce.number().default(65536), // 64 MiB
   ARGON2_T_COST: z.coerce.number().default(3),
   ARGON2_P_COST: z.coerce.number().default(4),
-  INTERNAL_API_KEYS: z.string().default(''),
+  WORKER_KEY: z.string().default(''),
+  FAKE_SMS_KEY: z.string().default(''),
+  FAKE_PAY_KEY: z.string().default(''),
+  FAKE_GEO_KEY: z.string().default(''),
   APP_BASE_URL: z.string().default('http://localhost:3001'),
 });
 

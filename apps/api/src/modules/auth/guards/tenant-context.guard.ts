@@ -4,20 +4,22 @@ import {
   ExecutionContext,
   UnauthorizedException,
   NotFoundException,
-  Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { PLATFORM_ROLE_KEY } from '../decorators/platform-role.decorator';
 import { INTERNAL_ONLY_KEY } from '../decorators/internal-only.decorator';
 import { TokenService } from '../services/token.service';
-import { Request } from 'express';
+import type { UserPrincipal } from '../types/principal';
 
 @Injectable()
 export class TenantContextGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private tokenService: TokenService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -47,7 +49,7 @@ export class TenantContextGuard implements CanActivate {
     }
 
     const token = authHeader.slice(7);
-    let decoded: any;
+    let decoded: ReturnType<TokenService['verifyAccessToken']>;
     try {
       decoded = this.tokenService.verifyAccessToken(token);
     } catch {
@@ -55,30 +57,48 @@ export class TenantContextGuard implements CanActivate {
     }
 
     // Validate session is not revoked
-    if (decoded.sid) {
-      const session = await this.tokenService['prisma'].session.findUnique({
-        where: { id: decoded.sid },
-      });
-      if (session?.revokedAt) {
-        throw new UnauthorizedException();
-      }
+    if (
+      decoded.sid &&
+      (await this.tokenService.isSessionRevoked(decoded.sid))
+    ) {
+      throw new UnauthorizedException();
     }
 
-    (request as any).user = decoded;
-    (request as any).tenantId = decoded.tid;
+    const principal: UserPrincipal = {
+      userId: decoded.sub,
+      tenantId: decoded.tid,
+      role: decoded.role,
+      platformRole: decoded.prole,
+      sessionId: decoded.sid,
+    };
+    request.user = principal;
+    request.tenantId = decoded.tid;
 
     // 404 rule: if route has :tenantId param and it doesn't match claims.tid
-    // Exception: @PlatformRole routes where :tenantId is authoritative
+    // Exceptions: @PlatformRole routes, and any route accessed by a
+    // platformRole=support principal — in both cases :tenantId is authoritative.
     const platformRole = this.reflector.getAllAndOverride<string>(
       PLATFORM_ROLE_KEY,
       [context.getHandler(), context.getClass()],
     );
+    const isSupport = decoded.prole === 'support';
 
-    const routeTenantId = request.params?.['tenantId'];
+    const rawRouteTenantId = request.params?.['tenantId'];
+    const routeTenantId = Array.isArray(rawRouteTenantId)
+      ? rawRouteTenantId[0]
+      : rawRouteTenantId;
     if (routeTenantId && routeTenantId !== decoded.tid) {
-      if (platformRole) {
-        // For platform role, route param is authoritative
-        (request as any).tenantId = routeTenantId;
+      if (platformRole || isSupport) {
+        // Route param is authoritative
+        request.tenantId = routeTenantId;
+        if (isSupport) {
+          this.eventEmitter.emit('support.tenant.accessed', {
+            supportUserId: decoded.sub,
+            tenantId: routeTenantId,
+            route: request.originalUrl ?? request.url,
+            at: new Date(),
+          });
+        }
       } else {
         // Never confirm another tenant exists → 404
         throw new NotFoundException();

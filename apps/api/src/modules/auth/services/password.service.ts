@@ -17,7 +17,7 @@ export class PasswordService {
 
   async hash(password: string): Promise<string> {
     return argon2.hash(password, {
-      type: 'argon2id' as any,
+      type: argon2.argon2id,
       memoryCost: this.mCost,
       timeCost: this.tCost,
       parallelism: this.pCost,

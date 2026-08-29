@@ -1,9 +1,6 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { hashForStorage, StaticKeyRing, type KeyRing } from '@verifynng/core';
 import { loadEnv } from '@verifynng/config';
 import crypto from 'node:crypto';
@@ -27,25 +24,47 @@ export interface DecodedToken {
   exp: number;
 }
 
+const DURATION_UNITS: Record<string, number> = {
+  s: 1,
+  m: 60,
+  h: 3600,
+  d: 86400,
+};
+
+/** Parses a short duration string ("15m", "30d") into seconds. */
+function parseDurationSeconds(value: string): number {
+  const match = value.match(/^(\d+)(s|m|h|d)$/);
+  if (!match) {
+    throw new Error(`Invalid duration string: ${value}`);
+  }
+  return parseInt(match[1], 10) * DURATION_UNITS[match[2]];
+}
+
 @Injectable()
 export class TokenService {
   private readonly keyRing: KeyRing;
-  private readonly accessTtl: string;
+  private readonly accessTtlSeconds: number;
   private readonly refreshTtlDays: number;
 
-  constructor(private prisma: PrismaClient, private jwtService: JwtService) {
+  constructor(
+    private prisma: PrismaClient,
+    private jwtService: JwtService,
+  ) {
     const env = loadEnv();
     this.keyRing = new StaticKeyRing(env.JWT_KEYS, env.JWT_ACTIVE_KID);
-    this.accessTtl = env.JWT_ACCESS_TTL;
+    this.accessTtlSeconds = parseDurationSeconds(env.JWT_ACCESS_TTL);
 
     const match = env.REFRESH_TTL.match(/^(\d+)d$/);
     this.refreshTtlDays = match ? parseInt(match[1], 10) : 30;
   }
 
+  getAccessTokenTtlSeconds(): number {
+    return this.accessTtlSeconds;
+  }
+
   async issueAccessToken(payload: AccessTokenPayload): Promise<string> {
     const { kid, secret } = this.keyRing.active();
-    const jwt = require('jsonwebtoken');
-    return jwt.sign(
+    return this.jwtService.signAsync(
       {
         sub: payload.userId,
         tid: payload.tenantId,
@@ -53,13 +72,18 @@ export class TokenService {
         prole: payload.platformRole,
         sid: payload.sessionId,
       },
-      Buffer.from(secret),
-      { expiresIn: this.accessTtl, keyid: kid },
+      {
+        secret: Buffer.from(secret),
+        expiresIn: this.accessTtlSeconds,
+        keyid: kid,
+      },
     );
   }
 
   verifyAccessToken(token: string): DecodedToken {
-    const decoded = this.jwtService.decode(token, { complete: true }) as any;
+    const decoded = this.jwtService.decode(token, { complete: true }) as {
+      header: { kid?: string };
+    } | null;
     if (!decoded?.header?.kid) {
       throw new UnauthorizedException('Invalid token');
     }
@@ -71,9 +95,9 @@ export class TokenService {
     }
 
     try {
-      const payload = this.jwtService.verify(token, {
-        secret: Buffer.from(secret) as any,
-      }) as any;
+      return this.jwtService.verify<DecodedToken>(token, {
+        secret: Buffer.from(secret),
+      });
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
@@ -81,16 +105,16 @@ export class TokenService {
 
   async issueMfaToken(userId: string): Promise<string> {
     const { kid, secret } = this.keyRing.active();
-    const jwt = require('jsonwebtoken');
-    return jwt.sign(
+    return this.jwtService.signAsync(
       { sub: userId, mfa: true },
-      Buffer.from(secret),
-      { expiresIn: '5m', keyid: kid },
+      { secret: Buffer.from(secret), expiresIn: '5m', keyid: kid },
     );
   }
 
   verifyMfaToken(token: string): { userId: string } {
-    const decoded = this.jwtService.decode(token, { complete: true }) as any;
+    const decoded = this.jwtService.decode(token, { complete: true }) as {
+      header: { kid?: string };
+    } | null;
     if (!decoded?.header?.kid) {
       throw new UnauthorizedException('Invalid MFA token');
     }
@@ -101,9 +125,10 @@ export class TokenService {
     }
 
     try {
-      const payload = this.jwtService.verify(token, {
-        secret: Buffer.from(secret) as any,
-      }) as any;
+      const payload = this.jwtService.verify<{ sub: string; mfa?: boolean }>(
+        token,
+        { secret: Buffer.from(secret) },
+      );
       if (!payload.mfa) {
         throw new UnauthorizedException('Not an MFA token');
       }
@@ -165,6 +190,13 @@ export class TokenService {
     }
 
     if (session.revokedAt) {
+      // A hash only gets here by being the *current* hash of a row at some
+      // point. If that row was retired by a later rotation ('rotated') and
+      // this stale hash is being replayed, someone has a copy of a
+      // superseded token — assume compromise and kill the whole family.
+      if (session.revokedReason === 'rotated') {
+        await this.revokeFamily(session.familyId, 'reuse-detected');
+      }
       throw new UnauthorizedException({ error: 'refresh_reuse_detected' });
     }
 
@@ -172,43 +204,29 @@ export class TokenService {
       throw new UnauthorizedException('Refresh token expired');
     }
 
-    // Reuse detection: check if a newer token exists for this family
-    const latestInFamily = await this.prisma.session.findFirst({
-      where: { familyId: session.familyId, revokedAt: null },
-      orderBy: { lastSeenAt: 'desc' },
-    });
-
-    if (
-      latestInFamily &&
-      latestInFamily.id !== session.id &&
-      latestInFamily.lastSeenAt > session.lastSeenAt
-    ) {
-      // REUSE DETECTED — revoke the whole family
-      await this.prisma.session.updateMany({
-        where: { familyId: session.familyId, revokedAt: null },
-        data: { revokedAt: new Date(), revokedReason: 'reuse-detected' },
-      });
-
-      throw new UnauthorizedException({ error: 'refresh_reuse_detected' });
-    }
-
-    // Normal rotation
+    // Normal rotation: retire this row and create a new one in the same
+    // family. Keeping the retired row (rather than overwriting its hash in
+    // place) is what makes the reuse check above possible.
     const newRefreshToken = this.generateRefreshToken();
     const newHash = hashForStorage(newRefreshToken);
-
     const now = new Date();
-    const shouldUpdateLastSeen =
-      !session.lastSeenAt ||
-      now.getTime() - session.lastSeenAt.getTime() > 60_000;
+
+    const newSession = await this.prisma.session.create({
+      data: {
+        userId: session.userId,
+        tenantId: session.tenantId,
+        refreshTokenHash: newHash,
+        familyId: session.familyId,
+        userAgent: userAgent ?? session.userAgent,
+        ipPrefix: ipPrefix ?? session.ipPrefix,
+        expiresAt: session.expiresAt,
+        lastSeenAt: now,
+      },
+    });
 
     await this.prisma.session.update({
       where: { id: session.id },
-      data: {
-        refreshTokenHash: newHash,
-        ...(shouldUpdateLastSeen ? { lastSeenAt: now } : {}),
-        ...(userAgent ? { userAgent } : {}),
-        ...(ipPrefix ? { ipPrefix } : {}),
-      },
+      data: { revokedAt: now, revokedReason: 'rotated' },
     });
 
     // Resolve current tenant context
@@ -231,14 +249,23 @@ export class TokenService {
       userId: session.userId,
       tenantId,
       role,
-      sessionId: session.id,
+      sessionId: newSession.id,
     });
 
     return {
       accessToken,
       refreshToken: newRefreshToken,
-      session: { id: session.id },
+      session: { id: newSession.id },
     };
+  }
+
+  /** A token referencing a session that doesn't exist is treated the same as revoked. */
+  async isSessionRevoked(sessionId: string): Promise<boolean> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select: { revokedAt: true },
+    });
+    return !session || session.revokedAt != null;
   }
 
   async revokeSession(
@@ -257,7 +284,7 @@ export class TokenService {
     exceptSessionId?: string,
     reason: string = 'user',
   ): Promise<void> {
-    const where: any = { userId, revokedAt: null };
+    const where: Prisma.SessionWhereInput = { userId, revokedAt: null };
     if (exceptSessionId) {
       where.id = { not: exceptSessionId };
     }

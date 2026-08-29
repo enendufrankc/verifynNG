@@ -1,23 +1,20 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import {
-  TOTP,
-  generateSecret,
-  generateURI,
-  verify,
-} from 'otplib';
+import { Injectable } from '@nestjs/common';
+import { generateSecret, generateURI, verify } from 'otplib';
 import crypto from 'node:crypto';
 import * as argon2 from 'argon2';
 import { loadEnv } from '@verifynng/config';
 
+const TOTP_PERIOD = 30;
+// ±1 time step of drift tolerance either side of the current period.
+const TOTP_EPOCH_TOLERANCE: [number, number] = [TOTP_PERIOD, TOTP_PERIOD];
+
 @Injectable()
 export class MfaService {
   private readonly encKey: Buffer;
-  private readonly totp: TOTP;
 
   constructor() {
     const env = loadEnv();
     this.encKey = Buffer.from(env.MFA_ENC_KEY, 'hex');
-    this.totp = new TOTP({ step: 30, window: 1 });
   }
 
   generateSecret(email: string): {
@@ -28,16 +25,22 @@ export class MfaService {
     const secret = generateSecret();
     const otpauthUri = generateURI({
       secret,
-      accountName: email,
+      label: email,
       issuer: 'VerifyNG',
     });
     const encrypted = this.encrypt(secret);
     return { secret, otpauthUri, encrypted };
   }
 
-  verifyTotp(code: string, encryptedSecret: string): boolean {
+  async verifyTotp(code: string, encryptedSecret: string): Promise<boolean> {
     const secret = this.decrypt(encryptedSecret);
-    return verify({ token: code, secret, step: 30, window: 1 });
+    const result = await verify({
+      token: code,
+      secret,
+      period: TOTP_PERIOD,
+      epochTolerance: TOTP_EPOCH_TOLERANCE,
+    });
+    return result.valid;
   }
 
   generateRecoveryCodes(): string[] {
@@ -53,7 +56,7 @@ export class MfaService {
     return Promise.all(
       codes.map((c) =>
         argon2.hash(c, {
-          type: 'argon2id' as any,
+          type: argon2.argon2id,
           memoryCost: 4096,
           timeCost: 1,
           parallelism: 1,

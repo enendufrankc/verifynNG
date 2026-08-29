@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -22,6 +23,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { Public } from './decorators/public.decorator';
 import { Principal } from './decorators/principal.decorator';
+import type { UserPrincipal } from './types/principal';
 
 @Controller('auth')
 export class AuthController {
@@ -41,42 +43,39 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Req() req: any) {
+  async login(@Body() dto: LoginDto, @Req() req: Request) {
     const userAgent = req.headers['user-agent'];
-    const ip = req.ip || req.connection?.remoteAddress;
+    const ip = req.ip || req.socket?.remoteAddress;
     return this.authService.login(dto.email, dto.password, userAgent, ip);
   }
 
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body() dto: RefreshDto, @Req() req: any) {
+  async refresh(@Body() dto: RefreshDto, @Req() req: Request) {
     const userAgent = req.headers['user-agent'];
-    const ip = req.ip || req.connection?.remoteAddress;
+    const ip = req.ip || req.socket?.remoteAddress;
     return this.authService.refresh(dto.refreshToken, userAgent, ip);
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(
-    @Body() dto: RefreshDto,
-    @Principal() principal: any,
-  ) {
-    return this.authService.logout(principal?.userId, dto.refreshToken);
+  async logout(@Body() dto: RefreshDto, @Principal() principal: UserPrincipal) {
+    return this.authService.logout(principal.userId, dto.refreshToken);
   }
 
   // ── Me / Switch Tenant ───────────────────────────────────
 
   @Get('me')
-  async me(@Principal() principal: any) {
-    return this.authService.me(principal.userId);
+  async me(@Principal() principal: UserPrincipal) {
+    return this.authService.me(principal.userId, principal.tenantId);
   }
 
   @Post('switch-tenant')
   @HttpCode(HttpStatus.OK)
   async switchTenant(
     @Body() dto: SwitchTenantDto,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
     return this.authService.switchTenant(
       principal.userId,
@@ -88,14 +87,14 @@ export class AuthController {
   // ── MFA ──────────────────────────────────────────────────
 
   @Post('mfa/setup')
-  async mfaSetup(@Principal() principal: any) {
+  async mfaSetup(@Principal() principal: UserPrincipal) {
     return this.authService.mfaSetup(principal.userId);
   }
 
   @Post('mfa/enable')
   async mfaEnable(
     @Body() dto: MfaEnableDto,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
     return this.authService.mfaEnable(principal.userId, dto.code);
   }
@@ -104,7 +103,7 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async mfaDisable(
     @Body() dto: MfaDisableDto,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
     return this.authService.mfaDisable(
       principal.userId,
@@ -116,9 +115,9 @@ export class AuthController {
   @Public()
   @Post('mfa/challenge')
   @HttpCode(HttpStatus.OK)
-  async mfaChallenge(@Body() dto: MfaChallengeDto, @Req() req: any) {
+  async mfaChallenge(@Body() dto: MfaChallengeDto, @Req() req: Request) {
     const userAgent = req.headers['user-agent'];
-    const ip = req.ip || req.connection?.remoteAddress;
+    const ip = req.ip || req.socket?.remoteAddress;
     return this.authService.mfaChallenge(
       dto.mfaToken,
       dto.code,
@@ -131,7 +130,7 @@ export class AuthController {
   @Post('mfa/recovery-codes/rotate')
   async mfaRecoveryCodesRotate(
     @Body() dto: MfaEnableDto,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
     return this.authService.mfaRecoveryCodesRotate(principal.userId, dto.code);
   }
@@ -157,7 +156,7 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
     @Body() dto: ChangePasswordDto,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
     await this.authService.changePassword(
       principal.userId,
@@ -170,29 +169,22 @@ export class AuthController {
   // ── Sessions ─────────────────────────────────────────────
 
   @Get('sessions')
-  async listSessions(@Principal() principal: any) {
-    return this.authService.listSessions(
-      principal.userId,
-      principal.sessionId,
-    );
+  async listSessions(@Principal() principal: UserPrincipal) {
+    return this.authService.listSessions(principal.userId, principal.sessionId);
   }
 
   @Delete('sessions/:sessionId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async revokeSession(
     @Param('sessionId') sessionId: string,
-    @Principal() principal: any,
+    @Principal() principal: UserPrincipal,
   ) {
-    await this.authService.revokeSessionById(
-      principal.userId,
-      sessionId,
-      principal.sessionId,
-    );
+    await this.authService.revokeSessionById(principal.userId, sessionId);
   }
 
   @Delete('sessions')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async revokeAllOtherSessions(@Principal() principal: any) {
+  async revokeAllOtherSessions(@Principal() principal: UserPrincipal) {
     await this.authService.revokeAllOtherSessions(
       principal.userId,
       principal.sessionId,

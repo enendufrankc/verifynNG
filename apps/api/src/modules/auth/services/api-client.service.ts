@@ -54,44 +54,34 @@ export class ApiClientService {
   }
 
   /**
-   * Seed platform-level ApiClients from INTERNAL_API_KEYS env.
-   * Format: "name:rawkey,name:rawkey"
-   * Idempotent — uses upsert by keyHash.
+   * Seed the four platform-level ApiClients (worker, fake-sms, fake-pay, fake-geo) from their
+   * dedicated env vars (see docker/.env.compose). Idempotent — upserts by keyHash.
    */
   async seedInternalClients() {
     const env = loadEnv();
-    const internalApiKeys = env.INTERNAL_API_KEYS;
-    if (!internalApiKeys) return;
+    const platformClients: Record<string, string> = {
+      worker: env.WORKER_KEY,
+      'fake-sms': env.FAKE_SMS_KEY,
+      'fake-pay': env.FAKE_PAY_KEY,
+      'fake-geo': env.FAKE_GEO_KEY,
+    };
 
-    const entries = internalApiKeys
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const entry of entries) {
-      const colonIdx = entry.indexOf(':');
-      if (colonIdx === -1) continue;
-      const name = entry.slice(0, colonIdx).trim();
-      const rawKey = entry.slice(colonIdx + 1).trim();
-      if (!name || !rawKey) continue;
+    for (const [name, rawKey] of Object.entries(platformClients)) {
+      if (!rawKey) continue;
 
       const keyHash = hashForStorage(rawKey);
       const keyPrefix = rawKey.slice(0, 8);
 
-      try {
-        await this.prisma.apiClient.upsert({
-          where: { keyHash },
-          update: {},
-          create: {
-            name,
-            keyHash,
-            keyPrefix,
-            scopes: ['internal'],
-          },
-        });
-      } catch {
-        // Skip if somehow conflicts
-      }
+      await this.prisma.apiClient.upsert({
+        where: { keyHash },
+        update: {},
+        create: {
+          name,
+          keyHash,
+          keyPrefix,
+          scopes: ['internal'],
+        },
+      });
     }
   }
 }

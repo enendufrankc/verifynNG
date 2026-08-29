@@ -16,7 +16,7 @@ export class SmtpMailer implements Mailer {
         env.SMTP_USER && env.SMTP_PASS
           ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
           : undefined,
-    } as any);
+    });
   }
 
   async send(msg: MailMessage): Promise<void> {
@@ -37,7 +37,8 @@ export class SmtpMailer implements Mailer {
         break;
       case 'mfa-enabled':
         subject = 'MFA enabled on your account';
-        html = '<p>Two-factor authentication has been enabled on your account.</p>';
+        html =
+          '<p>Two-factor authentication has been enabled on your account.</p>';
         break;
       case 'new-device-login':
         subject = 'New device login';
