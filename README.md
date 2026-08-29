@@ -6,13 +6,13 @@ Multi-tenant product-authenticity platform. Brands mint cryptographically secure
 
 ## Start here
 
-| If you want to… | Read |
-|---|---|
-| Understand the product and the two-tier code design | [`docs/verify-platform-mental-model.md`](docs/verify-platform-mental-model.md) |
-| See the incremental architecture (12 steps) | [`docs/verify-platform-architecture.md`](docs/verify-platform-architecture.md) |
-| See what "production grade" means here | [`docs/verify-platform-production-readiness.md`](docs/verify-platform-production-readiness.md) |
-| Pick up work as an agent or engineer | [`AGENTS.md`](AGENTS.md) → [`docs/epics/README.md`](docs/epics/README.md) |
-| See the running milestone-1 prototype | [`legacy/verify-platform/`](legacy/verify-platform/) (`npm i && node cli.js setup && node cli.js mint && npm start`) |
+| If you want to…                                     | Read                                                                                                                 |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Understand the product and the two-tier code design | [`docs/verify-platform-mental-model.md`](docs/verify-platform-mental-model.md)                                       |
+| See the incremental architecture (12 steps)         | [`docs/verify-platform-architecture.md`](docs/verify-platform-architecture.md)                                       |
+| See what "production grade" means here              | [`docs/verify-platform-production-readiness.md`](docs/verify-platform-production-readiness.md)                       |
+| Pick up work as an agent or engineer                | [`AGENTS.md`](AGENTS.md) → [`docs/epics/README.md`](docs/epics/README.md)                                            |
+| See the running milestone-1 prototype               | [`legacy/verify-platform/`](legacy/verify-platform/) (`npm i && node cli.js setup && node cli.js mint && npm start`) |
 
 ## Stack
 
@@ -37,6 +37,8 @@ pnpm db:migrate                                 # run Prisma migrations
 pnpm db:seed                                    # seed ivoryglow tenant + 3 products
 pnpm dev                                        # start all apps in dev mode
 ```
+
+Working in an epic worktree? Ports differ per worktree — run `scripts/epic ports EXX`. Defaults (main clone, no `.env`):
 
 - API: http://localhost:4000/health
 - Verify web: http://localhost:3000

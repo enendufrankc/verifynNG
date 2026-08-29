@@ -19,6 +19,9 @@ importers:
       depcheck:
         specifier: 1.4.7
         version: 1.4.7
+      dotenv:
+        specifier: 17.4.2
+        version: 17.4.2
       eslint:
         specifier: 9.35.0
         version: 9.35.0(jiti@2.7.0)

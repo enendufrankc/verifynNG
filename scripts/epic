@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Epic helper: start a worktree for an epic and print the agent prompt; show status.
-#   scripts/epic start E06      → creates ../verifynNG-E06 on branch epic/E06-<slug>, prints prompt
+#   scripts/epic start E06      → creates ../verifynNG-E06 on branch epic/E06-<slug>, writes its .env (own ports), prints prompt
+#   scripts/epic ports E06      → print the host ports this epic's worktree uses
 #   scripts/epic status         → all epics: issue, state, assignee, branch
 #   scripts/epic done E06       → removes the worktree (after its issue is closed and branch merged)
 set -euo pipefail
@@ -11,6 +12,56 @@ cmd="${1:-}"; id="${2:-}"
 file_for() { ls "$ROOT/docs/epics/$1-"*.md 2>/dev/null | head -1; }
 slug_for() { basename "$(file_for "$1")" .md | sed "s/^$1-//"; }
 issue_for() { grep -oE "issues/[0-9]+" "$(file_for "$1")" | head -1 | cut -d/ -f2; }
+num_for() { echo "$1" | sed 's/^E0*//'; }
+
+# Each worktree gets its own compose project and host ports: base + 103*N (N = epic number).
+# 103 is chosen so no two epics' shifted ports collide across the base port set.
+write_env() {
+  local wt="$1" eid="$2" n off
+  n="$(num_for "$eid")"; off=$((103 * n))
+  local pg=$((5432+off)) redis=$((6379+off)) minio=$((9000+off)) minioc=$((9001+off)) mpui=$((8025+off)) mpsmtp=$((1025+off))
+  local sms=$((4101+off)) pay=$((4102+off)) geo=$((4103+off)) api=$((4000+off)) wv=$((3000+off)) wa=$((3001+off))
+  local proj="verifynng-$(echo "$eid" | tr 'A-Z' 'a-z')"
+  local body
+  body="$(cat <<EOF
+# Written by scripts/epic start $eid — per-worktree compose project + ports (offset $off). Not committed.
+COMPOSE_PROJECT_NAME=$proj
+POSTGRES_PORT=$pg
+REDIS_PORT=$redis
+MINIO_PORT=$minio
+MINIO_CONSOLE_PORT=$minioc
+MAILPIT_UI_PORT=$mpui
+MAILPIT_SMTP_PORT=$mpsmtp
+FAKE_SMS_PORT=$sms
+FAKE_PAY_PORT=$pay
+FAKE_GEO_PORT=$geo
+API_HOST_PORT=$api
+WEB_VERIFY_PORT=$wv
+WEB_ADMIN_PORT=$wa
+# Host-side tools (pnpm db:*, tests) reach the containers through the offset ports:
+DATABASE_URL=postgresql://postgres:postgres@localhost:$pg/verifynng?schema=public
+REDIS_URL=redis://localhost:$redis
+S3_ENDPOINT=http://localhost:$minio
+SMTP_PORT=$mpsmtp
+NEXT_PUBLIC_API_URL=http://localhost:$api
+EOF
+)"
+  printf '%s\n' "$body" > "$wt/.env"
+  printf '%s\n' "$body" > "$wt/docker/.env"   # compose reads .env from the compose file's directory
+}
+
+print_ports() {
+  local wt="$1"
+  [[ -f "$wt/.env" ]] || { echo "no .env in $wt"; return 1; }
+  echo "Compose project: $(grep COMPOSE_PROJECT_NAME "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "API"        "$(grep ^API_HOST_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "web-verify" "$(grep ^WEB_VERIFY_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "web-admin"  "$(grep ^WEB_ADMIN_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "Mailpit"    "$(grep ^MAILPIT_UI_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "MinIO"      "$(grep ^MINIO_CONSOLE_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s localhost:%s\n"        "Postgres"   "$(grep ^POSTGRES_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s localhost:%s\n"        "Redis"      "$(grep ^REDIS_PORT "$wt/.env" | cut -d= -f2)"
+}
 
 case "$cmd" in
   start)
@@ -22,21 +73,31 @@ case "$cmd" in
     if [[ -d "$wt" ]]; then echo "worktree exists: $wt"; else
       git -C "$ROOT" worktree add -q "$wt" -b "$br" origin/main && echo "created $wt on $br"
     fi
+    write_env "$wt" "$id"
     cat <<EOF
 
 ────────────────────────────────────────────────────────────────
 Open a terminal in:  $wt
 Start your agent there and paste this:
 ────────────────────────────────────────────────────────────────
-You own epic $id in this repo. Read AGENTS.md, docs/epics/README.md,
-docs/epics/$(basename "$f"), and your section of docs/epics/CROSS-EPIC-REQUESTS.md.
+You own epic $id in this repo. Read AGENTS.md (especially "Definition of done"),
+docs/epics/README.md, docs/epics/$(basename "$f"), and your section of
+docs/epics/CROSS-EPIC-REQUESTS.md.
 Claim GitHub issue #$num: assign yourself and set Owner/Status in the epic file via a small PR.
 Work only inside your owned paths; follow the hot-spot rules for shared files; open small PRs
-into main; keep CI green; tick the issue checklist as tasks merge. The epic is done when every
-acceptance criterion is demonstrated against docker compose up with evidence in the issue.
+into main; keep the pre-push checks green; tick the issue checklist as tasks merge. The epic is
+done only when every acceptance criterion is demonstrated against docker compose up, evidence
+is pasted in the issue, the PR is merged and the issue closed.
+This worktree has its own Docker ports (see .env; run scripts/epic ports $id). Use them —
+do not assume 3000/3001/4000/5432.
 Branch: $br
 ────────────────────────────────────────────────────────────────
 EOF
+    print_ports "$wt"
+    ;;
+  ports)
+    [[ -n "$id" ]] || { echo "usage: scripts/epic ports EXX"; exit 1; }
+    print_ports "$ROOT/../verifynNG-$id"
     ;;
   status)
     printf "%-4s %-6s %-12s %-18s %s\n" ID ISSUE STATE ASSIGNEE TITLE
@@ -50,7 +111,9 @@ EOF
     ;;
   done)
     [[ -n "$id" ]] || { echo "usage: scripts/epic done EXX"; exit 1; }
-    git -C "$ROOT" worktree remove "$ROOT/../verifynNG-$id" && echo "removed worktree for $id"
+    wt="$ROOT/../verifynNG-$id"
+    [[ -f "$wt/docker/compose.yml" ]] && (cd "$wt" && docker compose -f docker/compose.yml down -v --remove-orphans >/dev/null 2>&1 || true)
+    git -C "$ROOT" worktree remove --force "$wt" && echo "removed worktree for $id"
     ;;
-  *) sed -n '2,6p' "$0";;
+  *) sed -n '2,7p' "$0";;
 esac

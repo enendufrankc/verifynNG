@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Wrapper that loads .env.example from the repo root as fallback,
+ * Wrapper that loads .env then .env.example from the repo root,
  * then runs the given prisma command. This ensures `pnpm db:migrate`
  * and `pnpm db:seed` work from a fresh clone with `docker compose up`.
  */
@@ -8,11 +8,10 @@ const { config } = require('dotenv');
 const { resolve } = require('node:path');
 const { execSync } = require('node:child_process');
 
-// Load .env.example as fallback if DATABASE_URL is not set
-if (!process.env.DATABASE_URL) {
-  const envPath = resolve(__dirname, '../../../.env.example');
-  config({ path: envPath });
-}
+// Per-worktree overrides first (.env, written by scripts/epic start), then repo defaults.
+// dotenv never overrides variables that are already set.
+config({ path: resolve(__dirname, '../../../.env') });
+config({ path: resolve(__dirname, '../../../.env.example') });
 
 const args = process.argv.slice(2);
 const cmd = `npx prisma ${args.join(' ')}`;
