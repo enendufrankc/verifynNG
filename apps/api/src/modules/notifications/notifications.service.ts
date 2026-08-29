@@ -83,4 +83,19 @@ export class NotificationService {
 
     return { outboxId: result.id, status: result.status };
   }
+
+  async retry(outboxId: string): Promise<void> {
+    await this.outboxService.retryOutboxRow(outboxId);
+    await this.notificationsQueue.add(
+      'deliver',
+      { outboxId },
+      {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 30_000,
+        },
+      },
+    );
+  }
 }

@@ -47,7 +47,6 @@ export class NotificationWorker extends WorkerHost {
     }
 
     await this.outboxService.markSending(outboxId);
-    await this.outboxService.addDeliveryEvent(outboxId, 'sending');
 
     try {
       const suppressed = await this.suppressionsService.isSuppressed(
@@ -65,7 +64,9 @@ export class NotificationWorker extends WorkerHost {
         return;
       }
 
-      const branding = await this.brandingResolver.for(row.tenantId ?? undefined);
+      const branding = await this.brandingResolver.for(
+        row.tenantId ?? undefined,
+      );
 
       const rendered = this.templateRegistry.render(
         row.templateId as TemplateId,
