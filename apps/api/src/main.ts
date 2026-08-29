@@ -16,6 +16,9 @@ async function bootstrap() {
     }),
   );
 
+  // Trust proxy for correct IP extraction
+  app.set('trust proxy', true);
+
   await app.listen(env.API_PORT);
   console.log(`API running on http://localhost:${env.API_PORT}`);
 }
