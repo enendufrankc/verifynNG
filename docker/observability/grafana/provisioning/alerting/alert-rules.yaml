@@ -11,8 +11,16 @@ groups:
         condition: A
         data:
           - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: Prometheus
             model:
+              refId: A
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               expr: sum(rate(verify_verdicts_total{verdict="error"}[5m])) / sum(rate(verify_verdicts_total[5m])) > 0.01
         for: 5m
         labels:
@@ -25,8 +33,16 @@ groups:
         condition: A
         data:
           - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: Prometheus
             model:
+              refId: A
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               expr: histogram_quantile(0.95, sum(rate(verify_latency_ms_bucket[5m])) by (le)) > 500
         for: 10m
         labels:
@@ -39,8 +55,16 @@ groups:
         condition: A
         data:
           - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: Prometheus
             model:
+              refId: A
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               expr: histogram_quantile(0.95, sum(rate(queue_lag_ms_bucket[5m])) by (le)) > 60000
         for: 5m
         labels:
@@ -53,8 +77,16 @@ groups:
         condition: A
         data:
           - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: Prometheus
             model:
+              refId: A
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               expr: probe_success == 0
         for: 1m
         labels:
@@ -67,8 +99,16 @@ groups:
         condition: A
         data:
           - refId: A
+            queryType: ''
+            relativeTimeRange:
+              from: 600
+              to: 0
             datasourceUid: Prometheus
             model:
+              refId: A
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
               expr: probe_success{target="verify-api"} == 0
         for: 1m
         labels:
