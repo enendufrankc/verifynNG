@@ -2,6 +2,7 @@ import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { loadEnv, envSchema } from '@verifynng/config';
 import { HealthModule } from './health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { RequestIdMiddleware } from './common/request-id.middleware';
 
 @Module({
@@ -12,6 +13,7 @@ import { RequestIdMiddleware } from './common/request-id.middleware';
       load: [() => loadEnv()],
     }),
     HealthModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {
