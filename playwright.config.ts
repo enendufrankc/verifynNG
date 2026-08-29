@@ -10,19 +10,40 @@ const verifyPort = process.env.WEB_VERIFY_PORT ?? '3000';
 const adminPort = process.env.WEB_ADMIN_PORT ?? '3001';
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests/e2e',
   timeout: 30_000,
-  retries: 1,
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI
+    ? [['html', { open: 'never' }], ['github']]
+    : [['html', { open: 'never' }]],
+  use: {
+    trace: 'on-first-retry',
+  },
   projects: [
     {
-      name: 'web-verify',
-      use: { baseURL: `http://localhost:${verifyPort}` },
-      testMatch: /web-verify\.spec/,
+      name: 'web-verify-desktop',
+      use: {
+        baseURL: `http://localhost:${verifyPort}`,
+        viewport: { width: 1280, height: 720 },
+      },
+      testMatch: /.*\.e2e\.spec/,
     },
     {
-      name: 'web-admin',
-      use: { baseURL: `http://localhost:${adminPort}` },
-      testMatch: /web-admin\.spec/,
+      name: 'web-verify-mobile',
+      use: {
+        baseURL: `http://localhost:${verifyPort}`,
+        viewport: { width: 375, height: 667 },
+        isMobile: true,
+      },
+      testMatch: /.*\.e2e\.spec/,
+    },
+    {
+      name: 'web-admin-desktop',
+      use: {
+        baseURL: `http://localhost:${adminPort}`,
+        viewport: { width: 1280, height: 720 },
+      },
+      testMatch: /.*\.e2e\.spec/,
     },
   ],
 });
