@@ -31,6 +31,31 @@ const e00Schema = z.object({
 // E02 will add JWT_SECRET, etc.
 // E14 will add EMAIL_FROM, etc.
 
-export const envSchema = e00Schema;
+// ── E06 Verification & Scan Events ──────────────────────────────
+const e06Schema = z.object({
+  RATE_LIMIT_IP_PER_MIN: z.coerce.number().default(20),
+  RATE_LIMIT_CODE_PER_MIN: z.coerce.number().default(10),
+  RATE_LIMIT_TENANT_DEFAULT_PER_MIN: z.coerce.number().default(600),
+  ENUMERATION_INVALID_THRESHOLD: z.coerce.number().default(15),
+  ENUMERATION_WINDOW_SEC: z.coerce.number().default(300),
+  ENUMERATION_BLOCK_SEC: z.coerce.number().default(900),
+  IP_HASH_SALT: z.string().default('verifynng-ip-salt-dev'),
+  GEOIP_PROVIDER: z.enum(['fake', 'maxmind']).default('fake'),
+  GEOIP_URL: z.string().default('http://fake-geo:4103'),
+  GEOIP_MMDB_PATH: z.string().default(''),
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  SMS_PROVIDER: z.enum(['fake', 'termii']).default('fake'),
+  SMS_URL: z.string().default('http://fake-sms:4101'),
+  FAKE_SMS_KEY: z.string().default('fake-sms-key'),
+  CORE_KEYS: z.string().default(
+    'k1:0000000000000000000000000000000000000000000000000000000000000000',
+  ),
+  CORE_ACTIVE_KID: z.string().default('k1'),
+});
+
+export const envSchema = e00Schema.merge(e06Schema);
 
 export type Env = z.infer<typeof envSchema>;
