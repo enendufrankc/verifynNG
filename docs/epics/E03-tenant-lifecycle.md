@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | enendufrankc |
 | GitHub Issue | [#4](https://github.com/enendufrankc/verifynNG/issues/4) |
 | Depends on | E02 (interfaces: `MembershipService.addOwner`, `@Roles`, `@PlatformRole('support')`, `TenantContextGuard`), E00 |
 | Unblocks | E15 (plan/suspension hooks), E18 (support review UI extends this queue), E19 (offboarding deletion honours retention), E09/E10 (branding settings) |
