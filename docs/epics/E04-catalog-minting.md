@@ -1,13 +1,13 @@
 # E04 — Catalog & Minting
 
-| | |
-|---|---|
-| Wave | 1 |
-| Status | in-progress |
-| Owner | pi (frank.enendu) |
-| GitHub Issue | [#5](https://github.com/enendufrankc/verifynNG/issues/5) |
-| Depends on | E01 (`generateCode`, `hashForStorage`, `deriveBatchWatermark`, `signManifest`), E00; soft: E02 (`@Roles`), E03 (`S3` provider, `TenantStatusGuard`) |
-| Unblocks | E05 (manifest delivery + batch states), E06 (units to verify), E07 (unit lifecycle), E10 (product pages), E12 (minted-units metering), E15 (`EntitlementPolicy` replacement), E16 (public minting API) |
+|                 |                                                                                                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 1                                                                                                                                                                                                                                  |
+| Status          | in-progress                                                                                                                                                                                                                        |
+| Owner           | pi (frank.enendu)                                                                                                                                                                                                                  |
+| GitHub Issue    | [#5](https://github.com/enendufrankc/verifynNG/issues/5)                                                                                                                                                                           |
+| Depends on      | E01 (`generateCode`, `hashForStorage`, `deriveBatchWatermark`, `signManifest`), E00; soft: E02 (`@Roles`), E03 (`S3` provider, `TenantStatusGuard`)                                                                                |
+| Unblocks        | E05 (manifest delivery + batch states), E06 (units to verify), E07 (unit lifecycle), E10 (product pages), E12 (minted-units metering), E15 (`EntitlementPolicy` replacement), E16 (public minting API)                             |
 | Readiness items | `architecture.md` step 2 "give the brand control", step 6 tenant namespacing of catalog · `production-readiness.md` §7 "entitlement enforcement at mint time" (hook only) · mental-model §3 domain model, §5 traceable code ranges |
 
 ## Goal
@@ -18,7 +18,7 @@ A brand owner creates products and registered OEMs, then mints a batch — produ
 
 **In:** Products CRUD with GTIN check-digit validation, OEM registry CRUD, Batches (create = mint), `MintService` (chunked transactional bulk insert, 1..1,000,000 units, idempotency key, BullMQ job for count > 5,000 with progress), `EntitlementPolicy` hook with allow-all default, export generation (QR PNGs, application sheet PDF, tier-1 CSV, ZIP) to MinIO with signed download URLs, manifest JSON generation + `signManifest` + AES-256-GCM encryption at rest, web-admin screens for products / OEMs / batches, domain events.
 
-**Out:** manifest *delivery* to the OEM, receipt hash, batch states `delivered|printed|shipped|closed` transitions (E05 — E04 defines the enum and only ever sets `minted`), unit flag/decommission/restore (E07), consumer verification (E06), real entitlement limits (E15), usage metering (E12 subscribes to `batch.minted`), product page content (E10 — E04 stores only catalog facts), public API surface (E16 wraps these services), label artwork upload (E05 manifests reference artwork; E04 has no artwork model).
+**Out:** manifest _delivery_ to the OEM, receipt hash, batch states `delivered|printed|shipped|closed` transitions (E05 — E04 defines the enum and only ever sets `minted`), unit flag/decommission/restore (E07), consumer verification (E06), real entitlement limits (E15), usage metering (E12 subscribes to `batch.minted`), product page content (E10 — E04 stores only catalog facts), public API surface (E16 wraps these services), label artwork upload (E05 manifests reference artwork; E04 has no artwork model).
 
 ## Owned paths
 
@@ -39,6 +39,7 @@ docs/minting.md
 ## Interfaces
 
 **Consumes**
+
 - E01: `generateCode(ring, { tenant, tier, watermark })`, `hashForStorage`, `deriveBatchWatermark`, `redactCode`, `signManifest`, `canonicalize`, `toGs1DigitalLink`, `StaticKeyRing` from `CORE_KEYS`.
 - E00: `Product`, `Oem`, `Batch`, `Unit` base models (E04 adds fields), `prisma`, `redis`.
 - E02: `@TenantId()`, `@Roles()`, `@Principal()`; `ApiClient` `worker` key for the worker process to call back.
@@ -48,6 +49,7 @@ docs/minting.md
 **Exposes**
 
 Nest providers (exported from `BatchesModule` / `CatalogModule`):
+
 ```ts
 ProductsService      // list/get/create/update/archive; validateGtin(gtin): boolean (GS1 mod-10 check digit, 8/12/13/14 digits)
 OemsService          // list/get/create/update/setStatus(active|suspended)
@@ -65,6 +67,7 @@ ExportsService.getSignedUrl(tenantId, batchId, artefact: 'qr-zip' | 'sheet-pdf' 
 ```
 
 HTTP routes (all tenant-scoped, JSON):
+
 ```
 GET/POST        /tenants/:tenantId/products                     @Roles('viewer') / @Roles('operator')
 GET/PATCH       /tenants/:tenantId/products/:productId          @Roles('viewer') / @Roles('operator')
@@ -82,6 +85,7 @@ GET             /tenants/:tenantId/jobs/:jobId                                  
 ```
 
 Domain events:
+
 ```ts
 'product.created'   { tenantId, productId, sku, gtin?, at }
 'product.updated'   { tenantId, productId, changed: string[], at }
@@ -97,6 +101,7 @@ Domain events:
 BullMQ queues: `mint` (concurrency 2, job id = `${tenantId}:${idempotencyKey}`), `batch-exports` (concurrency 1 per batch).
 
 MinIO layout (bucket `verifyng`):
+
 ```
 tenants/{tenantId}/batches/{batchId}/qr/{serial}-tier1.png
 tenants/{tenantId}/batches/{batchId}/qr/{serial}-tier2.png
@@ -179,12 +184,12 @@ model BatchArtefact {
 
 ## Tasks
 
-- [ ] T1 Schema + migration `E04_catalog_minting`; env section (`MINT_SYNC_MAX=5000`, `MINT_CHUNK=1000`, `MINT_MAX_COUNT=1000000`, `MANIFEST_ENC_KEY` 32-byte hex with compose default, `VERIFY_BASE_URL=http://localhost:3000`); one-line `AppModule` imports.
+- [x] T1 Schema + migration `E04_catalog_minting`; env section (`MINT_SYNC_MAX=5000`, `MINT_CHUNK=1000`, `MINT_MAX_COUNT=1000000`, `MANIFEST_ENC_KEY` 32-byte hex with compose default, `VERIFY_BASE_URL=http://localhost:3000`); one-line `AppModule` imports.
 - [ ] T2 `CatalogModule`: Products CRUD + `validateGtin` (mod-10 for GTIN-8/12/13/14, reject leading/trailing whitespace, store digits only) + archive; OEMs CRUD + status; DTOs with class-validator; `product.*`, `oem.*` events; seed the three IVORY GLOW shower-gel products from `legacy/cli.js` with SKUs `ig004`, `ig005`, `ig006` and the OEM "Guiba OEM (China)".
 - [ ] T3 `MintService` synchronous path: `EntitlementPolicy` check → create `Batch(minting)` with `watermark`/`kid` → per-chunk `$transaction` generating `generateCode(tier 1)` + `generateCode(tier 2)` → `hashForStorage(tier2)`; raw tier-2 codes are held in memory for the manifest only; `createMany` per chunk; `mintedCount/lastChunk` advanced; final status `minted`; `batch.minted` event. Unique-collision retry (regenerate the unit on `P2002`).
 - [ ] T4 Idempotency: `@@unique([tenantId, idempotencyKey])` → second POST with same key returns the existing batch (200, not 201) with no new units; different payload same key → 409.
 - [ ] T5 `mint` BullMQ queue + processor for count > `MINT_SYNC_MAX`: job resumes from `lastChunk` after a crash (kill the worker mid-mint in a test), reports progress via `job.updateProgress` and `batch.mint.progress`; `GET /jobs/:jobId`; failure sets `failed` + `failedReason`, units already written stay (batch is inspectable) but no manifest is generated.
-- [ ] T6 `ManifestService.generate`: manifest `{ version: 2, tenant, batchId, product: { id, sku, name, gtin? }, oem, count, watermark, kid, baseUrl, units: [{ serial, tier1Code, tier2Code, tier1Url, tier2Url }], createdAt }` → `signManifest` → AES-256-GCM (`iv|tag|ciphertext`) → MinIO; `open(batchId)` decrypts for E05; raw tier-2 codes leave process memory after this step. Tier-1 URL uses `toGs1DigitalLink` when the product has a GTIN, else `${VERIFY_BASE_URL}/v/${code}`.
+- [x] T6 `ManifestService.generate`: manifest `{ version: 2, tenant, batchId, product: { id, sku, name, gtin? }, oem, count, watermark, kid, baseUrl, units: [{ serial, tier1Code, tier2Code, tier1Url, tier2Url }], createdAt }` → `signManifest` → AES-256-GCM (`iv|tag|ciphertext`) → MinIO; `open(batchId)` decrypts for E05; raw tier-2 codes leave process memory after this step. Tier-1 URL uses `toGs1DigitalLink` when the product has a GTIN, else `${VERIFY_BASE_URL}/v/${code}`.
 - [ ] T7 Exports processor: QR PNGs via `qrcode` (`width: 300, margin: 1`, error correction M) streamed into `qr.zip` with `archiver` (never all in memory), `tier1-codes.csv` (`serial,tier1Code,url`), `application-sheet.pdf` via `@react-pdf/renderer` (two cards per row, unit serial, tier-1 "PUBLIC · print on bottle", tier-2 "HIDDEN · scratch-off label", tenant name + batch header, IVORY GLOW palette from legacy `sheet.js`), `all.zip`; `BatchArtefact` rows; `batch.exports.ready`.
 - [ ] T8 `ExportsService.getSignedUrl` + downloads route (302) + tier-1 QR PNG route; enforce `@Roles('operator')` for anything containing tier-2 (ZIP, sheet) and log a `manifest.downloaded`-style audit event through E13's event channel when the sheet/zip is fetched.
 - [ ] T9 `api-worker` compose service: same `apps/api` image, command `node dist/worker.js` (Nest app context with only job modules), `WORKER=true`; api process has `WORKER_INLINE=false` in compose, `true` in `pnpm dev`; documented in `docs/minting.md` and offered to E03/E06 processors.
@@ -215,8 +220,8 @@ model BatchArtefact {
 
 ## Compose services added
 
-| Service | Image | Host port |
-|---|---|---|
+| Service    | Image                                                 | Host port                                         |
+| ---------- | ----------------------------------------------------- | ------------------------------------------------- |
 | api-worker | apps/api (same image, `command: node dist/worker.js`) | — (no published port; `/health` on 4000 internal) |
 
 `api` gets `WORKER_INLINE=false`; `api-worker` gets `WORKER=true` and depends on postgres/redis/minio healthy. E03 and E06 processors are picked up by this process automatically because they register on the shared BullMQ connection.
@@ -224,7 +229,7 @@ model BatchArtefact {
 ## Notes and decisions
 
 - **PDF: `@react-pdf/renderer`, not Playwright/Chromium.** Justification: it runs inside the existing worker with no browser image (Chromium adds ~400 MB and a second failure mode to compose), output is deterministic and testable by text content, and the legacy sheet is a simple two-column card grid that needs no CSS features react-pdf lacks. The trade-off is that the sheet cannot reuse the legacy HTML/CSS verbatim; the palette and layout are ported. If E05 later needs artwork-heavy label templates from designers, revisit with a dedicated `pdf-renderer` service.
-- Raw tier-2 codes exist in exactly two places: process memory during the mint chunk, and the encrypted manifest object. They are never written to Postgres, logs, or a non-encrypted artefact. The QR ZIP contains tier-2 *PNGs* (needed for the scratch-off labels) — that ZIP is operator-and-above, presigned for 15 minutes, and its download is audited.
+- Raw tier-2 codes exist in exactly two places: process memory during the mint chunk, and the encrypted manifest object. They are never written to Postgres, logs, or a non-encrypted artefact. The QR ZIP contains tier-2 _PNGs_ (needed for the scratch-off labels) — that ZIP is operator-and-above, presigned for 15 minutes, and its download is audited.
 - Count ceiling raised from the legacy 100,000 to 1,000,000 per batch (mental model §6: 10⁵–10⁷ units/year/tenant). Chunks of 1,000 keep each transaction under Postgres' comfortable parameter limits with `createMany`.
 - Manifest encryption key is an env var for now; E13 owns moving it (and `CORE_KEYS`) behind the secrets abstraction. Encrypting at rest is required even locally so a MinIO dump does not leak mintable codes.
 - The `api-worker` service is added here because minting is the first heavy job; E03 and E06 (and every later epic) run their processors in it.
