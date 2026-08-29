@@ -8,6 +8,7 @@ import {
 import { prisma } from '@verifynng/db';
 import { TenantS3Service } from './s3.service';
 import { TenantEventBus } from './tenant-events';
+import { brandingSchema } from './branding.schema';
 
 const requiredDocuments = ['cac_certificate', 'director_id'] as const;
 const slugify = (value: string) =>
@@ -268,9 +269,30 @@ export class TenantLifecycleService {
     tenantId: string,
     patch: Record<string, unknown>,
   ): Promise<any> {
+    const branding = patch.branding
+      ? brandingSchema.parse(patch.branding)
+      : undefined;
+    if (
+      branding?.logoUrl &&
+      !branding.logoUrl.startsWith(`tenants/${tenantId}/branding/`)
+    )
+      throw new BadRequestException('invalid_logo_key');
+    const allowed = [
+      'name',
+      'legalName',
+      'trademarkNumber',
+      'country',
+      'branding',
+      'supportEmail',
+      'websiteUrl',
+    ];
+    const data = Object.fromEntries(
+      Object.entries(patch).filter(([key]) => allowed.includes(key)),
+    );
+    if (branding) data.branding = branding;
     return prisma.tenant.update({
       where: { id: tenantId },
-      data: patch as never,
+      data: data as never,
     });
   }
   async verification(tenantId: string): Promise<any> {
