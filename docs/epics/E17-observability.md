@@ -1,14 +1,14 @@
 # E17 — Observability
 
-| | |
-|---|---|
-| Wave | 2 |
-| Status | in-progress |
-| Owner | frank.enendu |
-| GitHub Issue | [#18](https://github.com/enendufrankc/verifynNG/issues/18) |
-| Depends on | E00 (compose, health module, request-id middleware), E14 (`NotificationService`, `MailerPort` for alert routing), E06 (verify endpoint to probe; verdict/rate-limit metrics), E02 (`@TenantId()`/user context for log enrichment — consumed via `AsyncLocalStorage`, soft dependency) |
-| Unblocks | E18 Support (log/trace lookup by requestId), E21 (perf gates read the same metrics), E15/E12 (per-tenant volume from metrics vs rollups reconciliation) |
-| Readiness items | `production-readiness.md` §5 all rows: centralised logs with tenant context, error tracking, uptime monitoring + alerting, core metrics, SLOs + status page, tracing · §4 "blue/green" prerequisite (`/ready`) · `architecture.md` step 11 |
+|                 |                                                                                                                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 2                                                                                                                                                                                                                                                                                     |
+| Status          | in-progress                                                                                                                                                                                                                                                                           |
+| Owner           | frank.enendu                                                                                                                                                                                                                                                                          |
+| GitHub Issue    | [#18](https://github.com/enendufrankc/verifynNG/issues/18)                                                                                                                                                                                                                            |
+| Depends on      | E00 (compose, health module, request-id middleware), E14 (`NotificationService`, `MailerPort` for alert routing), E06 (verify endpoint to probe; verdict/rate-limit metrics), E02 (`@TenantId()`/user context for log enrichment — consumed via `AsyncLocalStorage`, soft dependency) |
+| Unblocks        | E18 Support (log/trace lookup by requestId), E21 (perf gates read the same metrics), E15/E12 (per-tenant volume from metrics vs rollups reconciliation)                                                                                                                               |
+| Readiness items | `production-readiness.md` §5 all rows: centralised logs with tenant context, error tracking, uptime monitoring + alerting, core metrics, SLOs + status page, tracing · §4 "blue/green" prerequisite (`/ready`) · `architecture.md` step 11                                            |
 
 ## Goal
 
@@ -19,6 +19,7 @@ When a consumer in Onitsha sees an error instead of a verdict, we know before th
 **In:** OTel SDK bootstrap for api/web-verify/web-admin, pino structured logging with context propagation and redaction, otel-collector + Grafana + Loki + Tempo + Prometheus compose services with provisioned datasources/dashboards/alert rules, alert → E14 bridge, `ErrorTrackerPort` + adapters, `/health` vs `/ready`, `uptime-probe` container, `ProbeResult` storage and `GET /v1/status` public route, `/status` page in web-verify, SLO doc, incident runbook, k6 hooks for E21.
 
 **Out (with owner):**
+
 - The verify endpoint's own behaviour — E06. E17 measures it.
 - Email/SMS delivery of alerts — E14. E17 only calls `NotificationService.send('ops.alert', …)` and asks E14 for that template.
 - Audit log — E13 (tamper-evident business events ≠ operational logs).
@@ -58,6 +59,7 @@ docs/runbooks/verify-api-down.md
 **Exposes**
 
 Nest providers (`apps/api/src/telemetry/`):
+
 - `RequestContext` — `AsyncLocalStorage<{ requestId, tenantId?, userId?, traceId, spanId }>` with `RequestContextInterceptor` (global) populating it from headers/auth; `getContext()` for any code path including BullMQ processors (`withJobContext(job, fn)` helper).
 - `AppLogger` — pino instance; every line JSON with `{ level, time, msg, requestId, tenantId, userId, traceId, spanId, service, version }`; `redact` paths listed in Notes. Nest `LoggerService` adapter so framework logs share the format.
 - `Metrics` — typed wrappers over OTel meters: `verifyLatency` (histogram, attrs `tier`, `verdict`, `tenantId`), `verifyVerdicts` (counter), `rateLimitHits` (counter, attrs `scope`), `httpServerDuration` (auto), `queueDepth`/`queueLag` (gauges per BullMQ queue, sampled every 15 s), `dbPoolInUse`, `probeSuccess` (gauge). Other epics record via `Metrics.*`; no direct OTel API usage outside this folder.
@@ -65,6 +67,7 @@ Nest providers (`apps/api/src/telemetry/`):
 - `@Traced(name?)` method decorator for explicit spans; Prisma, BullMQ, http, and `fetch` auto-instrumented.
 
 HTTP routes:
+
 - `GET /health` — liveness: process up, event loop responsive. Never touches DB. 200 `{ status: 'ok', uptimeSec }`.
 - `GET /ready` — readiness: Postgres reachable **and** `prisma migrate status` reports no pending migrations, Redis reachable, MinIO bucket reachable, BullMQ workers registered. 200 `{ status:'ready', checks:{ db, migrations, redis, storage, workers } }` or 503 with the failing check named. Compose healthchecks switch to `/ready`.
 - `GET /metrics` — Prometheus exposition (bound to the internal network only; not exposed via the public ingress in production docs).
@@ -72,6 +75,7 @@ HTTP routes:
 - `GET /v1/status` — public, cached 30 s: `{ state: 'operational'|'degraded'|'outage', updatedAt, components: [{ name:'verify-api', state, p95Ms24h, uptime30dPct }], incidents: [] }`. Also serves `GET /v1/status/history?days=30` (daily uptime %).
 
 Domain events:
+
 - `ops.alert.fired { alertName, severity: 'page'|'ticket', summary, labels, firingSince }` and `ops.alert.resolved { alertName, resolvedAt }` — emitted by the alert bridge when Alertmanager webhooks arrive; E14 subscriber sends the mail; E18 may surface them.
 - `probe.failed { target, statusCode, latencyMs, at }` — emitted on each failed probe (after 2 consecutive failures) so E18/E19 incident register can be opened.
 
@@ -108,7 +112,7 @@ model StatusDaily {              // rolled from ProbeResult nightly; feeds /stat
 
 ## Tasks
 
-- [ ] T1 `apps/api/src/telemetry/otel.ts`: NodeSDK bootstrap loaded via `node --require` before Nest (auto-instrumentations: http, express/nest, pg/prisma, ioredis, bullmq, undici); OTLP/gRPC exporter to `otel-collector:4317`; resource attrs `service.name=api`, `service.version` from package.json, `deployment.environment`; `OTEL_*` env in `packages/config` section E17 with compose defaults; sampling 100% locally, `parentbased_traceidratio` configurable.
+- [x] T1 `apps/api/src/telemetry/otel.ts`: NodeSDK bootstrap loaded via `node --require` before Nest (auto-instrumentations: http, express/nest, pg/prisma, ioredis, bullmq, undici); OTLP/gRPC exporter to `otel-collector:4317`; resource attrs `service.name=api`, `service.version` from package.json, `deployment.environment`; `OTEL_*` env in `packages/config` section E17 with compose defaults; sampling 100% locally, `parentbased_traceidratio` configurable.
 - [ ] T2 `RequestContext` + interceptor + `AppLogger` (pino, `pino-opentelemetry-transport` or Loki push via collector), Nest `LoggerService` adapter, `withJobContext` for BullMQ processors, redaction (`req.headers.authorization`, `*.password`, `*.token`, `*.secret`, `*.code` (full codes — log only `redactCode`), `*.email` → hashed, `ip` → hashed via the same salt E06 uses). Replaces E00 request-id middleware while keeping `x-request-id` echo.
 - [ ] T3 `Metrics` wrappers and instrumentation points: middleware on `/v1/verify/*` for `verifyLatency`/`verifyVerdicts` (reads verdict from response body shape), `rateLimitHits` hook exposed for E06's limiter (**E06 calls `Metrics.rateLimitHits.add()`** — one-line change request), BullMQ queue depth/lag sampler, Prisma pool gauge; `/metrics` endpoint via Prometheus exporter on the internal port.
 - [ ] T4 `ErrorTrackerPort` with `LogErrorTracker` (default in compose) and `SentryErrorTracker` (`@sentry/node`, `@sentry/nextjs`, enabled when `SENTRY_DSN` set); global exception filter; Next `instrumentation.ts` in both apps wiring `onRequestError` + `global-error.tsx` capture; client-side beacon for unhandled errors in web-verify (no PII, no code).
@@ -144,20 +148,20 @@ model StatusDaily {              // rolled from ProbeResult nightly; feeds /stat
 
 ## Compose services added
 
-| Service | Image | Host port | Notes |
-|---|---|---|---|
-| grafana | grafana/grafana:11 | 3100 | anonymous viewer locally; provisioned dashboards/alerts/contact point |
-| loki | grafana/loki:3 | 3101 | filesystem storage, 7-day local retention |
-| tempo | grafana/tempo:2 | 3102 (HTTP), 4317 internal only | |
-| prometheus | prom/prometheus:v2 | 3103 | scrapes api:9464, otel-collector:8889, uptime-probe:9465 |
-| otel-collector | otel/opentelemetry-collector-contrib | 3104 (health), 4317/4318 internal | OTLP in; fan-out to tempo/prom/loki |
-| uptime-probe | tools/uptime-probe | 3105 (/health, /metrics) | 30 s cadence |
+| Service        | Image                                | Host port                         | Notes                                                                 |
+| -------------- | ------------------------------------ | --------------------------------- | --------------------------------------------------------------------- |
+| grafana        | grafana/grafana:11                   | 3100                              | anonymous viewer locally; provisioned dashboards/alerts/contact point |
+| loki           | grafana/loki:3                       | 3101                              | filesystem storage, 7-day local retention                             |
+| tempo          | grafana/tempo:2                      | 3102 (HTTP), 4317 internal only   |                                                                       |
+| prometheus     | prom/prometheus:v2                   | 3103                              | scrapes api:9464, otel-collector:8889, uptime-probe:9465              |
+| otel-collector | otel/opentelemetry-collector-contrib | 3104 (health), 4317/4318 internal | OTLP in; fan-out to tempo/prom/loki                                   |
+| uptime-probe   | tools/uptime-probe                   | 3105 (/health, /metrics)          | 30 s cadence                                                          |
 
 `api` additionally exposes `9464` (Prometheus) on the compose network only. All within the 3100–3199 block E00 reserved. Total added RAM ≈ 1 GB; documented opt-out via `COMPOSE_PROFILES=default`.
 
 ## Notes and decisions
 
-- **Error tracking: `ErrorTrackerPort` with `LogErrorTracker` as the compose default, `SentryErrorTracker` as the production adapter. No GlitchTip container.** Rationale: GlitchTip adds Postgres + Redis + web + worker (~1.5 GB) to a stack that already has Loki; locally, Loki *is* an adequate error store with `requestId`/`traceId` correlation, and Grafana can alert on `level=error` rate. In production Sentry's free tier (readiness §5) is the target and the adapter is exercised by unit tests against a fake transport. If the team later wants self-hosted parity, GlitchTip drops in behind the same port.
+- **Error tracking: `ErrorTrackerPort` with `LogErrorTracker` as the compose default, `SentryErrorTracker` as the production adapter. No GlitchTip container.** Rationale: GlitchTip adds Postgres + Redis + web + worker (~1.5 GB) to a stack that already has Loki; locally, Loki _is_ an adequate error store with `requestId`/`traceId` correlation, and Grafana can alert on `level=error` rate. In production Sentry's free tier (readiness §5) is the target and the adapter is exercised by unit tests against a fake transport. If the team later wants self-hosted parity, GlitchTip drops in behind the same port.
 - **Prometheus is kept** (rather than Grafana Mimir or collector-only) because alert rules on histograms are simplest there and E21's k6 gates read it directly.
 - **`/health` never touches dependencies**; `/ready` does. Orchestrators restart on liveness and drain on readiness — conflating them turns a DB blip into a restart storm. `migrations` in readiness is what makes a zero-downtime deploy safe: a new image with an unapplied migration never receives traffic.
 - **Probes are excluded from business data.** `x-synthetic-probe` is a shared secret; E06 skips ScanEvent and `scan.recorded` for it, so E12 never meters and the tenant never sees probe traffic.

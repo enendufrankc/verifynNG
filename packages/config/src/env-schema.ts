@@ -27,10 +27,32 @@ const e00Schema = z.object({
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:4000'),
 });
 
-// ── Sections for other epics will be added here ────────────────
-// E02 will add JWT_SECRET, etc.
-// E14 will add EMAIL_FROM, etc.
+// ── E17 Observability ───────────────────────────────────────────
+const e17Schema = z.object({
+  OTEL_EXPORTER_OTLP_ENDPOINT: z
+    .string()
+    .default('http://localhost:4317'),
+  OTEL_TRACES_SAMPLER: z.string().default('always_on'),
+  OTEL_TRACES_SAMPLER_ARG: z.string().optional(),
+  OTEL_SERVICE_NAME: z.string().default('api'),
+  OTEL_EXPORTER_OTLP_PROTOCOL: z.string().default('grpc'),
+  PROBE_KEY: z.string().default('probe-secret-local'),
+  PROBE_FIXTURE_CODE: z.string().default('PROBE_TIER1_OK'),
+  SENTRY_DSN: z.string().optional(),
+  OPS_ALERT_EMAILS: z.string().default('ops@verifynng.local'),
+  ALERT_WEBHOOK_SECRET: z
+    .string()
+    .default('alert-webhook-secret-local'),
+  GRAFANA_PORT: z.coerce.number().default(3100),
+  LOKI_PORT: z.coerce.number().default(3101),
+  TEMPO_PORT: z.coerce.number().default(3102),
+  PROMETHEUS_PORT: z.coerce.number().default(3103),
+  OTEL_COLLECTOR_PORT: z.coerce.number().default(3104),
+  UPTIME_PROBE_PORT: z.coerce.number().default(3105),
+  METRICS_PORT: z.coerce.number().default(9464),
+  VERIFY_ARTIFICIAL_DELAY_MS: z.coerce.number().default(0),
+});
 
-export const envSchema = e00Schema;
+export const envSchema = e00Schema.merge(e17Schema);
 
 export type Env = z.infer<typeof envSchema>;
