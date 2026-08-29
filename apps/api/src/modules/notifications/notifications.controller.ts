@@ -17,7 +17,11 @@ import { OutboxService } from './outbox/outbox.service';
 import { SuppressionsService } from './suppressions/suppressions.service';
 import { WebhooksService } from './webhooks/webhooks.service';
 import { EventRouter } from './routing/event-router';
-import { PrismaClient, NotificationChannel, SuppressionReason } from '@prisma/client';
+import {
+  PrismaClient,
+  NotificationChannel,
+  SuppressionReason,
+} from '@prisma/client';
 import { TenantId } from '../../common/tenant-id.decorator';
 import { ConfigService } from '@nestjs/config';
 
@@ -147,9 +151,7 @@ export class NotificationsController {
 
     const channel = body.channel ?? 'email';
     const recipient =
-      channel === 'email'
-        ? { email: user.email }
-        : { phone: '+2348000000001' };
+      channel === 'email' ? { email: user.email } : { phone: '+2348000000001' };
 
     return this.notificationService.send(
       'notification.test',
@@ -192,9 +194,7 @@ export class WebhooksController {
 
   @Post('termii')
   @HttpCode(HttpStatus.OK)
-  async termiiWebhook(
-    @Body() body: { message_id?: string; status?: string },
-  ) {
+  async termiiWebhook(@Body() body: { message_id?: string; status?: string }) {
     await this.webhooksService.handleTermiiWebhook(body);
     return { ok: true };
   }
@@ -226,6 +226,9 @@ export class DevController {
     }
 
     const channel = body.channel ?? (body.email ? 'email' : 'sms');
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { slug: 'ivoryglow' },
+    });
     const recipient =
       channel === 'email'
         ? { email: body.email ?? 'dev@verifyn.ng' }
@@ -238,7 +241,7 @@ export class DevController {
         message: 'Dev test notification',
         timestamp: new Date().toISOString(),
       } as never,
-      { channel, idempotencyKey: body.idempotencyKey },
+      { tenantId: tenant?.id, channel, idempotencyKey: body.idempotencyKey },
     );
   }
 
@@ -246,7 +249,11 @@ export class DevController {
   @HttpCode(HttpStatus.OK)
   async devEmit(
     @Body()
-    body: { event: string; tenantId?: string; data?: object },
+    body: {
+      event: string;
+      tenantId?: string;
+      data?: object;
+    },
   ) {
     if (this.config.get('NODE_ENV') === 'production') {
       return { error: 'Dev endpoints not available in production' };
@@ -254,9 +261,8 @@ export class DevController {
 
     const tenantId =
       body.tenantId ??
-      (
-        await this.prisma.tenant.findFirst({ where: { slug: 'ivoryglow' } })
-      )?.id;
+      (await this.prisma.tenant.findFirst({ where: { slug: 'ivoryglow' } }))
+        ?.id;
 
     if (!tenantId) {
       return { error: 'No tenant found' };

@@ -131,7 +131,9 @@ services:
     ports:
       - '${API_HOST_PORT:-4000}:4000'
     environment:
-      NODE_ENV: production
+      # Local compose exposes the dev-only acceptance endpoints; production deployments
+      # must set NODE_ENV=production outside this local stack.
+      NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifynng?schema=public
       REDIS_URL: redis://redis:6379
       API_PORT: '4000'
