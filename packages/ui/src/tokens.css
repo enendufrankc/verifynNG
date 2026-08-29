@@ -64,6 +64,29 @@
   --color-danger: var(--color-red);
   --color-info: var(--color-tq-dark);
 
+  /* ── shadcn/ui compatibility aliases ──────────────────── */
+  /* shadcn-generated primitives (dialog, sheet, table, …) use the
+     library's default token names; bridge them to the semantic
+     tokens above so no component hardcodes a colour outside tokens.css. */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-fg);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-fg);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-fg);
+  --color-primary: var(--color-brand);
+  --color-primary-foreground: var(--color-brand-ink);
+  --color-secondary: var(--color-surface-sunken);
+  --color-secondary-foreground: var(--color-fg);
+  --color-muted: var(--color-surface-sunken);
+  --color-muted-foreground: var(--color-fg-muted);
+  --color-accent: var(--color-surface-sunken);
+  --color-accent-foreground: var(--color-fg);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-n0);
+  --color-input: var(--color-border);
+  --color-ring: var(--color-focus);
+
   /* ── chart tokens ─────────────────────────────────────── */
   --color-chart-1: #5ae9d7;
   --color-chart-2: #6cda91;
