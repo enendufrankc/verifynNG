@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
@@ -17,6 +17,7 @@ import { RateLimitService, REDIS_CLIENT } from './rate-limit.service';
  */
 @Injectable()
 export class EnumerationDetector {
+  private readonly logger = new Logger(EnumerationDetector.name);
   private readonly threshold: number;
   private readonly windowSec: number;
   private readonly blockSec: number;
@@ -48,9 +49,13 @@ export class EnumerationDetector {
     tenantSlug?: string,
   ): Promise<{ blocked: boolean }> {
     const key = `enum:${ipHash}`;
+    // `hit()` allows up to `limit` events and blocks starting at `limit + 1`;
+    // we want the block to trip ON the `threshold`-th invalid observation
+    // (so the very next request — of any kind — is already blocked), so the
+    // limit passed in is one less than the configured threshold.
     const result = await this.rateLimit.hit(
       key,
-      this.threshold,
+      this.threshold - 1,
       this.windowSec,
     );
 
@@ -69,7 +74,12 @@ export class EnumerationDetector {
         },
       });
 
-      // Notify the rest of the system (alerting, analytics, …).
+      // Notify the rest of the system (alerting, analytics, …) — and log it
+      // so `scan.enumeration_detected` is visible via `docker compose logs`
+      // even before any subscriber (E07/E17) exists.
+      this.logger.warn(
+        `scan.enumeration_detected ipHash=${ipHash} tenantSlug=${tenantSlug ?? '-'} invalidCount=${this.threshold} blockedForSec=${this.blockSec}`,
+      );
       this.eventEmitter.emit('scan.enumeration_detected', {
         ipHash,
         tenantSlug: tenantSlug ?? null,

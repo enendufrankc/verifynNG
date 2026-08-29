@@ -17,7 +17,6 @@ import { Request, Response } from 'express';
 import { ApiOperation, ApiResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 import {
-  normalizeCode,
   verifyChecksum,
   hashForStorage,
   redactCode,
@@ -74,528 +73,20 @@ export class VerifyController {
     );
     this.trustProxy = configService.get<boolean>('TRUST_PROXY')!;
     this.ipSalt = configService.get<string>('IP_HASH_SALT')!;
-    this.rateLimitIpPerMin = configService.get<number>('RATE_LIMIT_IP_PER_MIN')!;
-    this.rateLimitCodePerMin =
-      configService.get<number>('RATE_LIMIT_CODE_PER_MIN')!;
-  }
-
-  // -------------------------------------------------------------------------
-  // GET /v1/verify/:code
-  // -------------------------------------------------------------------------
-
-  @Public()
-  @Get(':code')
-  @ApiOperation({ summary: 'Verify a unit code' })
-  @ApiQuery({
-    name: 'src',
-    required: false,
-    enum: ['qr', 'manual', 'sms'],
-    description: 'Scan source (default: qr)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Verification result',
-    type: VerifyResponseDto,
-  })
-  @ApiResponse({
-    status: 429,
-    description: 'Rate limited',
-    type: VerifyResponseDto,
-  })
-  @ApiResponse({ status: 503, description: 'Infrastructure unavailable' })
-  async verify(
-    @Param('code') rawCode: string,
-    @Query('src') src: 'qr' | 'manual' | 'sms' = 'qr',
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-    @Headers() headers: Record<string, string>,
-  ): Promise<VerifyResponseDto> {
-    const startedAt = Date.now();
-    const requestId = headers['x-request-id'] ?? '-';
-    const logCtx = { requestId, code: rawCode };
-
-    // The last applied rate limit — surfaced as response headers.
-    const setRateHeaders = (limit: number, remaining: number) => {
-      res.setHeader('X-RateLimit-Limit', String(limit));
-      res.setHeader('X-RateLimit-Remaining', String(remaining));
-    };
-
-    try {
-      // --- 1. Parse + checksum (no DB / Redis hit) ---------------------
-      const normalizedCode = normalizeCode(rawCode);
-      const redacted = redactCode(rawCode);
-      const checksumResult = verifyChecksum(this.keyRing, rawCode);
-
-      const parsed =
-        checksumResult.ok === true
-          ? {
-              tenant: checksumResult.parsed.tenant,
-              tier: checksumResult.parsed.tier,
-              kid: checksumResult.parsed.kid,
-              payload: checksumResult.parsed.payload,
-              checksum: checksumResult.parsed.checksum,
-              legacy: checksumResult.parsed.legacy,
-            }
-          : null;
-      const checksumOk = checksumResult.ok;
-
-      // --- 2. Invalid → return immediately (no DB hit) ------------------
-      if (parsed === null || !checksumOk) {
-        const result = this.verdictEngine.evaluate({
-          parsed,
-          checksumOk,
-          unit: null,
-          tenant: null,
-          product: null,
-          batch: null,
-          priorScans: [],
-          redactedCode: redacted,
-          brandDisplayName: '',
-          brandSlug: '',
-          rateLimited: false,
-          now: new Date(),
-        } satisfies VerdictContext);
-
-        // Observe the invalid scan for enumeration detection.
-        const ip = getClientIp(
-          headers,
-          req.socket.remoteAddress,
-          this.trustProxy,
-        );
-        if (ip) {
-          try {
-            const ipHash = hashIp(ip, this.ipSalt);
-            await this.enumerationDetector.observeInvalid(ipHash, parsed?.tenant);
-          } catch (err) {
-            this.logger.error(
-              'enumeration observe failed (Redis down?) — returning 503',
-              err instanceof Error ? err.stack : String(err),
-              logCtx,
-            );
-            throw new HttpException(
-              'Service temporarily unavailable',
-              HttpStatus.SERVICE_UNAVAILABLE,
-            );
-          }
-        }
-
-        // No tenant known for an unparseable code, so no ScanEvent row.
-        return this.toResponseDto(result, null, []);
-      }
-
-      const tier = parsed.tier;
-      const tenantSlug = parsed.tenant;
-
-      // --- 3. IP + GeoIP (best-effort) ----------------------------------
-      const ip = getClientIp(
-        headers,
-        req.socket.remoteAddress,
-        this.trustProxy,
-      );
-      let ipHash: string | null = null;
-      if (ip) ipHash = hashIp(ip, this.ipSalt);
-
-      let geoResult: {
-        country: string | null;
-        city: string | null;
-      } | null = null;
-      if (ip) {
-        try {
-          const looked = await this.geoIp.lookup(ip);
-          geoResult = looked
-            ? { country: looked.country, city: looked.city }
-            : null;
-        } catch (err) {
-          this.logger.warn(
-            `GeoIP lookup failed for ${ip}: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-            logCtx,
-          );
-        }
-      }
-
-      // --- 4. Rate limits -------------------------------------------------
-      let rateLimited = false;
-      let retryAfterSec: number | undefined;
-
-      try {
-        // 4a. IP hard-block (enumeration)
-        if (ipHash) {
-          const blocked = await this.rateLimit.isBlocked(`ip:${ipHash}`);
-          if (blocked) {
-            rateLimited = true;
-            retryAfterSec = this.configService.get<number>(
-              'ENUMERATION_BLOCK_SEC',
-            )!;
-            res.setHeader(
-              'Retry-After',
-              String(retryAfterSec),
-            );
-          }
-        }
-
-        // 4b. Per-IP
-        if (!rateLimited && ipHash) {
-          const rl = await this.rateLimit.hit(
-            `rl:ip:${ipHash}`,
-            this.rateLimitIpPerMin,
-            60,
-          );
-          setRateHeaders(this.rateLimitIpPerMin, rl.remaining);
-          if (!rl.allowed) {
-            rateLimited = true;
-            retryAfterSec = rl.retryAfterSec;
-          }
-        }
-
-        // 4c. Tenant lookup (needed for per-tenant limit + verdict)
-        let tenant: {
-          id: string;
-          slug: string;
-          status: 'pending' | 'active' | 'suspended' | 'offboarded';
-          name: string;
-          verifyRateLimitPerMin: number;
-        } | null = null;
-        try {
-          const t = await this.prisma.tenant.findUnique({
-            where: { slug: tenantSlug },
-          });
-          if (t) {
-            tenant = {
-              id: t.id,
-              slug: t.slug,
-              status: t.status,
-              name: t.name,
-              verifyRateLimitPerMin: t.verifyRateLimitPerMin,
-            };
-          }
-        } catch (err) {
-          this.logger.error(
-            'tenant lookup failed (Postgres down?) — returning 503',
-            err instanceof Error ? err.stack : String(err),
-            { ...logCtx, tenantSlug },
-          );
-          throw new HttpException(
-            'Service temporarily unavailable',
-            HttpStatus.SERVICE_UNAVAILABLE,
-          );
-        }
-
-        // 4d. Per-tenant
-        if (!rateLimited && tenant) {
-          const rl = await this.rateLimit.hit(
-            `rl:tenant:${tenant.id}`,
-            tenant.verifyRateLimitPerMin,
-            60,
-          );
-          setRateHeaders(tenant.verifyRateLimitPerMin, rl.remaining);
-          if (!rl.allowed) {
-            rateLimited = true;
-            retryAfterSec = rl.retryAfterSec;
-          }
-        }
-
-        // 4e. Per-code (tier 2 only)
-        if (!rateLimited && tier === 2) {
-          const tier2Hash = hashForStorage(normalizedCode);
-          const rl = await this.rateLimit.hit(
-            `rl:code:${tier2Hash}`,
-            this.rateLimitCodePerMin,
-            60,
-          );
-          setRateHeaders(this.rateLimitCodePerMin, rl.remaining);
-          if (!rl.allowed) {
-            rateLimited = true;
-            retryAfterSec = rl.retryAfterSec;
-          }
-        }
-
-        // --- 5. Offboarded tenant → unknown (no unit lookup) ----------
-        if (tenant?.status === 'offboarded') {
-          const result = this.verdictEngine.evaluate({
-            parsed,
-            checksumOk,
-            unit: null,
-            tenant,
-            product: null,
-            batch: null,
-            priorScans: [],
-            redactedCode: redacted,
-            brandDisplayName: tenant.name,
-            brandSlug: tenant.slug,
-            rateLimited,
-            retryAfterSec,
-            now: new Date(),
-          } satisfies VerdictContext);
-
-          const scanEvent = await this.recordScan({
-            tenantId: tenant.id,
-            unitId: null,
-            tier,
-            verdict: result.verdict,
-            source: src,
-            code: rawCode,
-            redactedCode: redacted,
-            ip,
-            userAgent: headers['user-agent'] ?? null,
-            batchId: null,
-            productId: null,
-            geoCountry: geoResult?.country ?? null,
-            geoCity: geoResult?.city ?? null,
-            latencyMs: Date.now() - startedAt,
-          });
-
-          this.emitScanRecorded({
-            scanEventId: scanEvent.id,
-            tenantId: tenant.id,
-            unitId: null,
-            batchId: null,
-            tier,
-            verdict: result.verdict,
-            ipHash,
-            geo: geoResult,
-            src,
-            at: scanEvent.createdAt,
-          });
-
-          if (rateLimited) this.throwRateLimited(result, retryAfterSec, res);
-          return this.toResponseDto(result, scanEvent.id, []);
-        }
-
-        // --- 6. Unit lookup (tier-gated) ------------------------------
-        let unit: {
-          id: string;
-          state: 'active' | 'flagged' | 'decommissioned';
-          tenantId: string;
-          batchId: string;
-        } | null = null;
-        let product: {
-          id: string;
-          name: string;
-          sku: string;
-          gtin?: string;
-        } | null = null;
-        let batch: {
-          id: string;
-          oem?: string;
-          commissionedAt: string;
-        } | null = null;
-
-        try {
-          if (tier === 1) {
-            const row = await this.prisma.unit.findUnique({
-              where: { tier1Code: normalizedCode },
-              include: { batch: { include: { product: true, oem: true } } },
-            });
-            if (row) {
-              unit = {
-                id: row.id,
-                state: row.state,
-                tenantId: row.tenantId,
-                batchId: row.batchId,
-              };
-              product = row.batch.product
-                ? {
-                    id: row.batch.product.id,
-                    name: row.batch.product.name,
-                    sku: row.batch.product.sku,
-                    gtin: row.batch.product.gtin ?? undefined,
-                  }
-                : null;
-              batch = {
-                id: row.batch.id,
-                oem: row.batch.oem?.name ?? undefined,
-                commissionedAt: row.batch.createdAt.toISOString(),
-              };
-            }
-          } else {
-            const tier2Hash = hashForStorage(normalizedCode);
-            const row = await this.prisma.unit.findUnique({
-              where: { tier2Hash },
-              include: { batch: { include: { product: true, oem: true } } },
-            });
-            if (row) {
-              unit = {
-                id: row.id,
-                state: row.state,
-                tenantId: row.tenantId,
-                batchId: row.batchId,
-              };
-              product = row.batch.product
-                ? {
-                    id: row.batch.product.id,
-                    name: row.batch.product.name,
-                    sku: row.batch.product.sku,
-                    gtin: row.batch.product.gtin ?? undefined,
-                  }
-                : null;
-              batch = {
-                id: row.batch.id,
-                oem: row.batch.oem?.name ?? undefined,
-                commissionedAt: row.batch.createdAt.toISOString(),
-              };
-            }
-          }
-        } catch (err) {
-          this.logger.error(
-            'unit lookup failed (Postgres down?) — returning 503',
-            err instanceof Error ? err.stack : String(err),
-            { ...logCtx, tenantId: tenant?.id },
-          );
-          throw new HttpException(
-            'Service temporarily unavailable',
-            HttpStatus.SERVICE_UNAVAILABLE,
-          );
-        }
-
-        // --- 7. Prior tier-2 scans (for history / signals) ----------
-        let priorScans: Array<{
-          geoCity: string | null;
-          geoCountry: string | null;
-          createdAt: Date;
-        }> = [];
-        if (tier === 2 && unit) {
-          try {
-            const events = await this.scanEvents.forUnit(unit.id, 'tier2', {
-              limit: 100,
-            });
-            priorScans = events.map((e) => ({
-              geoCity: e.geoCity,
-              geoCountry: e.geoCountry,
-              createdAt: e.createdAt,
-            }));
-          } catch (err) {
-            this.logger.error(
-              'prior scan lookup failed (Postgres down?) — returning 503',
-              err instanceof Error ? err.stack : String(err),
-              { ...logCtx, tenantId: tenant?.id, unitId: unit.id },
-            );
-            throw new HttpException(
-              'Service temporarily unavailable',
-              HttpStatus.SERVICE_UNAVAILABLE,
-            );
-          }
-        }
-
-        // --- 8. Evaluate verdict -------------------------------------
-        const result = this.verdictEngine.evaluate({
-          parsed,
-          checksumOk,
-          unit,
-          tenant,
-          product,
-          batch,
-          priorScans,
-          redactedCode: redacted,
-          brandDisplayName: tenant?.name ?? '',
-          brandSlug: tenant?.slug ?? tenantSlug,
-          rateLimited,
-          retryAfterSec,
-          now: new Date(),
-        } satisfies VerdictContext);
-
-        // --- 9. Record scan event -----------------------------------
-        const tenantIdForRecord = tenant?.id ?? unit?.tenantId ?? '';
-        let scanEventId: string | null = null;
-
-        if (tenantIdForRecord) {
-          try {
-            const scanEvent = await this.recordScan({
-              tenantId: tenantIdForRecord,
-              unitId: unit?.id ?? null,
-              tier,
-              verdict: result.verdict,
-              source: src,
-              code: rawCode,
-              redactedCode: redacted,
-              ip,
-              userAgent: headers['user-agent'] ?? null,
-              batchId: unit?.batchId ?? null,
-              productId: product?.id ?? null,
-              geoCountry: geoResult?.country ?? null,
-              geoCity: geoResult?.city ?? null,
-              latencyMs: Date.now() - startedAt,
-            });
-            scanEventId = scanEvent.id;
-
-            // --- 10. Emit scan.recorded -----------------------------
-            this.emitScanRecorded({
-              scanEventId: scanEvent.id,
-              tenantId: tenantIdForRecord,
-              unitId: unit?.id ?? null,
-              batchId: unit?.batchId ?? null,
-              tier,
-              verdict: result.verdict,
-              ipHash,
-              geo: geoResult,
-              src,
-              at: scanEvent.createdAt,
-            });
-          } catch (err) {
-            this.logger.error(
-              'scan event recording failed — returning 503',
-              err instanceof Error ? err.stack : String(err),
-              { ...logCtx, tenantId: tenantIdForRecord },
-            );
-            throw new HttpException(
-              'Service temporarily unavailable',
-              HttpStatus.SERVICE_UNAVAILABLE,
-            );
-          }
-        }
-
-        // --- 11. Observe invalid for enumeration (tier-2 unknown) ---
-        if (result.verdict === 'unknown' && ipHash) {
-          try {
-            await this.enumerationDetector.observeInvalid(ipHash, tenantSlug);
-          } catch (err) {
-            this.logger.warn(
-              `enumeration observe failed: ${
-                err instanceof Error ? err.message : String(err)
-              }`,
-              logCtx,
-            );
-          }
-        }
-
-        // --- 12. Build response ------------------------------------
-        const distinctRegions = this.computeDistinctRegions(
-          priorScans,
-          geoResult,
-        );
-
-        if (rateLimited) this.throwRateLimited(result, retryAfterSec, res);
-        return this.toResponseDto(result, scanEventId, distinctRegions);
-      } catch (err) {
-        if (err instanceof HttpException) throw err;
-        // Rate-limit / Redis layer blew up — never a false verdict.
-        this.logger.error(
-          'rate-limit layer failed (Redis down?) — returning 503',
-          err instanceof Error ? err.stack : String(err),
-          logCtx,
-        );
-        throw new HttpException(
-          'Service temporarily unavailable',
-          HttpStatus.SERVICE_UNAVAILABLE,
-        );
-      }
-    } catch (err) {
-      if (err instanceof HttpException) throw err;
-      this.logger.error(
-        'unexpected error during verification — returning 503',
-        err instanceof Error ? err.stack : String(err),
-        logCtx,
-      );
-      throw new HttpException(
-        'Service temporarily unavailable',
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
+    this.rateLimitIpPerMin = configService.get<number>(
+      'RATE_LIMIT_IP_PER_MIN',
+    )!;
+    this.rateLimitCodePerMin = configService.get<number>(
+      'RATE_LIMIT_CODE_PER_MIN',
+    )!;
   }
 
   // -------------------------------------------------------------------------
   // GET /v1/verify/_schema
+  //
+  // Registered BEFORE the `:code` route below: Nest/Express match routes in
+  // declaration order, so a static path must come first or `:code` swallows
+  // it (a request for "_schema" would otherwise be treated as the code).
   // -------------------------------------------------------------------------
 
   @Public()
@@ -686,6 +177,538 @@ export class VerifyController {
   }
 
   // -------------------------------------------------------------------------
+  // GET /v1/verify/:code
+  // -------------------------------------------------------------------------
+
+  @Public()
+  @Get(':code')
+  @ApiOperation({ summary: 'Verify a unit code' })
+  @ApiQuery({
+    name: 'src',
+    required: false,
+    enum: ['qr', 'manual', 'sms'],
+    description: 'Scan source (default: qr)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification result',
+    type: VerifyResponseDto,
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Rate limited',
+    type: VerifyResponseDto,
+  })
+  @ApiResponse({ status: 503, description: 'Infrastructure unavailable' })
+  async verify(
+    @Param('code') rawCode: string,
+    @Query('src') src: 'qr' | 'manual' | 'sms' = 'qr',
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Headers() headers: Record<string, string>,
+  ): Promise<VerifyResponseDto> {
+    const startedAt = Date.now();
+    const requestId = headers['x-request-id'] ?? '-';
+    const logCtx = { requestId, code: rawCode };
+
+    // The last applied rate limit — surfaced as response headers.
+    const setRateHeaders = (limit: number, remaining: number) => {
+      res.setHeader('X-RateLimit-Limit', String(limit));
+      res.setHeader('X-RateLimit-Remaining', String(remaining));
+    };
+
+    try {
+      // --- 1. Parse + checksum (no DB / Redis hit) ---------------------
+      const redacted = redactCode(rawCode);
+      const checksumResult = verifyChecksum(this.keyRing, rawCode);
+
+      const parsed =
+        checksumResult.ok === true
+          ? {
+              tenant: checksumResult.parsed.tenant,
+              tier: checksumResult.parsed.tier,
+              kid: checksumResult.parsed.kid,
+              payload: checksumResult.parsed.payload,
+              checksum: checksumResult.parsed.checksum,
+              legacy: checksumResult.parsed.legacy,
+            }
+          : null;
+      const checksumOk = checksumResult.ok;
+
+      // --- 2. Invalid → return immediately (no DB hit) ------------------
+      if (parsed === null || !checksumOk) {
+        const result = this.verdictEngine.evaluate({
+          parsed,
+          checksumOk,
+          unit: null,
+          tenant: null,
+          product: null,
+          batch: null,
+          priorScans: [],
+          redactedCode: redacted,
+          brandDisplayName: '',
+          brandSlug: '',
+          rateLimited: false,
+          now: new Date(),
+        } satisfies VerdictContext);
+
+        // Observe the invalid scan for enumeration detection.
+        const ip = getClientIp(
+          headers,
+          req.socket.remoteAddress,
+          this.trustProxy,
+        );
+        if (ip) {
+          try {
+            const ipHash = hashIp(ip, this.ipSalt);
+            await this.enumerationDetector.observeInvalid(
+              ipHash,
+              parsed?.tenant,
+            );
+          } catch (err) {
+            this.logger.error(
+              'enumeration observe failed (Redis down?) — returning 503',
+              err instanceof Error ? err.stack : String(err),
+              logCtx,
+            );
+            throw new HttpException(
+              'Service temporarily unavailable',
+              HttpStatus.SERVICE_UNAVAILABLE,
+            );
+          }
+        }
+
+        // No tenant known for an unparseable code, so no ScanEvent row.
+        return this.toResponseDto(result, null);
+      }
+
+      const tier = parsed.tier;
+      const tenantSlug = parsed.tenant;
+      // Canonical storage form, reconstructed from the parsed segments
+      // (tenant/kid lower-cased) — NOT `normalizeCode(rawCode)`, which
+      // upper-cases the whole string including tenant/kid and would never
+      // match what `generateCode` stored (`ivoryglow.1.k1...` vs
+      // `IVORYGLOW.1.K1...`).
+      const canonicalCode = `${parsed.tenant}.${parsed.tier}.${parsed.kid}.${parsed.payload}.${parsed.checksum}`;
+
+      // --- 3. IP + GeoIP (best-effort) ----------------------------------
+      const ip = getClientIp(
+        headers,
+        req.socket.remoteAddress,
+        this.trustProxy,
+      );
+      let ipHash: string | null = null;
+      if (ip) ipHash = hashIp(ip, this.ipSalt);
+
+      let geoResult: {
+        country: string | null;
+        city: string | null;
+      } | null = null;
+      if (ip) {
+        try {
+          const looked = await this.geoIp.lookup(ip);
+          geoResult = looked
+            ? { country: looked.country, city: looked.city }
+            : null;
+        } catch (err) {
+          this.logger.warn(
+            `GeoIP lookup failed for ${ip}: ${
+              err instanceof Error ? err.message : String(err)
+            }`,
+            logCtx,
+          );
+        }
+      }
+
+      // --- 4. Rate limits -------------------------------------------------
+      let rateLimited = false;
+      let retryAfterSec: number | undefined;
+
+      try {
+        // 4a. IP hard-block (enumeration) — short-circuits with NO DB lookup:
+        // an already-blocked IP never touches Postgres.
+        if (ipHash) {
+          const blocked = await this.rateLimit.isBlocked(`ip:${ipHash}`);
+          if (blocked) {
+            const blockRetryAfterSec = this.configService.get<number>(
+              'ENUMERATION_BLOCK_SEC',
+            )!;
+            res.setHeader('Retry-After', String(blockRetryAfterSec));
+            const result = this.verdictEngine.evaluate({
+              parsed,
+              checksumOk,
+              unit: null,
+              tenant: null,
+              product: null,
+              batch: null,
+              priorScans: [],
+              redactedCode: redacted,
+              brandDisplayName: '',
+              brandSlug: '',
+              rateLimited: true,
+              retryAfterSec: blockRetryAfterSec,
+              now: new Date(),
+            } satisfies VerdictContext);
+            this.throwRateLimited(result, blockRetryAfterSec, res);
+          }
+        }
+
+        // 4b. Per-IP
+        if (!rateLimited && ipHash) {
+          const rl = await this.rateLimit.hit(
+            `rl:ip:${ipHash}`,
+            this.rateLimitIpPerMin,
+            60,
+          );
+          setRateHeaders(this.rateLimitIpPerMin, rl.remaining);
+          if (!rl.allowed) {
+            rateLimited = true;
+            retryAfterSec = rl.retryAfterSec;
+          }
+        }
+
+        // 4c. Tenant lookup (needed for per-tenant limit + verdict)
+        let tenant: {
+          id: string;
+          slug: string;
+          status: 'pending' | 'active' | 'suspended' | 'offboarded';
+          name: string;
+          verifyRateLimitPerMin: number;
+        } | null = null;
+        try {
+          const t = await this.prisma.tenant.findUnique({
+            where: { slug: tenantSlug },
+          });
+          if (t) {
+            tenant = {
+              id: t.id,
+              slug: t.slug,
+              status: t.status,
+              name: t.name,
+              verifyRateLimitPerMin: t.verifyRateLimitPerMin,
+            };
+          }
+        } catch (err) {
+          this.logger.error(
+            'tenant lookup failed (Postgres down?) — returning 503',
+            err instanceof Error ? err.stack : String(err),
+            { ...logCtx, tenantSlug },
+          );
+          throw new HttpException(
+            'Service temporarily unavailable',
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
+
+        // 4d. Per-tenant
+        if (!rateLimited && tenant) {
+          const rl = await this.rateLimit.hit(
+            `rl:tenant:${tenant.id}`,
+            tenant.verifyRateLimitPerMin,
+            60,
+          );
+          setRateHeaders(tenant.verifyRateLimitPerMin, rl.remaining);
+          if (!rl.allowed) {
+            rateLimited = true;
+            retryAfterSec = rl.retryAfterSec;
+          }
+        }
+
+        // 4e. Per-code (tier 2 only)
+        if (!rateLimited && tier === 2) {
+          const tier2Hash = hashForStorage(canonicalCode);
+          const rl = await this.rateLimit.hit(
+            `rl:code:${tier2Hash}`,
+            this.rateLimitCodePerMin,
+            60,
+          );
+          setRateHeaders(this.rateLimitCodePerMin, rl.remaining);
+          if (!rl.allowed) {
+            rateLimited = true;
+            retryAfterSec = rl.retryAfterSec;
+          }
+        }
+
+        // --- 5. Offboarded tenant → unknown (no unit lookup) ----------
+        if (tenant?.status === 'offboarded') {
+          const result = this.verdictEngine.evaluate({
+            parsed,
+            checksumOk,
+            unit: null,
+            tenant,
+            product: null,
+            batch: null,
+            priorScans: [],
+            redactedCode: redacted,
+            brandDisplayName: tenant.name,
+            brandSlug: tenant.slug,
+            rateLimited,
+            retryAfterSec,
+            now: new Date(),
+          } satisfies VerdictContext);
+
+          const scanEvent = await this.recordScan({
+            tenantId: tenant.id,
+            unitId: null,
+            tier,
+            verdict: result.verdict,
+            source: src,
+            code: rawCode,
+            redactedCode: redacted,
+            ip,
+            userAgent: headers['user-agent'] ?? null,
+            batchId: null,
+            productId: null,
+            geoCountry: geoResult?.country ?? null,
+            geoCity: geoResult?.city ?? null,
+            latencyMs: Date.now() - startedAt,
+          });
+
+          this.emitScanRecorded({
+            scanEventId: scanEvent.id,
+            tenantId: tenant.id,
+            unitId: null,
+            batchId: null,
+            tier,
+            verdict: result.verdict,
+            ipHash,
+            geo: geoResult,
+            src,
+            at: scanEvent.createdAt,
+          });
+
+          if (rateLimited) this.throwRateLimited(result, retryAfterSec, res);
+          return this.toResponseDto(result, scanEvent.id);
+        }
+
+        // --- 6. Unit lookup (tier-gated) ------------------------------
+        let unit: {
+          id: string;
+          state: 'active' | 'flagged' | 'decommissioned';
+          tenantId: string;
+          batchId: string;
+        } | null = null;
+        let product: {
+          id: string;
+          name: string;
+          sku: string;
+          gtin?: string;
+        } | null = null;
+        let batch: {
+          id: string;
+          oem?: string;
+          commissionedAt: string;
+        } | null = null;
+
+        try {
+          if (tier === 1) {
+            const row = await this.prisma.unit.findUnique({
+              where: { tier1Code: canonicalCode },
+              include: { batch: { include: { product: true, oem: true } } },
+            });
+            if (row) {
+              unit = {
+                id: row.id,
+                state: row.state,
+                tenantId: row.tenantId,
+                batchId: row.batchId,
+              };
+              product = row.batch.product
+                ? {
+                    id: row.batch.product.id,
+                    name: row.batch.product.name,
+                    sku: row.batch.product.sku,
+                    gtin: row.batch.product.gtin ?? undefined,
+                  }
+                : null;
+              batch = {
+                id: row.batch.id,
+                oem: row.batch.oem?.name ?? undefined,
+                commissionedAt: row.batch.createdAt.toISOString(),
+              };
+            }
+          } else {
+            const tier2Hash = hashForStorage(canonicalCode);
+            const row = await this.prisma.unit.findUnique({
+              where: { tier2Hash },
+              include: { batch: { include: { product: true, oem: true } } },
+            });
+            if (row) {
+              unit = {
+                id: row.id,
+                state: row.state,
+                tenantId: row.tenantId,
+                batchId: row.batchId,
+              };
+              product = row.batch.product
+                ? {
+                    id: row.batch.product.id,
+                    name: row.batch.product.name,
+                    sku: row.batch.product.sku,
+                    gtin: row.batch.product.gtin ?? undefined,
+                  }
+                : null;
+              batch = {
+                id: row.batch.id,
+                oem: row.batch.oem?.name ?? undefined,
+                commissionedAt: row.batch.createdAt.toISOString(),
+              };
+            }
+          }
+        } catch (err) {
+          this.logger.error(
+            'unit lookup failed (Postgres down?) — returning 503',
+            err instanceof Error ? err.stack : String(err),
+            { ...logCtx, tenantId: tenant?.id },
+          );
+          throw new HttpException(
+            'Service temporarily unavailable',
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
+
+        // --- 7. Prior tier-2 scans (for history / signals) ----------
+        let priorScans: Array<{
+          geoCity: string | null;
+          geoCountry: string | null;
+          createdAt: Date;
+        }> = [];
+        if (tier === 2 && unit) {
+          try {
+            const events = await this.scanEvents.forUnit(unit.id, 'tier2', {
+              limit: 100,
+            });
+            priorScans = events.map((e) => ({
+              geoCity: e.geoCity,
+              geoCountry: e.geoCountry,
+              createdAt: e.createdAt,
+            }));
+          } catch (err) {
+            this.logger.error(
+              'prior scan lookup failed (Postgres down?) — returning 503',
+              err instanceof Error ? err.stack : String(err),
+              { ...logCtx, tenantId: tenant?.id, unitId: unit.id },
+            );
+            throw new HttpException(
+              'Service temporarily unavailable',
+              HttpStatus.SERVICE_UNAVAILABLE,
+            );
+          }
+        }
+
+        // --- 8. Evaluate verdict -------------------------------------
+        const result = this.verdictEngine.evaluate({
+          parsed,
+          checksumOk,
+          unit,
+          tenant,
+          product,
+          batch,
+          priorScans,
+          currentGeo: geoResult,
+          redactedCode: redacted,
+          brandDisplayName: tenant?.name ?? '',
+          brandSlug: tenant?.slug ?? tenantSlug,
+          rateLimited,
+          retryAfterSec,
+          now: new Date(),
+        } satisfies VerdictContext);
+
+        // --- 9. Record scan event -----------------------------------
+        const tenantIdForRecord = tenant?.id ?? unit?.tenantId ?? '';
+        let scanEventId: string | null = null;
+
+        if (tenantIdForRecord) {
+          try {
+            const scanEvent = await this.recordScan({
+              tenantId: tenantIdForRecord,
+              unitId: unit?.id ?? null,
+              tier,
+              verdict: result.verdict,
+              source: src,
+              code: rawCode,
+              redactedCode: redacted,
+              ip,
+              userAgent: headers['user-agent'] ?? null,
+              batchId: unit?.batchId ?? null,
+              productId: product?.id ?? null,
+              geoCountry: geoResult?.country ?? null,
+              geoCity: geoResult?.city ?? null,
+              latencyMs: Date.now() - startedAt,
+            });
+            scanEventId = scanEvent.id;
+
+            // --- 10. Emit scan.recorded -----------------------------
+            this.emitScanRecorded({
+              scanEventId: scanEvent.id,
+              tenantId: tenantIdForRecord,
+              unitId: unit?.id ?? null,
+              batchId: unit?.batchId ?? null,
+              tier,
+              verdict: result.verdict,
+              ipHash,
+              geo: geoResult,
+              src,
+              at: scanEvent.createdAt,
+            });
+          } catch (err) {
+            this.logger.error(
+              'scan event recording failed — returning 503',
+              err instanceof Error ? err.stack : String(err),
+              { ...logCtx, tenantId: tenantIdForRecord },
+            );
+            throw new HttpException(
+              'Service temporarily unavailable',
+              HttpStatus.SERVICE_UNAVAILABLE,
+            );
+          }
+        }
+
+        // --- 11. Observe invalid for enumeration (tier-2 unknown) ---
+        if (result.verdict === 'unknown' && ipHash) {
+          try {
+            await this.enumerationDetector.observeInvalid(ipHash, tenantSlug);
+          } catch (err) {
+            this.logger.warn(
+              `enumeration observe failed: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+              logCtx,
+            );
+          }
+        }
+
+        // --- 12. Build response ------------------------------------
+        if (rateLimited) this.throwRateLimited(result, retryAfterSec, res);
+        return this.toResponseDto(result, scanEventId);
+      } catch (err) {
+        if (err instanceof HttpException) throw err;
+        // Rate-limit / Redis layer blew up — never a false verdict.
+        this.logger.error(
+          'rate-limit layer failed (Redis down?) — returning 503',
+          err instanceof Error ? err.stack : String(err),
+          logCtx,
+        );
+        throw new HttpException(
+          'Service temporarily unavailable',
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      this.logger.error(
+        'unexpected error during verification — returning 503',
+        err instanceof Error ? err.stack : String(err),
+        logCtx,
+      );
+      throw new HttpException(
+        'Service temporarily unavailable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
 
@@ -738,45 +761,9 @@ export class VerifyController {
     this.eventEmitter.emit('scan.recorded', payload);
   }
 
-  private computeDistinctRegions(
-    priorScans: Array<{
-      geoCity: string | null;
-      geoCountry: string | null;
-    }>,
-    currentGeo: { country: string | null; city: string | null } | null,
-  ): string[] {
-    const seen = new Set<string>();
-    const out: string[] = [];
-    const add = (region: string) => {
-      if (region && !seen.has(region)) {
-        seen.add(region);
-        out.push(region);
-      }
-    };
-
-    for (const scan of priorScans) {
-      const city = scan.geoCity?.trim() || null;
-      const country = scan.geoCountry?.trim() || null;
-      if (city && country) add(`${city}, ${country}`);
-      else if (city) add(city);
-      else if (country) add(country);
-    }
-
-    if (currentGeo) {
-      const city = currentGeo.city?.trim() || null;
-      const country = currentGeo.country?.trim() || null;
-      if (city && country) add(`${city}, ${country}`);
-      else if (city) add(city);
-      else if (country) add(country);
-    }
-
-    return out;
-  }
-
   private toResponseDto(
     result: VerdictResult,
     scanEventId: string | null,
-    distinctRegions: string[],
   ): VerifyResponseDto {
     const dto = new VerifyResponseDto();
     dto.verdict = result.verdict;
@@ -814,10 +801,7 @@ export class VerifyController {
       dto.history = {
         firstVerifiedAt: result.history.firstVerifiedAt,
         scanCount: result.history.scanCount,
-        distinctRegions:
-          distinctRegions.length > 0
-            ? distinctRegions
-            : result.history.distinctRegions,
+        distinctRegions: result.history.distinctRegions,
         lastVerifiedAt: result.history.lastVerifiedAt,
       };
     }

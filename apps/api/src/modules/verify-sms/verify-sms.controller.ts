@@ -11,12 +11,16 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ApiOperation, ApiResponse, ApiTags, ApiProperty } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiProperty,
+} from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 import crypto from 'node:crypto';
 
 import {
-  normalizeCode,
   verifyChecksum,
   hashForStorage,
   redactCode,
@@ -24,7 +28,11 @@ import {
 } from '@verifynng/core';
 import { PrismaClient } from '@prisma/client';
 
-import { VerdictEngine, VerdictContext, VerdictResult } from '../verify/verdict-engine';
+import {
+  VerdictEngine,
+  VerdictContext,
+  VerdictResult,
+} from '../verify/verdict-engine';
 import { ScanEventsService } from '../scan-events/scan-events.service';
 import { RateLimitService } from '../rate-limit/rate-limit.service';
 import { EnumerationDetector } from '../rate-limit/enumeration-detector';
@@ -108,8 +116,9 @@ export class VerifySmsController {
     );
     this.fakeSmsKey = configService.get<string>('FAKE_SMS_KEY')!;
     this.ipSalt = configService.get<string>('IP_HASH_SALT')!;
-    this.rateLimitCodePerMin =
-      configService.get<number>('RATE_LIMIT_CODE_PER_MIN')!;
+    this.rateLimitCodePerMin = configService.get<number>(
+      'RATE_LIMIT_CODE_PER_MIN',
+    )!;
   }
 
   @Post('sms')
@@ -146,7 +155,6 @@ export class VerifySmsController {
 
     try {
       // --- 1. Parse + checksum (no DB / Redis hit) ----------------------
-      const normalizedCode = normalizeCode(rawCode);
       const checksumResult = verifyChecksum(this.keyRing, rawCode);
 
       const parsed =
@@ -203,6 +211,10 @@ export class VerifySmsController {
 
       const tier = parsed.tier;
       const tenantSlug = parsed.tenant;
+      // Canonical storage form, reconstructed from the parsed segments
+      // (tenant/kid lower-cased) — see verify.controller.ts for why this
+      // can't just be `normalizeCode(rawCode)`.
+      const canonicalCode = `${parsed.tenant}.${parsed.tier}.${parsed.kid}.${parsed.payload}.${parsed.checksum}`;
 
       // --- 3. Rate limits (phone replaces IP) ---------------------------
       let rateLimited = false;
@@ -279,7 +291,7 @@ export class VerifySmsController {
 
         // 3e. Per-code (tier 2 only)
         if (!rateLimited && tier === 2) {
-          const tier2Hash = hashForStorage(normalizedCode);
+          const tier2Hash = hashForStorage(canonicalCode);
           const rl = await this.rateLimit.hit(
             `rl:code:${tier2Hash}`,
             this.rateLimitCodePerMin,
@@ -356,7 +368,7 @@ export class VerifySmsController {
         try {
           if (tier === 1) {
             const row = await this.prisma.unit.findUnique({
-              where: { tier1Code: normalizedCode },
+              where: { tier1Code: canonicalCode },
               include: { batch: { include: { product: true, oem: true } } },
             });
             if (row) {
@@ -381,7 +393,7 @@ export class VerifySmsController {
               };
             }
           } else {
-            const tier2Hash = hashForStorage(normalizedCode);
+            const tier2Hash = hashForStorage(canonicalCode);
             const row = await this.prisma.unit.findUnique({
               where: { tier2Hash },
               include: { batch: { include: { product: true, oem: true } } },
@@ -510,7 +522,10 @@ export class VerifySmsController {
         // --- 10. Observe invalid for enumeration (tier-2 unknown) ---
         if (result.verdict === 'unknown' && phoneHash) {
           try {
-            await this.enumerationDetector.observeInvalid(phoneHash, tenantSlug);
+            await this.enumerationDetector.observeInvalid(
+              phoneHash,
+              tenantSlug,
+            );
           } catch (err) {
             this.logger.warn(
               `enumeration observe failed: ${
@@ -561,7 +576,10 @@ export class VerifySmsController {
 
   /** sha256(IP_HASH_SALT || phone) — the SMS equivalent of `hashIp`. */
   private hashPhone(phone: string): string {
-    return crypto.createHash('sha256').update(this.ipSalt + phone).digest('hex');
+    return crypto
+      .createHash('sha256')
+      .update(this.ipSalt + phone)
+      .digest('hex');
   }
 
   private async recordScan(args: {
@@ -701,5 +719,3 @@ export class VerifySmsController {
     return stripped.slice(-4);
   }
 }
-
-
