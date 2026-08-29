@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | frank-enendu |
 | GitHub Issue | [#7](https://github.com/enendufrankc/verifynNG/issues/7) |
 | Depends on | E01 (`parseCode`, `verifyChecksum`, `hashForStorage`, `redactCode`, `normalizeCode`), E00; soft: E04 (units to look up — E06 tests seed units directly via `packages/db`) |
 | Unblocks | E07 (anomaly rules consume `scan.recorded`), E08 (report button on red/amber verdicts), E09 (consumer web renders these responses), E12 (analytics over `ScanEvent`), E16 (publishes the OpenAPI schema), E17 (verify-path metrics), E19 (retention over `ScanEvent`) |
