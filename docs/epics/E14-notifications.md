@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 1 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | pi-agent |
 | GitHub Issue | [#15](https://github.com/enendufrankc/verifynNG/issues/15) |
 | Depends on | E00 |
 | Unblocks | E02 (password.reset, mfa.recovery), E03 (tenant.welcome), E04 (batch.minted), E05, E07, E08, E15 |
