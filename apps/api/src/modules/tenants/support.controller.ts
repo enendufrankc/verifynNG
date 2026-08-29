@@ -46,7 +46,16 @@ export class SupportTenantsController {
     @Req() req: PrincipalRequest,
   ): Promise<any> {
     this.ensureSupport(req);
-    return this.lifecycle.transition(id, 'active', req.principal!.userId);
+    return this.lifecycle
+      .transition(id, 'active', req.principal!.userId)
+      .then(() =>
+        this.lifecycle.addReviewNote(
+          id,
+          req.principal!.userId,
+          'Tenant approved',
+        ),
+      )
+      .then(() => this.lifecycle.get(id));
   }
   @Post('tenants/:tenantId/reject') async reject(
     @Param('tenantId') id: string,
@@ -54,12 +63,17 @@ export class SupportTenantsController {
     @Req() req: PrincipalRequest,
   ): Promise<any> {
     this.ensureSupport(req);
-    return this.lifecycle.transition(
-      id,
-      'rejected',
-      req.principal!.userId,
-      body.reason,
-    );
+    return this.lifecycle
+      .transition(
+        id,
+        body.canResubmit ? 'pending' : 'rejected',
+        req.principal!.userId,
+        body.reason,
+      )
+      .then(() =>
+        this.lifecycle.addReviewNote(id, req.principal!.userId, body.reason),
+      )
+      .then(() => this.lifecycle.get(id));
   }
   @Post('tenants/:tenantId/suspend') async suspend(
     @Param('tenantId') id: string,
@@ -67,18 +81,36 @@ export class SupportTenantsController {
     @Req() req: PrincipalRequest,
   ): Promise<any> {
     this.ensureSupport(req);
-    return this.lifecycle.transition(
-      id,
-      'suspended',
-      req.principal!.userId,
-      body.note ?? body.reason,
-    );
+    return this.lifecycle
+      .transition(
+        id,
+        'suspended',
+        req.principal!.userId,
+        body.note ?? body.reason,
+      )
+      .then(() =>
+        this.lifecycle.addReviewNote(
+          id,
+          req.principal!.userId,
+          body.note ?? body.reason,
+        ),
+      )
+      .then(() => this.lifecycle.get(id));
   }
   @Post('tenants/:tenantId/reactivate') async reactivate(
     @Param('tenantId') id: string,
     @Req() req: PrincipalRequest,
   ): Promise<any> {
     this.ensureSupport(req);
-    return this.lifecycle.transition(id, 'active', req.principal!.userId);
+    return this.lifecycle
+      .transition(id, 'active', req.principal!.userId)
+      .then(() =>
+        this.lifecycle.addReviewNote(
+          id,
+          req.principal!.userId,
+          'Tenant reactivated',
+        ),
+      )
+      .then(() => this.lifecycle.get(id));
   }
 }
