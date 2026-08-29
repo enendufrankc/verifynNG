@@ -6,6 +6,7 @@ import { RequestIdMiddleware } from './common/request-id.middleware';
 import { PrismaModule } from './common/prisma.module';
 import { S3Module } from './common/s3.module';
 import { EventsModule } from './common/events.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { EventsModule } from './common/events.module';
     PrismaModule,
     S3Module,
     EventsModule,
+    CatalogModule,
   ],
 })
 export class AppModule {
