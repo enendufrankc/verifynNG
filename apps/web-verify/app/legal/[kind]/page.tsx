@@ -36,25 +36,38 @@ function isValidKind(kind: string): kind is Kind {
 
 async function getDocument(kind: Kind): Promise<LegalDocument | null> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${apiUrl}/v1/legal/${kind}`, {
-    next: { revalidate },
-  });
-  if (!res.ok) return null;
-  return (await res.json()) as LegalDocument;
+  try {
+    const res = await fetch(`${apiUrl}/v1/legal/${kind}`, {
+      next: { revalidate },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LegalDocument;
+  } catch {
+    // The API is unreachable during the Docker image's isolated build stage
+    // (generateStaticParams runs at build time, before the api container
+    // exists on the compose network) — fall back to notFound() rather than
+    // crashing the whole build; ISR re-fetches once the API is reachable.
+    return null;
+  }
 }
 
 async function getVersions(kind: Kind): Promise<LegalDocument[]> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${apiUrl}/v1/legal/${kind}/versions`, {
-    next: { revalidate },
-  });
-  if (!res.ok) return [];
-  return (await res.json()) as LegalDocument[];
+  try {
+    const res = await fetch(`${apiUrl}/v1/legal/${kind}/versions`, {
+      next: { revalidate },
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as LegalDocument[];
+  } catch {
+    return [];
+  }
 }
 
-export function generateStaticParams() {
-  return VALID_KINDS.map((kind) => ({ kind }));
-}
+// No generateStaticParams(): the API isn't reachable during the Docker
+// image's isolated build stage, so these routes render on demand at
+// runtime and are then cached per `revalidate` (ISR), instead of being
+// baked into the image at build time.
 
 export default async function LegalPage({
   params,
