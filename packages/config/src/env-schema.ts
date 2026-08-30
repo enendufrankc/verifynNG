@@ -108,6 +108,26 @@ const e17Schema = z.object({
 });
 
 
-export const envSchema = e02Schema.merge(e06Schema).merge(e17Schema);
+
+// ── E14 Notifications ──────────────────────────────────────────
+const e14Schema = z.object({
+  MAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
+  RESEND_API_KEY: z.string().default(''),
+  SMS_PROVIDER: z.enum(['fake', 'termii']).default('fake'),
+  TERMII_API_KEY: z.string().default(''),
+  TERMII_SENDER: z.string().default('VerifyN'),
+  FAKE_SMS_URL: z.string().default('http://localhost:4101'),
+  WHATSAPP_PROVIDER: z.enum(['fake', 'meta']).default('fake'),
+  META_WA_PHONE_NUMBER_ID: z.string().default(''),
+  META_WA_ACCESS_TOKEN: z.string().default(''),
+  META_WA_BUSINESS_ACCOUNT_ID: z.string().default(''),
+  NOTIFICATIONS_FROM: z.string().default('VerifyN <noreply@verifyn.ng>'),
+  FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
+});
+
+export const envSchema = e02Schema
+  .merge(e06Schema)
+  .merge(e17Schema)
+  .merge(e14Schema);
 
 export type Env = z.infer<typeof envSchema>;
