@@ -24,6 +24,10 @@ import { loadEnv } from '@verifynng/config';
         defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
       },
       {
+        name: 'reports',
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
+      },
+      {
         name: 'anomaly',
         defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
       },

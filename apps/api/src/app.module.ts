@@ -27,6 +27,7 @@ import { EventsModule } from './common/events.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { BatchesModule } from './modules/batches/batches.module';
 import { BullMQModule } from './jobs/bullmq.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { OemManifestModule } from './modules/oem-manifest/oem-manifest.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { LegalModule } from './modules/legal/legal.module';
@@ -74,6 +75,7 @@ import { AnomalyModule } from './modules/anomaly/anomaly.module';
     CatalogModule,
     BullMQModule,
     BatchesModule,
+    ReportsModule,
     OemManifestModule,
     AnalyticsModule,
     LegalModule,

@@ -7,5 +7,6 @@ export { expectAudit } from './audit.js';
 export { webhookSink } from './webhook.js';
 export { payOnFakeCheckout } from './pay.js';
 export { loadManifest, type SeedManifest } from './manifest.js';
+export { seedReports } from './reports.js';
 export { getPrisma } from './db.js';
 export { seedVerifyFixtures, type VerifyFixtures } from './verify-fixtures.js';

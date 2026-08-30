@@ -25,6 +25,13 @@ export const queryKeys = {
     job: (tenantId: string, jobId: string) =>
       ['batches', 'job', tenantId, jobId] as const,
   },
+  reports: {
+    list: (tenantId: string, filters?: string) =>
+      ['reports', 'list', tenantId, filters] as const,
+    summary: (tenantId: string) => ['reports', 'summary', tenantId] as const,
+    detail: (tenantId: string, id: string) =>
+      ['reports', 'detail', tenantId, id] as const,
+  },
   deliveries: {
     list: (tenantId: string) => ['deliveries', 'list', tenantId] as const,
     forBatch: (tenantId: string, batchId: string) =>

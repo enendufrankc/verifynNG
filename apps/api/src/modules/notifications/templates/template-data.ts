@@ -7,6 +7,8 @@ export type TemplateId =
   | 'receipt.mismatch'
   | 'anomaly.alert'
   | 'report.received'
+  | 'report.consumer_ack'
+  | 'report.consumer_update'
   | 'invoice.issued'
   | 'invoice.paid'
   | 'invoice.failed'
@@ -82,6 +84,18 @@ export interface TemplateData {
     reportType: string;
     reportedAt: string;
     dashboardUrl: string;
+  }>;
+  'report.consumer_ack': NoCodeKeys<{
+    reference: string;
+    productName: string;
+    statusUrl: string;
+  }>;
+  'report.consumer_update': NoCodeKeys<{
+    reference: string;
+    productName: string;
+    status: string;
+    outcome?: string;
+    statusUrl: string;
   }>;
   'invoice.issued': NoCodeKeys<{
     invoiceNumber: string;

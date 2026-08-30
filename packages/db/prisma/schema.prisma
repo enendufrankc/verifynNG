@@ -683,6 +683,132 @@ model IpBlock {
   @@index([ipHash, expiresAt])
 }
 
+// ─── E08 Consumer Fake Reporting ────────────────────────────────────────
+
+enum PurchaseChannel {
+  open_market
+  street_vendor
+  online_marketplace
+  social_media
+  pharmacy
+  supermarket
+  brand_store
+  other
+}
+
+enum ReportStatus {
+  new
+  triaged
+  investigating
+  closed
+}
+
+enum ReportOutcome {
+  confirmed_counterfeit
+  legit
+  insufficient
+}
+
+enum PhotoStatus {
+  pending
+  uploaded
+  processing
+  ready
+  rejected
+}
+
+model Report {
+  id               String          @id @default(cuid())
+  tenantId         String
+  reference        String          @unique
+  scanEventId      String?
+  unitId           String?
+  batchId          String?
+  productId        String?
+  verdictAtReport  String
+  sellerName       String?
+  sellerLocation   String?
+  purchaseChannel  PurchaseChannel
+  purchaseDate     DateTime?
+  description      String?
+  contactEmail     String?
+  contactPhone     String?
+  contactConsentId String?
+  contactPurgedAt  DateTime?
+  status           ReportStatus    @default(new)
+  outcome          ReportOutcome?
+  assignedToId     String?
+  ipHash           String
+  userAgent        String?
+  locale           String?
+  closedAt         DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  photos        ReportPhoto[]
+  notes         ReportNote[]
+  statusChanges ReportStatusChange[]
+
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, batchId])
+  @@index([unitId])
+  @@index([tenantId, assignedToId])
+}
+
+model ReportPhoto {
+  id            String      @id @default(cuid())
+  tenantId      String
+  reportId      String?
+  incomingKey   String
+  objectKey     String?
+  contentType   String
+  declaredBytes Int
+  storedBytes   Int?
+  sha256        String?
+  width         Int?
+  height        Int?
+  status        PhotoStatus @default(pending)
+  rejectReason  String?
+  ipHash        String
+  createdAt     DateTime    @default(now())
+  processedAt   DateTime?
+
+  report Report? @relation(fields: [reportId], references: [id])
+
+  @@index([reportId])
+  @@index([status, createdAt])
+}
+
+model ReportNote {
+  id        String   @id @default(cuid())
+  tenantId  String
+  reportId  String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id])
+
+  @@index([reportId, createdAt])
+}
+
+model ReportStatusChange {
+  id               String         @id @default(cuid())
+  tenantId         String
+  reportId         String
+  fromStatus       ReportStatus?
+  toStatus         ReportStatus
+  outcome          ReportOutcome?
+  note             String?
+  actorId          String
+  consumerNotified Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+
+  report Report @relation(fields: [reportId], references: [id])
+
+  @@index([reportId, createdAt])
+}
+
 // ─── E05 OEM Manifest Delivery ──────────────────────────────────────────
 
 model OemUser {

@@ -172,6 +172,19 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+// ── E08 Consumer Fake Reporting ─────────────────────────────────
+const e08Schema = z.object({
+  CAPTCHA_PROVIDER: z.enum(['fake', 'turnstile']).default('fake'),
+  TURNSTILE_SECRET: z.string().default(''),
+  FAKE_CAPTCHA_URL: z.string().default('http://fake-captcha:4106'),
+  REPORT_PHOTO_MAX_BYTES: z.coerce.number().default(8_000_000),
+  REPORTS_MAX_PHOTOS: z.coerce.number().default(5),
+  REPORT_INCOMING_TTL_HOURS: z.coerce.number().default(24),
+  REPORTS_BUCKET_INCOMING: z.string().default('reports-incoming'),
+  REPORTS_BUCKET: z.string().default('reports'),
+  REPORT_MAX_INPUT_PIXELS: z.coerce.number().default(40_000_000),
+});
+
 // ─── E05 OEM Manifest Delivery ──────────────────────────────────
 const e05Schema = z.object({
   OEM_PORTAL_BASE_URL: z.string().default('http://localhost:3001'),
@@ -221,6 +234,7 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .merge(e04Schema)
+  .merge(e08Schema)
   .merge(e05Schema)
   .merge(e09Schema)
   .merge(e12Schema)

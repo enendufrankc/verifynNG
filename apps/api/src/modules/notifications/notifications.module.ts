@@ -103,6 +103,8 @@ import { WebhooksService } from './webhooks/webhooks.service';
     NotificationService,
     NotificationWorker,
   ],
+  // The one global EventEmitter2 comes from common/events.module.ts
+  // (single EventEmitterModule.forRoot() app-wide) — nothing to re-export here.
   exports: [MAILER, SMS, WHATSAPP, NotificationService],
 })
 export class NotificationsModule {}

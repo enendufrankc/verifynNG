@@ -86,6 +86,14 @@ async function bootstrap() {
     defaultLimit: 10,
     window: 'minute',
   });
+  quotaService.registerKind('reports_per_ip_per_hour', {
+    defaultLimit: 5,
+    window: 'hour',
+  });
+  quotaService.registerKind('report_uploads_per_ip_per_hour', {
+    defaultLimit: 15,
+    window: 'hour',
+  });
   // manifest_downloads_per_hour is registered by OemManifestModule.onModuleInit()
 
   await app.listen(env.API_PORT);
