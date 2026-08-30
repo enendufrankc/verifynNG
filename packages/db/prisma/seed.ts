@@ -3,11 +3,16 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create the ivoryglow tenant
+  // Create the ivoryglow tenant. `id` is pinned to the slug because
+  // @TenantId() is still E02's placeholder — it returns the literal string
+  // 'ivoryglow' rather than resolving the :tenantId path param against a
+  // real session, so every tenant-scoped query needs a tenant whose `id`
+  // is that exact string until E02 ships real auth.
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'ivoryglow' },
     update: {},
     create: {
+      id: 'ivoryglow',
       slug: 'ivoryglow',
       name: 'IVORY GLOW',
       legalName: 'Tunnel Light Global Concept Ltd',
