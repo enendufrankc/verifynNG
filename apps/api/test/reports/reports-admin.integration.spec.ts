@@ -199,4 +199,31 @@ describe('ReportsService admin flows (integration)', () => {
     expect(detail.status).toBe('triaged');
     expect(detail.statusChanges).toHaveLength(1);
   });
+
+  it('omits contact columns for non-owner roles and includes them for owner', async () => {
+    const tenant = await makeTenant(prisma);
+    await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-CSV001',
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'z',
+        contactEmail: 'consumer@example.com',
+        contactPhone: '+2348000000001',
+      },
+    });
+
+    const rowsNonOwner: unknown[][] = [];
+    for await (const row of service.streamForExport(tenant.id, {}, false))
+      rowsNonOwner.push(row);
+    expect(rowsNonOwner[0]).not.toContain('contactEmail');
+    expect(rowsNonOwner[1]).not.toContain('consumer@example.com');
+
+    const rowsOwner: unknown[][] = [];
+    for await (const row of service.streamForExport(tenant.id, {}, true))
+      rowsOwner.push(row);
+    expect(rowsOwner[0]).toContain('contactEmail');
+    expect(rowsOwner[1]).toContain('consumer@example.com');
+  });
 });

@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { Roles, TenantId } from '../../common/tenant';
 import { Audited } from '../audit/audited.decorator';
 import { ReportsService } from './reports.service';
 import { ReportAssignDto } from './dto/report-assign.dto';
 import { ReportNoteDto } from './dto/report-note.dto';
 import { ReportStatusChangeDto } from './dto/report-status.dto';
+import { csvRow } from './csv.util';
 import type { AuthenticatedRequest } from '../../common/authenticated-request';
 
 @Controller('v1/reports')
@@ -40,6 +51,34 @@ export class ReportsAdminController {
   @Roles('viewer')
   summary(@TenantId() tenantId: string) {
     return this.reports.summary(tenantId);
+  }
+
+  @Get('export.csv')
+  @Roles('operator')
+  @Audited('report.export')
+  async exportCsv(
+    @TenantId() tenantId: string,
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Query('status') status?: string,
+    @Query('outcome') outcome?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const includeContact = req.user!.role === 'owner';
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="reports-export.csv"',
+    );
+    for await (const row of this.reports.streamForExport(
+      tenantId,
+      { status, outcome, from, to },
+      includeContact,
+    )) {
+      res.write(csvRow(row));
+    }
+    res.end();
   }
 
   @Get(':id')

@@ -398,4 +398,72 @@ export class ReportsService {
       });
     }
   }
+
+  async *streamForExport(
+    tenantId: string,
+    opts: { status?: string; outcome?: string; from?: string; to?: string },
+    includeContact: boolean,
+  ) {
+    const header = [
+      'reference',
+      'createdAt',
+      'status',
+      'outcome',
+      'verdict',
+      'productId',
+      'batchId',
+      'unitId',
+      'purchaseChannel',
+      'sellerName',
+      'sellerLocation',
+      'assignedToId',
+      'photoCount',
+      ...(includeContact ? ['contactEmail', 'contactPhone'] : []),
+    ];
+    yield header;
+
+    let cursor: string | undefined;
+    for (;;) {
+      const where: Record<string, unknown> = { tenantId };
+      if (opts.status) where.status = opts.status;
+      if (opts.outcome) where.outcome = opts.outcome;
+      if (opts.from || opts.to) {
+        where.createdAt = {
+          ...(opts.from ? { gte: new Date(opts.from) } : {}),
+          ...(opts.to ? { lte: new Date(opts.to) } : {}),
+        };
+      }
+      const batch = await this.prisma.report.findMany({
+        where,
+        orderBy: { id: 'asc' },
+        take: 500,
+        cursor: cursor ? { id: cursor } : undefined,
+        skip: cursor ? 1 : 0,
+        include: { _count: { select: { photos: true } } },
+      });
+      if (batch.length === 0) break;
+      for (const r of batch) {
+        yield [
+          r.reference,
+          r.createdAt.toISOString(),
+          r.status,
+          r.outcome ?? '',
+          r.verdictAtReport,
+          r.productId ?? '',
+          r.batchId ?? '',
+          r.unitId ?? '',
+          r.purchaseChannel,
+          r.sellerName ?? '',
+          r.sellerLocation ?? '',
+          r.assignedToId ?? '',
+          r._count.photos,
+          ...(includeContact
+            ? [r.contactEmail ?? '', r.contactPhone ?? '']
+            : []),
+        ];
+      }
+      cursor = batch[batch.length - 1].id;
+      if (batch.length < 500) break;
+    }
+  }
 }
