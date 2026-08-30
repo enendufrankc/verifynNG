@@ -7,7 +7,9 @@ import { PageEventDto } from './dto/page-event.dto';
 @Controller('v1/events/page')
 export class PageEventsController {
   constructor(
-    private readonly pageEvents: PageEventsService,
+    // Explicit @Inject(PageEventsService) — see RollupCountersSubscriber's
+    // constructor comment (tsx/esbuild decorator metadata gap; jobs:run only).
+    @Inject(PageEventsService) private readonly pageEvents: PageEventsService,
     @Inject('PRISMA') private readonly prisma: PrismaClient,
   ) {}
 

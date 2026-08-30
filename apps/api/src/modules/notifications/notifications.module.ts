@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 
 import { MAILER } from './ports/mailer.port';
@@ -45,7 +44,10 @@ import { WebhooksService } from './webhooks/webhooks.service';
       inject: [ConfigService],
     }),
     BullModule.registerQueue({ name: 'notifications' }),
-    EventEmitterModule.forRoot(),
+    // Not EventEmitterModule.forRoot() here — see the note in app.module.ts;
+    // it's called exactly once app-wide, in common/events.module.ts. This
+    // module's own EventRouter injects EventEmitter2 directly and was
+    // silently never receiving events while this called forRoot() again.
   ],
   controllers: [NotificationsController, WebhooksController, DevController],
   providers: [

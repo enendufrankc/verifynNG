@@ -37,7 +37,12 @@ export class RollupCountersSubscriber implements OnModuleInit {
   private readonly logger = new Logger(RollupCountersSubscriber.name);
 
   constructor(
-    private readonly eventEmitter: EventEmitter2,
+    // Explicit @Inject(EventEmitter2), unlike the plain type-based injection
+    // used elsewhere in this repo: esbuild (which `jobs:run`'s tsx uses)
+    // doesn't reliably emit `design:paramtypes` for a constructor mixing
+    // implicit and @Inject('token') parameters — `nest build` (tsc) isn't
+    // affected, but jobs:run boots this class via JobsRunnerModule under tsx.
+    @Inject(EventEmitter2) private readonly eventEmitter: EventEmitter2,
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     private readonly rowRepo: ScanRollupRowRepository,
   ) {}

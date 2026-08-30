@@ -7,12 +7,19 @@
 import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
+// This process only ever calls a job method directly — it must never start
+// the BullMQ Worker that AnalyticsJobsQueue creates when WORKER_INLINE is
+// true, or the process blocks forever consuming the queue instead of
+// exiting. dotenv never overrides an already-set var, so this wins even
+// though .env sets WORKER_INLINE=true for the real api/api-worker processes.
+process.env.WORKER_INLINE = 'false';
+
 // Per-worktree overrides first (.env, written by scripts/epic start), then repo defaults.
 config({ path: resolve(__dirname, '../../../.env') });
 config({ path: resolve(__dirname, '../../../.env.example') });
 
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
+import { JobsRunnerModule } from '../src/modules/analytics/jobs-runner.module';
 import { ScanRollupJobService } from '../src/modules/analytics/jobs/scan-rollup.service';
 import { ReconcileService } from '../src/modules/analytics/jobs/reconcile.service';
 import { MeteringMonthCloseService } from '../src/modules/metering/jobs/month-close.service';
@@ -31,7 +38,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(JobsRunnerModule, {
     logger: ['error', 'warn'],
   });
 
@@ -68,7 +75,11 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exitCode = 1;
-});
+// Dangling handles (the shared Prisma client, the analytics Redis client)
+// are never explicitly closed — force the exit rather than hang.
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

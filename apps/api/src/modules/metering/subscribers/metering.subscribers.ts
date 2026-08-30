@@ -66,7 +66,10 @@ export class MeteringSubscribers implements OnModuleInit {
   private readonly logger = new Logger(MeteringSubscribers.name);
 
   constructor(
-    private readonly eventEmitter: EventEmitter2,
+    // Explicit @Inject(EventEmitter2) — see the comment on
+    // RollupCountersSubscriber's constructor for why (tsx/esbuild decorator
+    // metadata gap, hit only via jobs:run's JobsRunnerModule bootstrap).
+    @Inject(EventEmitter2) private readonly eventEmitter: EventEmitter2,
     @Inject(METER_PORT) private readonly meter: MeterPort,
   ) {}
 

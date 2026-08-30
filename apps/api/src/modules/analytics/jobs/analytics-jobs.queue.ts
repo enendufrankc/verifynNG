@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
@@ -36,11 +37,17 @@ export class AnalyticsJobsQueue implements OnModuleInit, OnModuleDestroy {
   private readonly worker?: Worker;
 
   constructor(
-    private readonly config: ConfigService,
+    // All explicit @Inject(...) — see RollupCountersSubscriber's constructor
+    // comment: esbuild (jobs:run's tsx) doesn't reliably emit
+    // design:paramtypes for a 5+ parameter constructor with none decorated;
+    // nest build (tsc) has no such issue.
+    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(ScanRollupJobService)
     private readonly scanRollup: ScanRollupJobService,
-    private readonly reconcile: ReconcileService,
+    @Inject(ReconcileService) private readonly reconcile: ReconcileService,
+    @Inject(MeteringMonthCloseService)
     private readonly monthClose: MeteringMonthCloseService,
-    private readonly pageEvents: PageEventsService,
+    @Inject(PageEventsService) private readonly pageEvents: PageEventsService,
   ) {
     const connection = {
       url: this.config.get<string>('REDIS_URL'),
