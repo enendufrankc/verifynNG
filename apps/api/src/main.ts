@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { startOtel } from './telemetry/otel';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { loadEnv } from '@verifynng/config';
@@ -11,7 +12,9 @@ startOtel();
 
 async function bootstrap() {
   const env = loadEnv();
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
   app.useLogger(app.get(AppLogger));
 
   app.useGlobalPipes(
@@ -21,6 +24,9 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // Trust proxy for correct IP extraction
+  app.set('trust proxy', true);
 
   await app.listen(env.API_PORT);
   console.log(`API running on http://localhost:${env.API_PORT}`);

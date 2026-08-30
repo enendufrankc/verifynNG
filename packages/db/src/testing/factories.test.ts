@@ -85,8 +85,9 @@ describe('factories', () => {
 
   it('scanEvent() creates a scan event', async () => {
     const se = await scanEvent(prisma, { tenantId });
-    expect(se.tier).toBe(1);
+    expect(se.tier).toBe('tier1');
     expect(se.verdict).toBe('authentic');
-    expect(se.ip).toMatch(/^192\.0\.2\./);
+    expect(se.codeRedacted).toBeTruthy();
+    expect(se.source).toBe('qr');
   });
 });
