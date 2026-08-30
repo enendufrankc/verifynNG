@@ -43,6 +43,23 @@ app.post('/api/whatsapp/send', async (req, reply) => {
   return { message_id: id };
 });
 
+
+// ── E06 compatibility: HttpFakeSms adapter posts {to, body} to /send; AC8 reads /outbox ──
+app.post('/send', async (req, reply) => {
+  const { to, body } = req.body ?? {};
+  if (typeof to !== 'string' || typeof body !== 'string') {
+    reply.code(400);
+    return { error: 'to and body are required' };
+  }
+  const id = `msg_${idCounter++}`;
+  messages.push({ id, channel: 'sms', to, from: 'VerifyN', body, receivedAt: new Date().toISOString() });
+  return { id, status: 'sent' };
+});
+
+app.get('/outbox', async () =>
+  messages.filter((m) => m.channel === 'sms').map((m) => ({ id: m.id, to: m.to, body: m.body, sentAt: m.receivedAt })),
+);
+
 // ── List Messages ─────────────────────────────────────────
 
 app.get('/api/messages', async (req) => {
