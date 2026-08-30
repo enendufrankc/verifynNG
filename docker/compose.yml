@@ -106,6 +106,18 @@ services:
       timeout: 5s
       retries: 5
 
+  fake-captcha:
+    build:
+      context: ../tools/fakes/captcha
+      dockerfile: Dockerfile
+    ports:
+      - '${FAKE_CAPTCHA_PORT:-4106}:4106'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4106/health']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # ── Application services ──────────────────────────────────
   db-migrate:
     build:
@@ -209,6 +221,14 @@ services:
       GEOIP_URL: http://fake-geo:4103
       TRUST_PROXY: 'true'
       SMS_URL: http://fake-sms:4101
+      # ── E08 Consumer Fake Reporting ──
+      CAPTCHA_PROVIDER: fake
+      FAKE_CAPTCHA_URL: http://fake-captcha:4106
+      REPORT_PHOTO_MAX_BYTES: '8000000'
+      REPORTS_MAX_PHOTOS: '5'
+      REPORT_INCOMING_TTL_HOURS: '24'
+      REPORTS_BUCKET_INCOMING: reports-incoming
+      REPORTS_BUCKET: reports
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
