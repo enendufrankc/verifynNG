@@ -7,6 +7,8 @@ export type TemplateId =
   | 'receipt.mismatch'
   | 'anomaly.alert'
   | 'report.received'
+  | 'report.consumer_ack'
+  | 'report.consumer_update'
   | 'invoice.issued'
   | 'invoice.paid'
   | 'invoice.failed'
@@ -16,9 +18,7 @@ export type TemplateId =
 
 // Branded types to reject keys named 'code' or 'tier2Code' at type level
 type NoCodeKeys<T> = {
-  [K in keyof T]: K extends 'code' | 'tier2Code'
-    ? never
-    : T[K];
+  [K in keyof T]: K extends 'code' | 'tier2Code' ? never : T[K];
 };
 
 export interface BrandingData {
@@ -74,6 +74,18 @@ export interface TemplateData {
     reportType: string;
     reportedAt: string;
     dashboardUrl: string;
+  }>;
+  'report.consumer_ack': NoCodeKeys<{
+    reference: string;
+    productName: string;
+    statusUrl: string;
+  }>;
+  'report.consumer_update': NoCodeKeys<{
+    reference: string;
+    productName: string;
+    status: string;
+    outcome?: string;
+    statusUrl: string;
   }>;
   'invoice.issued': NoCodeKeys<{
     invoiceNumber: string;

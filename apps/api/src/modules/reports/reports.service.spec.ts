@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   BadRequestException,
@@ -10,6 +10,17 @@ import { ReportsService } from './reports.service';
 import { InMemoryConsent } from './consent/in-memory-consent.provider';
 import type { CaptchaPort } from './captcha/captcha-port';
 import type { SubmitReportDto } from './dto/submit-report.dto';
+import type { NotificationService } from '../notifications/notifications.service';
+
+function makeFakeNotifications() {
+  const send = vi
+    .fn()
+    .mockResolvedValue({ outboxId: 'fake-outbox', status: 'queued' });
+  return {
+    send,
+    asService: () => ({ send }) as unknown as NotificationService,
+  };
+}
 
 // Fast, DB-free unit coverage of ReportsService's branching logic (tenant
 // status gates, cross-tenant isolation, verdict gating, photo ownership).
@@ -49,14 +60,21 @@ interface FakePhoto {
   status: string;
 }
 
+interface FakeProduct {
+  id: string;
+  name: string;
+}
+
 function makeFakePrisma(opts: {
   tenants?: FakeTenant[];
   scanEvents?: FakeScanEvent[];
   photos?: FakePhoto[];
+  products?: FakeProduct[];
 }) {
   const tenants = opts.tenants ?? [];
   const scanEvents = opts.scanEvents ?? [];
   const photos = opts.photos ?? [];
+  const products = opts.products ?? [];
   const reports: Array<Record<string, unknown>> = [];
 
   return {
@@ -102,6 +120,10 @@ function makeFakePrisma(opts: {
         }
         return { count };
       },
+    },
+    product: {
+      findUnique: async ({ where: { id } }: { where: { id: string } }) =>
+        products.find((p) => p.id === id) ?? null,
     },
     report: {
       count: async ({
@@ -151,6 +173,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       await expect(service.resolveTenantBySlug('nope')).rejects.toBeInstanceOf(
         NotFoundException,
@@ -166,6 +189,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       await expect(service.resolveTenantBySlug('acme')).rejects.toBeInstanceOf(
         GoneException,
@@ -181,6 +205,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       const tenant = await service.resolveTenantBySlug('acme');
       expect(tenant.id).toBe('t1');
@@ -202,6 +227,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(false),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       await expect(
         service.submit('acme', baseDto(), { ip: '1.2.3.4', ipHash: 'h1' }),
@@ -227,6 +253,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       const crossTenant = service.submit('acme', baseDto(), {
         ip: '1.2.3.4',
@@ -267,6 +294,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       await expect(
         service.submit('acme', baseDto(), { ip: '1.2.3.4', ipHash: 'h1' }),
@@ -300,6 +328,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       await expect(
         service.submit('acme', baseDto({ photoIds: ['photo-1'] }), {
@@ -336,6 +365,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       await expect(
         service.submit('acme', baseDto({ photoIds: ['photo-1'] }), {
@@ -364,6 +394,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       const result = await service.submit('acme', baseDto(), {
         ip: '1.2.3.4',
@@ -382,6 +413,80 @@ describe('ReportsService', () => {
       expect(created.batchId).toBe('batch-9');
       expect(created.productId).toBe('product-9');
       expect(created.verdictAtReport).toBe('amber');
+    });
+
+    it('sends a report.consumer_ack notification when a contact email is provided, resolving the product name', async () => {
+      const prisma = makeFakePrisma({
+        tenants: [tenant],
+        scanEvents: [
+          {
+            id: 'scan-1',
+            tenantId: tenant.id,
+            verdict: 'red',
+            unitId: null,
+            batchId: null,
+            productId: 'product-1',
+          },
+        ],
+        products: [{ id: 'product-1', name: 'Glow Serum' }],
+      });
+      const notifications = makeFakeNotifications();
+      const service = new ReportsService(
+        prisma,
+        new EventEmitter2(),
+        new FixedCaptcha(true),
+        new InMemoryConsent(),
+        notifications.asService(),
+      );
+
+      const result = await service.submit(
+        'acme',
+        baseDto({ contact: { email: 'consumer@example.com', consent: false } }),
+        { ip: '1.2.3.4', ipHash: 'h1' },
+      );
+
+      expect(notifications.send).toHaveBeenCalledTimes(1);
+      expect(notifications.send).toHaveBeenCalledWith(
+        'report.consumer_ack',
+        { email: 'consumer@example.com' },
+        {
+          reference: result.reference,
+          productName: 'Glow Serum',
+          statusUrl: result.statusUrl,
+        },
+        { tenantId: tenant.id },
+      );
+    });
+
+    it('falls back to a generic product name and skips the notification without a contact email', async () => {
+      const prisma = makeFakePrisma({
+        tenants: [tenant],
+        scanEvents: [
+          {
+            id: 'scan-1',
+            tenantId: tenant.id,
+            verdict: 'red',
+            unitId: null,
+            batchId: null,
+            productId: null,
+          },
+        ],
+      });
+      const notifications = makeFakeNotifications();
+      const service = new ReportsService(
+        prisma,
+        new EventEmitter2(),
+        new FixedCaptcha(true),
+        new InMemoryConsent(),
+        notifications.asService(),
+      );
+
+      await service.submit('acme', baseDto(), {
+        ip: '1.2.3.4',
+        ipHash: 'h1',
+      });
+
+      expect(notifications.send).not.toHaveBeenCalled();
     });
   });
 
@@ -407,6 +512,7 @@ describe('ReportsService', () => {
         new EventEmitter2(),
         new FixedCaptcha(true),
         new InMemoryConsent(),
+        makeFakeNotifications().asService(),
       );
       const { reference } = await service.submit('acme', baseDto(), {
         ip: '1.2.3.4',

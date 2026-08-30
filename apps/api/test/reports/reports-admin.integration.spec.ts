@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { ConflictException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
@@ -6,13 +6,28 @@ import {
   dropTestSchema,
   disconnectTestHelper,
 } from '@verifynng/db';
-import { tenant as makeTenant, user as makeUser } from '@verifynng/db/testing';
+import {
+  tenant as makeTenant,
+  user as makeUser,
+  product as makeProduct,
+} from '@verifynng/db/testing';
 import type { PrismaClient } from '@prisma/client';
 import {
   ReportsService,
   canTransition,
 } from '../../src/modules/reports/reports.service';
 import { InMemoryConsent } from '../../src/modules/reports/consent/in-memory-consent.provider';
+import type { NotificationService } from '../../src/modules/notifications/notifications.service';
+
+function makeFakeNotifications() {
+  const send = vi
+    .fn()
+    .mockResolvedValue({ outboxId: 'fake-outbox', status: 'queued' });
+  return {
+    send,
+    asService: () => ({ send }) as unknown as NotificationService,
+  };
+}
 
 describe('canTransition', () => {
   it('allows new -> triaged -> investigating -> closed', () => {
@@ -32,16 +47,19 @@ describe('ReportsService admin flows (integration)', () => {
   let prisma: PrismaClient;
   let schemaName: string;
   let service: ReportsService;
+  let notifications: ReturnType<typeof makeFakeNotifications>;
 
   beforeAll(async () => {
     const db = await createTestDatabase('reports-admin');
     prisma = db.prisma;
     schemaName = db.schemaName;
+    notifications = makeFakeNotifications();
     service = new ReportsService(
       prisma,
       new EventEmitter2(),
       { verify: async () => ({ ok: true }) },
       new InMemoryConsent(),
+      notifications.asService(),
     );
   });
 
@@ -225,5 +243,65 @@ describe('ReportsService admin flows (integration)', () => {
       rowsOwner.push(row);
     expect(rowsOwner[0]).toContain('contactEmail');
     expect(rowsOwner[1]).toContain('consumer@example.com');
+  });
+
+  it('sends a report.consumer_update notification when notifyConsumer is set and the report has a contact email', async () => {
+    const tenant = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const product = await makeProduct(prisma, {
+      tenantId: tenant.id,
+      name: 'Glow Serum',
+    });
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-NOTIFY1',
+        productId: product.id,
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'notify-1',
+        contactEmail: 'consumer@example.com',
+      },
+    });
+
+    await service.changeStatus(tenant.id, report.id, operator.id, {
+      status: 'triaged',
+      notifyConsumer: true,
+    });
+
+    expect(notifications.send).toHaveBeenCalledWith(
+      'report.consumer_update',
+      { email: 'consumer@example.com' },
+      {
+        reference: 'RPT-NOTIFY1',
+        productName: 'Glow Serum',
+        status: 'triaged',
+        outcome: undefined,
+        statusUrl: `/v1/public/${tenant.slug}/reports/RPT-NOTIFY1`,
+      },
+      { tenantId: tenant.id },
+    );
+  });
+
+  it('does not send report.consumer_update when the report has no contact email', async () => {
+    const tenant = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-NOTIFY2',
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'notify-2',
+      },
+    });
+
+    notifications.send.mockClear();
+    await service.changeStatus(tenant.id, report.id, operator.id, {
+      status: 'triaged',
+      notifyConsumer: true,
+    });
+
+    expect(notifications.send).not.toHaveBeenCalled();
   });
 });

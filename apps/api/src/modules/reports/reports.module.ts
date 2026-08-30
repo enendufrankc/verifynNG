@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullMQModule } from '../../jobs/bullmq.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { CAPTCHA_PORT } from './captcha/captcha-port';
 import { TurnstileCaptcha } from './captcha/turnstile-captcha.provider';
 import { FakeCaptcha } from './captcha/fake-captcha.provider';
@@ -17,7 +18,7 @@ import { ReportsPublicController } from './reports-public.controller';
 import { ReportsAdminController } from './reports-admin.controller';
 
 @Module({
-  imports: [ConfigModule, BullMQModule],
+  imports: [ConfigModule, BullMQModule, NotificationsModule],
   providers: [
     TurnstileCaptcha,
     FakeCaptcha,

@@ -58,6 +58,18 @@ const samples: { [T in TemplateId]: TemplateData[T] } = {
     reportedAt: '2026-08-29T00:00:00.000Z',
     dashboardUrl: 'https://example.test/reports/RPT-001',
   },
+  'report.consumer_ack': {
+    reference: 'RPT-001',
+    productName: 'Glow Serum',
+    statusUrl: 'https://example.test/reports/RPT-001',
+  },
+  'report.consumer_update': {
+    reference: 'RPT-001',
+    productName: 'Glow Serum',
+    status: 'triaged',
+    outcome: undefined,
+    statusUrl: 'https://example.test/reports/RPT-001',
+  },
   'invoice.issued': {
     invoiceNumber: 'INV-001',
     amount: '₦10,000',

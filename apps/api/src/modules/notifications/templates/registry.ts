@@ -144,6 +144,26 @@ const renderers: Record<
     sms: `Report ${data.reportReference}: ${data.reportType} on ${data.tier1Code}`,
   }),
 
+  'report.consumer_ack': (
+    data: TemplateData['report.consumer_ack'],
+    branding,
+  ) => ({
+    subject: `We received your report — ${data.reference}`,
+    bodyHtml: `<p style="margin:0 0 12px">Thanks for reporting a suspected fake ${esc(data.productName)}.</p><p style="margin:0 0 8px">Your reference: <strong>${esc(data.reference)}</strong></p><p style="margin:0 0 8px">We'll review it and let you know if we need anything else.</p><p style="margin:12px 0 0"><a href="${esc(data.statusUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Check status</a></p>`,
+    text: `Thanks for reporting ${data.productName}.\nReference: ${data.reference}\nStatus: ${data.statusUrl}`,
+    sms: `Report received: ${data.reference}. We'll be in touch.`,
+  }),
+
+  'report.consumer_update': (
+    data: TemplateData['report.consumer_update'],
+    branding,
+  ) => ({
+    subject: `Update on your report — ${data.reference}`,
+    bodyHtml: `<p style="margin:0 0 12px">Your report on ${esc(data.productName)} has been updated.</p><p style="margin:0 0 8px">Status: <strong>${esc(data.status)}</strong>${data.outcome ? ` — ${esc(data.outcome)}` : ''}</p><p style="margin:12px 0 0"><a href="${esc(data.statusUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">View details</a></p>`,
+    text: `Report ${data.reference} update.\nStatus: ${data.status}${data.outcome ? ` — ${data.outcome}` : ''}\n${data.statusUrl}`,
+    sms: `Report ${data.reference}: now ${data.status}.`,
+  }),
+
   'invoice.issued': (data: TemplateData['invoice.issued'], branding) => ({
     subject: `Invoice ${data.invoiceNumber} issued`,
     bodyHtml: `<p style="margin:0 0 12px">Invoice <strong>${esc(data.invoiceNumber)}</strong> has been issued for <strong>${esc(data.amount)}</strong>.</p><p style="margin:0 0 8px">Due date: ${esc(data.dueDate)}</p><p style="margin:0"><a href="${esc(data.dashboardUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">View invoice</a></p>`,

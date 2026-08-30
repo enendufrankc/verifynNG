@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { Request } from 'express';
 import type { Queue } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
@@ -10,13 +10,17 @@ import {
   dropTestSchema,
   disconnectTestHelper,
 } from '@verifynng/db';
-import { tenant as makeTenant } from '@verifynng/db/testing';
+import {
+  tenant as makeTenant,
+  product as makeProduct,
+} from '@verifynng/db/testing';
 import type { PrismaClient } from '@prisma/client';
 import { ReportsService } from '../../src/modules/reports/reports.service';
 import { ReportsPublicController } from '../../src/modules/reports/reports-public.controller';
 import { InMemoryConsent } from '../../src/modules/reports/consent/in-memory-consent.provider';
 import type { CaptchaPort } from '../../src/modules/reports/captcha/captcha-port';
 import type { PhotosService } from '../../src/modules/reports/photos.service';
+import type { NotificationService } from '../../src/modules/notifications/notifications.service';
 import { QuotaService } from '../../src/modules/quota/quota.service.js';
 import { hashIp } from '../../src/common/ip-utils';
 
@@ -28,6 +32,16 @@ class FixedCaptcha implements CaptchaPort {
       reason: this.ok ? undefined : 'invalid-input-response',
     };
   }
+}
+
+function makeFakeNotifications() {
+  const send = vi
+    .fn()
+    .mockResolvedValue({ outboxId: 'fake-outbox', status: 'queued' });
+  return {
+    send,
+    asService: () => ({ send }) as unknown as NotificationService,
+  };
 }
 
 describe('ReportsService.submit (integration)', () => {
@@ -53,6 +67,7 @@ describe('ReportsService.submit (integration)', () => {
       events,
       new FixedCaptcha(true),
       new InMemoryConsent(),
+      makeFakeNotifications().asService(),
     );
 
     const redScan = await prisma.scanEvent.create({
@@ -104,6 +119,56 @@ describe('ReportsService.submit (integration)', () => {
     ).rejects.toThrow();
   });
 
+  it('sends a report.consumer_ack notification when the consumer leaves a contact email', async () => {
+    const tenant = await makeTenant(prisma);
+    const product = await makeProduct(prisma, {
+      tenantId: tenant.id,
+      name: 'Glow Serum',
+    });
+    const notifications = makeFakeNotifications();
+    const service = new ReportsService(
+      prisma,
+      new EventEmitter2(),
+      new FixedCaptcha(true),
+      new InMemoryConsent(),
+      notifications.asService(),
+    );
+    const scan = await prisma.scanEvent.create({
+      data: {
+        tenantId: tenant.id,
+        tier: 'tier2',
+        verdict: 'red',
+        source: 'qr',
+        codeRedacted: 'ack***',
+        productId: product.id,
+      },
+    });
+
+    const result = await service.submit(
+      tenant.slug,
+      {
+        scanEventId: scan.id,
+        purchaseChannel: 'open_market' as never,
+        photoIds: [],
+        captchaToken: 'ok-demo',
+        contact: { email: 'consumer@example.com', consent: false },
+      } as never,
+      { ip: '10.0.0.2', ipHash: 'iphash-ack' },
+    );
+
+    expect(notifications.send).toHaveBeenCalledTimes(1);
+    expect(notifications.send).toHaveBeenCalledWith(
+      'report.consumer_ack',
+      { email: 'consumer@example.com' },
+      {
+        reference: result.reference,
+        productName: 'Glow Serum',
+        statusUrl: result.statusUrl,
+      },
+      { tenantId: tenant.id },
+    );
+  });
+
   it('rejects a scanEvent belonging to another tenant with 404', async () => {
     const tenantA = await makeTenant(prisma);
     const tenantB = await makeTenant(prisma);
@@ -113,6 +178,7 @@ describe('ReportsService.submit (integration)', () => {
       events,
       new FixedCaptcha(true),
       new InMemoryConsent(),
+      makeFakeNotifications().asService(),
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -145,6 +211,7 @@ describe('ReportsService.submit (integration)', () => {
       events,
       new FixedCaptcha(false),
       new InMemoryConsent(),
+      makeFakeNotifications().asService(),
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -177,6 +244,7 @@ describe('ReportsService.submit (integration)', () => {
       events,
       new FixedCaptcha(true),
       new InMemoryConsent(),
+      makeFakeNotifications().asService(),
     );
     await expect(
       service.submit(
@@ -200,6 +268,7 @@ describe('ReportsService.submit (integration)', () => {
       events,
       new FixedCaptcha(true),
       new InMemoryConsent(),
+      makeFakeNotifications().asService(),
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -262,6 +331,7 @@ describe('ReportsPublicController.submit (integration) — captcha-before-quota 
       new EventEmitter2(),
       new FixedCaptcha(captchaOk),
       new InMemoryConsent(),
+      makeFakeNotifications().asService(),
     );
     const config = new ConfigService({
       TRUST_PROXY: false,

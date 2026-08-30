@@ -13,6 +13,7 @@ import { CAPTCHA_PORT, type CaptchaPort } from './captcha/captcha-port';
 import { CONSENT_PORT, type ConsentPort } from './consent/consent-port';
 import { generateUniqueReference } from './reference.util';
 import type { SubmitReportDto } from './dto/submit-report.dto';
+import { NotificationService } from '../notifications/notifications.service';
 
 const REPORTABLE_VERDICTS = new Set([
   'red',
@@ -51,7 +52,18 @@ export class ReportsService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(CAPTCHA_PORT) private readonly captcha: CaptchaPort,
     @Inject(CONSENT_PORT) private readonly consent: ConsentPort,
+    private readonly notifications: NotificationService,
   ) {}
+
+  /** Falls back to a generic label rather than failing the notification. */
+  private async resolveProductName(productId: string | null): Promise<string> {
+    if (!productId) return 'your product';
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { name: true },
+    });
+    return product?.name ?? 'your product';
+  }
 
   async resolveTenantBySlug(tenantSlug: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -172,20 +184,21 @@ export class ReportsService {
       },
     });
 
+    const statusUrl = `/v1/public/${tenantSlug}/reports/${report.reference}`;
+
     if (dto.contact?.email) {
-      // Listener + notification template land in Task 10 of the E08 plan
-      // (docs/superpowers/plans/2026-08-30-e08-consumer-reporting.md).
-      this.eventEmitter.emit('report.consumer_ack.requested', {
-        reportId: report.id,
-        tenantId: tenant.id,
-        email: dto.contact.email,
-        reference: report.reference,
-      });
+      const productName = await this.resolveProductName(report.productId);
+      await this.notifications.send(
+        'report.consumer_ack',
+        { email: dto.contact.email },
+        { reference: report.reference, productName, statusUrl },
+        { tenantId: tenant.id },
+      );
     }
 
     return {
       reference: report.reference,
-      statusUrl: `/v1/public/${tenantSlug}/reports/${report.reference}`,
+      statusUrl,
       reportId: report.id,
     };
   }
@@ -387,15 +400,25 @@ export class ReportsService {
       actorId,
     });
     if (input.notifyConsumer && report.contactEmail) {
-      // Listener + notification template land in Task 10 of the E08 plan.
-      this.eventEmitter.emit('report.consumer_update.requested', {
-        reportId: report.id,
-        tenantId,
-        email: report.contactEmail,
-        reference: report.reference,
-        status: input.status,
-        outcome: input.outcome,
-      });
+      const [tenant, productName] = await Promise.all([
+        this.prisma.tenant.findUnique({
+          where: { id: tenantId },
+          select: { slug: true },
+        }),
+        this.resolveProductName(report.productId),
+      ]);
+      await this.notifications.send(
+        'report.consumer_update',
+        { email: report.contactEmail },
+        {
+          reference: report.reference,
+          productName,
+          status: input.status,
+          outcome: input.outcome,
+          statusUrl: `/v1/public/${tenant?.slug}/reports/${report.reference}`,
+        },
+        { tenantId },
+      );
     }
   }
 
