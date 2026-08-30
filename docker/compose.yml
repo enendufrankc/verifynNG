@@ -142,6 +142,16 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: api
+      LOKI_URL: http://loki:3100
+      PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
+      PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OPS_ALERT_EMAILS: ${OPS_ALERT_EMAILS:-ops@verifynng.local}
+      ALERT_WEBHOOK_SECRET: ${ALERT_WEBHOOK_SECRET:-alert-webhook-secret-local}
+      METRICS_PORT: '9464'
+      VERIFY_ARTIFICIAL_DELAY_MS: ${VERIFY_ARTIFICIAL_DELAY_MS:-0}
       # ── E02 Identity & Access ──
       JWT_KEYS: k1:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2,k2:f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5
       JWT_ACTIVE_KID: k1
@@ -183,7 +193,8 @@ services:
       db-migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health']
+      test:
+        ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:4000/ready']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -241,6 +252,73 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  # ── Observability stack (profile: observability) ───────────
+  grafana:
+    image: grafana/grafana:11.6.0
+    profiles:
+      - observability
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    ports:
+      - '${GRAFANA_PORT:-3100}:3000'
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+
+  loki:
+    image: grafana/loki:3.0.0
+    profiles:
+      - observability
+    ports:
+      - '${LOKI_PORT:-3101}:3100'
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    profiles:
+      - observability
+    ports:
+      - '${TEMPO_PORT:-3102}:3200'
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    profiles:
+      - observability
+    ports:
+      - '${PROMETHEUS_PORT:-3103}:9090'
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.98.0
+    profiles:
+      - observability
+    ports:
+      - '${OTEL_COLLECTOR_PORT:-3104}:4317'
+    command: ['--config=/etc/otel-collector-config.yaml']
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otel-collector-config.yaml:ro
+
+  uptime-probe:
+    build:
+      context: ../tools/uptime-probe
+      dockerfile: Dockerfile
+    profiles:
+      - observability
+    ports:
+      - '${UPTIME_PROBE_PORT:-3105}:9465'
+    environment:
+      API_URL: http://api:4000
+      WEB_VERIFY_URL: http://web-verify:3000
+      WEB_ADMIN_URL: http://web-admin:3001
+      PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
+      PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
 
 volumes:
   pgdata:

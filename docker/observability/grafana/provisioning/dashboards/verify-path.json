@@ -1,0 +1,65 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Verify RPS",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(verify_verdicts_total[1m]))",
+          "legendFormat": "RPS"
+        }
+      ]
+    },
+    {
+      "title": "Verify Latency (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(verify_latency_ms_bucket[5m])) by (le))",
+          "legendFormat": "p95 ms"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(verify_latency_ms_bucket[5m])) by (le))",
+          "legendFormat": "p50 ms"
+        }
+      ]
+    },
+    {
+      "title": "Verdicts Stacked",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(verify_verdicts_total[1m])) by (verdict)",
+          "legendFormat": "{{verdict}}"
+        }
+      ]
+    },
+    {
+      "title": "Rate Limit Hits",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(rate_limit_hits_total[1m])) by (scope)",
+          "legendFormat": "{{scope}}"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["verify", "e17"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Verify Path"
+}

@@ -1,0 +1,12 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: api-alert-bridge
+    receivers:
+      - uid: webhook-1
+        type: webhook
+        settings:
+          url: http://api:4000/internal/alerts
+          httpMethod: POST
+          authorization_credentials: alert-webhook-secret-local
