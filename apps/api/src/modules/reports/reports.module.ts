@@ -11,7 +11,10 @@ import { PhotosService } from './photos.service';
 import { PhotoProcessor } from './photo.processor';
 import { PhotoSweepProcessor } from './photo-sweep.processor';
 import { ReportsService } from './reports.service';
+import { ReportsQueryService } from './reports-query.service';
+import { ReportsRetentionService } from './reports-retention.service';
 import { ReportsPublicController } from './reports-public.controller';
+import { ReportsAdminController } from './reports-admin.controller';
 
 @Module({
   imports: [ConfigModule, BullMQModule],
@@ -40,8 +43,16 @@ import { ReportsPublicController } from './reports-public.controller';
       useExisting: InMemoryConsent,
     },
     ReportsService,
+    ReportsQueryService,
+    ReportsRetentionService,
   ],
-  controllers: [ReportsPublicController],
-  exports: [CAPTCHA_PORT, ReportsS3Service, PhotosService],
+  controllers: [ReportsPublicController, ReportsAdminController],
+  exports: [
+    CAPTCHA_PORT,
+    ReportsS3Service,
+    PhotosService,
+    ReportsQueryService,
+    ReportsRetentionService,
+  ],
 })
 export class ReportsModule {}

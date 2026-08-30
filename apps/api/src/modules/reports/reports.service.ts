@@ -21,6 +21,17 @@ const REPORTABLE_VERDICTS = new Set([
   'flagged',
 ]);
 
+const TRANSITIONS: Record<string, string[]> = {
+  new: ['triaged', 'closed'],
+  triaged: ['investigating', 'closed'],
+  investigating: ['closed'],
+  closed: ['investigating'],
+};
+
+export function canTransition(from: string, to: string): boolean {
+  return TRANSITIONS[from]?.includes(to) ?? false;
+}
+
 export interface SubmitContext {
   ip: string;
   ipHash: string;
@@ -201,5 +212,177 @@ export class ReportsService {
       outcome: report.outcome ?? undefined,
       updatedAt: report.updatedAt.toISOString(),
     };
+  }
+
+  // — Admin —
+
+  async list(
+    tenantId: string,
+    opts: {
+      status?: string;
+      outcome?: string;
+      assignedToId?: string;
+      batchId?: string;
+      from?: string;
+      to?: string;
+      q?: string;
+      cursor?: string;
+    },
+  ) {
+    const where: Record<string, unknown> = { tenantId };
+    if (opts.status) where.status = opts.status;
+    if (opts.outcome) where.outcome = opts.outcome;
+    if (opts.assignedToId) where.assignedToId = opts.assignedToId;
+    if (opts.batchId) where.batchId = opts.batchId;
+    if (opts.from || opts.to) {
+      where.createdAt = {
+        ...(opts.from ? { gte: new Date(opts.from) } : {}),
+        ...(opts.to ? { lte: new Date(opts.to) } : {}),
+      };
+    }
+    if (opts.q) {
+      where.OR = [
+        { reference: { contains: opts.q, mode: 'insensitive' } },
+        { sellerName: { contains: opts.q, mode: 'insensitive' } },
+      ];
+    }
+    return this.prisma.report.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      cursor: opts.cursor ? { id: opts.cursor } : undefined,
+      skip: opts.cursor ? 1 : 0,
+      include: { photos: true },
+    });
+  }
+
+  async summary(tenantId: string) {
+    const [newCount, triaged, investigating, closed, byOutcomeRows] =
+      await Promise.all([
+        this.prisma.report.count({ where: { tenantId, status: 'new' } }),
+        this.prisma.report.count({ where: { tenantId, status: 'triaged' } }),
+        this.prisma.report.count({
+          where: { tenantId, status: 'investigating' },
+        }),
+        this.prisma.report.count({ where: { tenantId, status: 'closed' } }),
+        this.prisma.report.groupBy({
+          by: ['outcome'],
+          where: { tenantId, outcome: { not: null } },
+          _count: true,
+        }),
+      ]);
+    const byOutcome = Object.fromEntries(
+      byOutcomeRows.map((r) => [r.outcome, r._count]),
+    );
+    return { new: newCount, triaged, investigating, closed, byOutcome };
+  }
+
+  async detail(tenantId: string, id: string) {
+    const report = await this.prisma.report.findUnique({
+      where: { id },
+      include: {
+        photos: true,
+        notes: { orderBy: { createdAt: 'asc' } },
+        statusChanges: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!report || report.tenantId !== tenantId)
+      throw new NotFoundException('report_not_found');
+    return report;
+  }
+
+  async assign(tenantId: string, id: string, memberId: string): Promise<void> {
+    const report = await this.detail(tenantId, id);
+    await this.prisma.report.update({
+      where: { id: report.id },
+      data: { assignedToId: memberId },
+    });
+    this.eventEmitter.emit('report.assigned', {
+      reportId: report.id,
+      tenantId,
+      assignedToId: memberId,
+    });
+  }
+
+  async addNote(
+    tenantId: string,
+    id: string,
+    authorId: string,
+    body: string,
+  ): Promise<void> {
+    const report = await this.detail(tenantId, id);
+    await this.prisma.reportNote.create({
+      data: { tenantId, reportId: report.id, authorId, body },
+    });
+  }
+
+  async changeStatus(
+    tenantId: string,
+    id: string,
+    actorId: string,
+    input: {
+      status: string;
+      outcome?: string;
+      note?: string;
+      notifyConsumer?: boolean;
+    },
+  ): Promise<void> {
+    const report = await this.detail(tenantId, id);
+    if (!canTransition(report.status, input.status)) {
+      throw new BadRequestException({
+        error: 'invalid_transition',
+        from: report.status,
+        to: input.status,
+      });
+    }
+    if (input.status === 'closed' && !input.outcome) {
+      throw new BadRequestException({ error: 'outcome_required' });
+    }
+    await this.prisma.$transaction([
+      this.prisma.report.update({
+        where: { id: report.id },
+        data: {
+          status: input.status as never,
+          outcome:
+            (input.outcome as never) ??
+            (input.status === 'closed' ? report.outcome : undefined),
+          closedAt: input.status === 'closed' ? new Date() : null,
+        },
+      }),
+      this.prisma.reportStatusChange.create({
+        data: {
+          tenantId,
+          reportId: report.id,
+          fromStatus: report.status,
+          toStatus: input.status as never,
+          outcome: input.outcome as never,
+          note: input.note,
+          actorId,
+          consumerNotified: Boolean(
+            input.notifyConsumer && report.contactEmail,
+          ),
+        },
+      }),
+    ]);
+    this.eventEmitter.emit('report.status.changed', {
+      reportId: report.id,
+      tenantId,
+      reference: report.reference,
+      from: report.status,
+      to: input.status,
+      outcome: input.outcome,
+      actorId,
+    });
+    if (input.notifyConsumer && report.contactEmail) {
+      // Listener + notification template land in Task 10 of the E08 plan.
+      this.eventEmitter.emit('report.consumer_update.requested', {
+        reportId: report.id,
+        tenantId,
+        email: report.contactEmail,
+        reference: report.reference,
+        status: input.status,
+        outcome: input.outcome,
+      });
+    }
   }
 }
