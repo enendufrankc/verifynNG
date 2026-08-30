@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  Inject,
   Post,
   Query,
   Res,
@@ -23,7 +24,12 @@ function parseRange(range: string | undefined): RangeKey {
 
 @Controller('v1/analytics')
 export class AnalyticsController {
-  constructor(private readonly analyticsRead: AnalyticsReadService) {}
+  // Explicit @Inject(AnalyticsReadService) — see RollupCountersSubscriber's
+  // constructor comment (tsx/esbuild decorator metadata gap; jobs:run only).
+  constructor(
+    @Inject(AnalyticsReadService)
+    private readonly analyticsRead: AnalyticsReadService,
+  ) {}
 
   @Get('overview')
   @Roles('viewer')
@@ -156,7 +162,12 @@ export class AnalyticsController {
 @Controller('v1/analytics/rollups')
 @PlatformRole('support')
 export class AnalyticsRollupsController {
-  constructor(private readonly scanRollup: ScanRollupJobService) {}
+  // Explicit @Inject(ScanRollupJobService) — see RollupCountersSubscriber's
+  // constructor comment (tsx/esbuild decorator metadata gap; jobs:run only).
+  constructor(
+    @Inject(ScanRollupJobService)
+    private readonly scanRollup: ScanRollupJobService,
+  ) {}
 
   @Post('rebuild')
   async rebuild(@Body() dto: RebuildRollupsDto) {

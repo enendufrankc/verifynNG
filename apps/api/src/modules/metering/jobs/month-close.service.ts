@@ -13,8 +13,11 @@ export class MeteringMonthCloseService {
   private readonly logger = new Logger(MeteringMonthCloseService.name);
 
   constructor(
+    // Explicit @Inject(EventsService) — see RollupCountersSubscriber's
+    // constructor comment (tsx/esbuild decorator metadata gap; jobs:run
+    // only, nest build/tsc is unaffected).
     @Inject('PRISMA') private readonly prisma: PrismaClient,
-    private readonly events: EventsService,
+    @Inject(EventsService) private readonly events: EventsService,
   ) {}
 
   /**

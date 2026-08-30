@@ -9,9 +9,13 @@ const RECONCILE_WINDOW_DAYS = 3;
 @Injectable()
 export class ReconcileService {
   constructor(
+    // Explicit @Inject(...) on the non-string-token params — see
+    // RollupCountersSubscriber's constructor comment (tsx/esbuild decorator
+    // metadata gap; jobs:run only, nest build/tsc is unaffected).
     @Inject('PRISMA') private readonly prisma: PrismaClient,
+    @Inject(ScanRollupJobService)
     private readonly scanRollup: ScanRollupJobService,
-    private readonly events: EventsService,
+    @Inject(EventsService) private readonly events: EventsService,
   ) {}
 
   /**

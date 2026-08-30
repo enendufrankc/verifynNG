@@ -15,7 +15,11 @@ const DEFAULT_BATCH_LIMIT = 5000;
 @Injectable()
 export class ScanRollupJobService {
   constructor(
+    // Explicit @Inject(ScanRollupRowRepository) — see
+    // RollupCountersSubscriber's constructor comment (tsx/esbuild decorator
+    // metadata gap; jobs:run only, nest build/tsc is unaffected).
     @Inject('PRISMA') private readonly prisma: PrismaClient,
+    @Inject(ScanRollupRowRepository)
     private readonly rowRepo: ScanRollupRowRepository,
   ) {}
 
@@ -25,9 +29,7 @@ export class ScanRollupJobService {
    * incrementally, so each touched day is recomputed from scratch off the
    * full day's ScanEvents rather than merged in.
    */
-  async runIncremental(
-    limit = DEFAULT_BATCH_LIMIT,
-  ): Promise<{
+  async runIncremental(limit = DEFAULT_BATCH_LIMIT): Promise<{
     rowsWritten: number;
     touchedDays: number;
     eventsProcessed: number;

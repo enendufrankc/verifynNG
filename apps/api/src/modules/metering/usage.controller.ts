@@ -1,11 +1,15 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { PlatformRole, Roles, TenantId } from '../../common/tenant';
 import { UsageReadService } from './usage-read.service';
 import { currentMonthUtc } from './month.util';
 
 @Controller('v1/tenants/:tenantId/usage')
 export class UsageController {
-  constructor(private readonly usageRead: UsageReadService) {}
+  // Explicit @Inject(UsageReadService) — see RollupCountersSubscriber's
+  // constructor comment (tsx/esbuild decorator metadata gap; jobs:run only).
+  constructor(
+    @Inject(UsageReadService) private readonly usageRead: UsageReadService,
+  ) {}
 
   // owner for own tenant; a `support` platformRole principal may pass any
   // :tenantId — TenantContextGuard/RolesGuard already enforce that split.
