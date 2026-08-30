@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   GoneException,
   Inject,
@@ -291,7 +292,12 @@ export class ReportsService {
     return report;
   }
 
-  async assign(tenantId: string, id: string, memberId: string): Promise<void> {
+  async assign(
+    tenantId: string,
+    id: string,
+    memberId: string,
+    actorId: string,
+  ): Promise<void> {
     const report = await this.detail(tenantId, id);
     await this.prisma.report.update({
       where: { id: report.id },
@@ -301,6 +307,7 @@ export class ReportsService {
       reportId: report.id,
       tenantId,
       assignedToId: memberId,
+      actorId,
     });
   }
 
@@ -338,9 +345,12 @@ export class ReportsService {
     if (input.status === 'closed' && !input.outcome) {
       throw new BadRequestException({ error: 'outcome_required' });
     }
-    await this.prisma.$transaction([
-      this.prisma.report.update({
-        where: { id: report.id },
+    await this.prisma.$transaction(async (tx) => {
+      // Scope the write to the status we read: if another request already
+      // moved this report on, the WHERE clause matches zero rows and we
+      // reject rather than silently overwrite a transition we never validated.
+      const { count } = await tx.report.updateMany({
+        where: { id: report.id, status: report.status },
         data: {
           status: input.status as never,
           outcome:
@@ -348,8 +358,11 @@ export class ReportsService {
             (input.status === 'closed' ? report.outcome : undefined),
           closedAt: input.status === 'closed' ? new Date() : null,
         },
-      }),
-      this.prisma.reportStatusChange.create({
+      });
+      if (count === 0) {
+        throw new ConflictException('report_status_changed_concurrently');
+      }
+      await tx.reportStatusChange.create({
         data: {
           tenantId,
           reportId: report.id,
@@ -362,8 +375,8 @@ export class ReportsService {
             input.notifyConsumer && report.contactEmail,
           ),
         },
-      }),
-    ]);
+      });
+    });
     this.eventEmitter.emit('report.status.changed', {
       reportId: report.id,
       tenantId,

@@ -58,9 +58,10 @@ export class ReportsAdminController {
   async assign(
     @TenantId() tenantId: string,
     @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
     @Body() dto: ReportAssignDto,
   ) {
-    await this.reports.assign(tenantId, id, dto.memberId);
+    await this.reports.assign(tenantId, id, dto.memberId, req.user!.userId!);
     return { ok: true };
   }
 

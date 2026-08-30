@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { ConflictException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   createTestDatabase,
@@ -62,7 +63,7 @@ describe('ReportsService admin flows (integration)', () => {
       },
     });
 
-    await service.assign(tenant.id, report.id, operator.id);
+    await service.assign(tenant.id, report.id, operator.id, operator.id);
     await service.addNote(
       tenant.id,
       report.id,
@@ -106,5 +107,96 @@ describe('ReportsService admin flows (integration)', () => {
       },
     });
     await expect(service.detail(tenantB.id, report.id)).rejects.toThrow();
+  });
+
+  it('rejects a cross-tenant assign with 404', async () => {
+    const tenantA = await makeTenant(prisma);
+    const tenantB = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenantA.id,
+        reference: 'RPT-TEST03',
+        verdictAtReport: 'amber',
+        purchaseChannel: 'pharmacy',
+        ipHash: 'cross-assign',
+      },
+    });
+    await expect(
+      service.assign(tenantB.id, report.id, operator.id, operator.id),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a cross-tenant addNote with 404', async () => {
+    const tenantA = await makeTenant(prisma);
+    const tenantB = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenantA.id,
+        reference: 'RPT-TEST04',
+        verdictAtReport: 'amber',
+        purchaseChannel: 'pharmacy',
+        ipHash: 'cross-note',
+      },
+    });
+    await expect(
+      service.addNote(tenantB.id, report.id, operator.id, 'nope'),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a cross-tenant changeStatus with 404', async () => {
+    const tenantA = await makeTenant(prisma);
+    const tenantB = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenantA.id,
+        reference: 'RPT-TEST05',
+        verdictAtReport: 'amber',
+        purchaseChannel: 'pharmacy',
+        ipHash: 'cross-status',
+      },
+    });
+    await expect(
+      service.changeStatus(tenantB.id, report.id, operator.id, {
+        status: 'triaged',
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects one of two concurrent status changes racing from the same starting status', async () => {
+    const tenant = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-TEST06',
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'race',
+      },
+    });
+
+    const results = await Promise.allSettled([
+      service.changeStatus(tenant.id, report.id, operator.id, {
+        status: 'triaged',
+      }),
+      service.changeStatus(tenant.id, report.id, operator.id, {
+        status: 'triaged',
+      }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter(
+      (r): r is PromiseRejectedResult => r.status === 'rejected',
+    );
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+
+    const detail = await service.detail(tenant.id, report.id);
+    expect(detail.status).toBe('triaged');
+    expect(detail.statusChanges).toHaveLength(1);
   });
 });
