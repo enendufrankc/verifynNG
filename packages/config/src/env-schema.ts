@@ -97,6 +97,9 @@ const e13Schema = z.object({
     .transform((v) => v === 'true'),
   // Secrets file
   SECRETS_FILE: z.string().default('docker/secrets/local.env'),
+  // Real deployments set DEPLOYMENT_ENV=production; NODE_ENV=production alone is
+  // also what local Docker images run with, so it cannot be the trigger.
+  DEPLOYMENT_ENV: z.enum(['local', 'staging', 'production']).default('local'),
 });
 
 // ── E17 Observability ───────────────────────────────────────────
@@ -148,8 +151,8 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .superRefine((env, ctx) => {
-    if (env.NODE_ENV !== 'production') return;
-    // Fail fast in production: dev defaults must never reach a real deployment.
+    if (env.DEPLOYMENT_ENV !== 'production') return;
+    // Fail fast in real deployments: dev defaults must never reach production.
     if (env.JWT_KEYS.includes(ZERO_KEY))
       ctx.addIssue({ code: 'custom', path: ['JWT_KEYS'], message: 'dev default key not allowed in production' });
     if (env.MFA_ENC_KEY === ZERO_KEY)
