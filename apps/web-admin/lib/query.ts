@@ -25,6 +25,18 @@ export const queryKeys = {
     job: (tenantId: string, jobId: string) =>
       ['batches', 'job', tenantId, jobId] as const,
   },
+  analytics: {
+    overview: (tenantId: string, range: string) =>
+      ['analytics', 'overview', tenantId, range] as const,
+    verdicts: (tenantId: string, range: string) =>
+      ['analytics', 'verdicts', tenantId, range] as const,
+    batches: (tenantId: string, range: string) =>
+      ['analytics', 'batches', tenantId, range] as const,
+    products: (tenantId: string, range: string) =>
+      ['analytics', 'products', tenantId, range] as const,
+    geo: (tenantId: string, range: string, groupBy: string) =>
+      ['analytics', 'geo', tenantId, range, groupBy] as const,
+  },
 };
 
 export function usePagedQuery<TItem>(

@@ -667,6 +667,90 @@ model IpBlock {
   @@index([ipHash, expiresAt])
 }
 
+// ─── E12 Analytics & Metering ────────────────────────────────────────────────
+// tenantId fields below are plain scalars (no @relation to Tenant), matching
+// IpBlock/TenantSenderIdentity above — avoids adding a back-relation field to
+// the E02/E03-owned Tenant model.
+
+enum UsageKind {
+  code_minted
+  scan_tier1
+  scan_tier2
+  api_call
+  notification_sent
+}
+
+model UsageEvent {
+  id             String    @id @default(cuid())
+  tenantId       String
+  kind           UsageKind
+  quantity       Int // >= 1
+  occurredAt     DateTime
+  recordedAt     DateTime  @default(now())
+  ref            String? // batchId / scanEventId / notificationId / apiKeyId
+  idempotencyKey String?
+
+  @@unique([tenantId, kind, idempotencyKey])
+  @@index([tenantId, occurredAt])
+  @@index([tenantId, kind, occurredAt])
+}
+
+model UsageSummary {
+  id          String    @id @default(cuid())
+  tenantId    String
+  month       String // "YYYY-MM"
+  kind        UsageKind
+  quantity    Int
+  eventCount  Int
+  finalisedAt DateTime? // set by the month-close job; E15 bills only finalised rows
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([tenantId, month, kind])
+  @@index([tenantId, month])
+}
+
+model ScanRollupDaily {
+  id              String   @id @default(cuid())
+  tenantId        String
+  date            DateTime @db.Date
+  productId       String?
+  batchId         String?
+  tier            Int
+  verdict         String // E06 verdict string
+  count           Int
+  distinctIpCount Int // count(distinct ipHash) within the day/key
+  topCountries    Json // [{ country, city?, count }] top 10
+  rateLimitHits   Int      @default(0)
+  flaggedUnits    Int      @default(0) // from unit.flagged that day, only on rows with verdict = 'flagged'
+  computedAt      DateTime @default(now())
+
+  @@unique([tenantId, date, productId, batchId, tier, verdict], map: "ScanRollupDaily_unique_key")
+  @@index([tenantId, date])
+  @@index([tenantId, batchId, date])
+  @@index([tenantId, productId, date])
+}
+
+model PageViewRollupDaily {
+  id           String   @id @default(cuid())
+  tenantId     String
+  date         DateTime @db.Date
+  route        String // '/v', '/verify', '/p'
+  referrerType String // qr|manual|camera|direct
+  locale       String
+  count        Int
+
+  @@unique([tenantId, date, route, referrerType, locale], map: "PageViewRollupDaily_unique_key")
+  @@index([tenantId, date])
+}
+
+model RollupCheckpoint {
+  id          String   @id // `${tenantId}:scan` | `global:scan`
+  lastEventAt DateTime
+  lastEventId String
+  updatedAt   DateTime @updatedAt
+}
+
+// ── end E12 models ────────────────────────────────────────────
 // ─── E19 Compliance & Data Governance ────────────────────────────────────────
 // LegalDocument versioning reuses PolicyDocument/PolicyAcceptance above (see
 // docs/superpowers/plans/2026-08-30-e19-legal-documents-milestone1.md "Key

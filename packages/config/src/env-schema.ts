@@ -172,6 +172,18 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+// ── E12 Analytics & Metering ────────────────────────────────────
+const e12Schema = z.object({
+  // Incremental scan rollup job — every 10 min per the epic's lag budget.
+  ANALYTICS_ROLLUP_CRON: z.string().default('*/10 * * * *'),
+  // Nightly reconcile of the last 3 days (drift/late-event correction).
+  ANALYTICS_RECONCILE_CRON: z.string().default('30 2 * * *'),
+  // Monthly UsageSummary finalise — day 1, 02:00 UTC, for the previous month.
+  METERING_MONTH_CLOSE_CRON: z.string().default('0 2 1 * *'),
+  // Hint for E19's retention policy, not enforced by E12 itself.
+  ANALYTICS_RETENTION_HINT_DAYS: z.coerce.number().default(730),
+});
+
 // ── E19 Compliance & Data Governance ─────────────────────────────
 const e19Schema = z.object({
   CONSENT_SALT: z.string().default('dev-consent-salt'),
@@ -195,6 +207,7 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .merge(e04Schema)
+  .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
   .superRefine((env, ctx) => {
