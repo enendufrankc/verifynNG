@@ -10,7 +10,7 @@ export type AuthenticatedRequest = Omit<Request, 'user'> & {
     userId?: string;
     /** @deprecated use userId */
     id?: string;
-    tenantId?: string | null;
+    tenantId?: string;
     role?: string;
     platformRole?: string;
   };
