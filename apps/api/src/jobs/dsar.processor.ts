@@ -160,7 +160,7 @@ export class DsarProcessor {
     await prisma.dsarRequest.update({
       where: { id: job.dsarRequestId },
       data: {
-        status: updated.status === 'completed' ? 'completed' : 'rejected',
+        status: updated.status === 'done' ? 'completed' : 'rejected',
         exportObjectKey: updated.objectKey,
         exportExpiresAt: new Date(Date.now() + ttlSeconds * 1000),
         completedAt: new Date(),
@@ -168,9 +168,18 @@ export class DsarProcessor {
       },
     });
     if (downloadUrl) {
+      // NotificationService resolves the delivery channel from
+      // recipient.email/phone, not recipientUserId (that field is only
+      // used for suppression/outbox tracking) — an explicit email is
+      // required or send() silently defaults to the sms channel with no
+      // phone number and never creates an outbox row.
+      const requester = await prisma.user.findUnique({
+        where: { id: job.requestedByUserId },
+        select: { email: true },
+      });
       await this.notifications.send(
         'dsar.ready',
-        { userId: job.requestedByUserId },
+        { email: requester?.email, userId: job.requestedByUserId },
         { downloadUrl, expiresIn: `${env.DSAR_EXPORT_TTL_HOURS} hours` },
         { tenantId: job.tenantId },
       );

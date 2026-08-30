@@ -111,6 +111,7 @@ export class LegalDocumentService {
       version: doc.version,
       locale: doc.locale,
       publishedAt: doc.effectiveFrom.toISOString(),
+      requiresReacceptance: doc.requiresReacceptance,
     });
     return this.toDto(doc);
   }
@@ -140,9 +141,7 @@ export class LegalDocumentService {
   }
 
   /** Read-only view of E03's PolicyAcceptance rows for the "Your agreements" screen. */
-  async agreements(
-    tenantId: string,
-  ): Promise<
+  async agreements(tenantId: string): Promise<
     {
       kind: LegalDocKind;
       version: string;
