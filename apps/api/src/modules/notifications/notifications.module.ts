@@ -98,6 +98,16 @@ import { WebhooksService } from './webhooks/webhooks.service';
     NotificationService,
     NotificationWorker,
   ],
-  exports: [MAILER, SMS, WHATSAPP, NotificationService],
+  // Re-exports this module's own EventEmitterModule.forRoot() registration so
+  // that consumers who import NotificationsModule (e.g. ReportsModule, for
+  // NotificationService) resolve the SAME EventEmitter2 instance EventRouter
+  // listens on here, instead of falling through to Nest's global-module
+  // binding and picking up an unrelated forRoot() instance registered
+  // elsewhere in the app (app.module.ts, auth/status/alerts modules, etc. —
+  // each independent EventEmitterModule.forRoot() call creates its own
+  // EventEmitter2 instance; without this re-export, ReportsService's emit()
+  // and EventRouter's listener were silently talking to two different
+  // buses). See E08 issue re: report.received never firing.
+  exports: [MAILER, SMS, WHATSAPP, NotificationService, EventEmitterModule],
 })
 export class NotificationsModule {}

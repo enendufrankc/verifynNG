@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { loadEnv } from '@verifynng/config';
 import { CAPTCHA_PORT, type CaptchaPort } from './captcha/captcha-port';
 import { CONSENT_PORT, type ConsentPort } from './consent/consent-port';
 import { generateUniqueReference } from './reference.util';
@@ -184,6 +185,14 @@ export class ReportsService {
         purchaseChannel: report.purchaseChannel,
         hasPhotos: dto.photoIds.length > 0,
         hasContact: Boolean(dto.contact?.email || dto.contact?.phone),
+        // Additive fields for EventRouter's 'report.received' operator/owner
+        // template (templates/template-data.ts) — a redacted display code,
+        // never the raw tier-2 secret.
+        reportReference: report.reference,
+        tier1Code: scanEvent.codeRedacted,
+        reportType: report.verdictAtReport,
+        reportedAt: report.createdAt.toISOString(),
+        dashboardUrl: `${loadEnv().APP_BASE_URL}/reports/${report.id}`,
       },
     });
 

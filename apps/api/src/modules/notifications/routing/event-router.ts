@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaClient, NotificationChannel } from '@prisma/client';
+import { PrismaClient, NotificationChannel, TenantRole } from '@prisma/client';
 import { NotificationService } from '../notifications.service';
 import { TemplateId } from '../templates/template-data';
 
@@ -28,11 +28,16 @@ export class EventRouter implements OnModuleInit {
   onModuleInit() {
     // Subscribe to all known event names
     for (const eventName of Object.keys(EVENT_TEMPLATE_MAP)) {
-      this.eventEmitter.on(eventName, (payload: { tenantId: string; data: object }) => {
-        this.handleEvent(eventName, payload.tenantId, payload.data).catch((err) => {
-          console.error(`EventRouter error handling ${eventName}:`, err);
-        });
-      });
+      this.eventEmitter.on(
+        eventName,
+        (payload: { tenantId: string; data: object }) => {
+          this.handleEvent(eventName, payload.tenantId, payload.data).catch(
+            (err) => {
+              console.error(`EventRouter error handling ${eventName}:`, err);
+            },
+          );
+        },
+      );
     }
   }
 
@@ -40,11 +45,7 @@ export class EventRouter implements OnModuleInit {
     await this.handleEvent(eventName, tenantId, data);
   }
 
-  private async handleEvent(
-    eventName: string,
-    tenantId: string,
-    data: object,
-  ) {
+  private async handleEvent(eventName: string, tenantId: string, data: object) {
     // Find enabled routing rules for this event and tenant
     const rules = await this.prisma.notificationRoutingRule.findMany({
       where: {
@@ -56,7 +57,6 @@ export class EventRouter implements OnModuleInit {
 
     if (rules.length === 0) return;
 
-    // Resolve members by roles (stubbed until E02 lands)
     for (const rule of rules) {
       const members = await this.resolveMembers(tenantId, rule.roles);
       const templateId = rule.templateId as TemplateId;
@@ -64,9 +64,7 @@ export class EventRouter implements OnModuleInit {
       for (const member of members) {
         for (const channel of rule.channels) {
           const recipient =
-            channel === NotificationChannel.email
-              ? member.email
-              : member.phone;
+            channel === NotificationChannel.email ? member.email : member.phone;
           if (!recipient) continue;
 
           await this.notificationService.send(
@@ -83,23 +81,29 @@ export class EventRouter implements OnModuleInit {
     }
   }
 
-  /** Stub: resolves members by roles until E02 ships UsersService.listMembers */
+  /**
+   * Resolves tenant members by role via the Membership join table. Tenant
+   * membership lives in Membership (userId, tenantId, role), not on User
+   * directly — User.tenantId is a separate, unrelated denormalized field that
+   * is left null for normal members (only set on some legacy/test fixtures),
+   * so querying User.tenantId here silently resolved zero recipients for
+   * every real tenant. See E08 issue re: report.received never firing.
+   */
   private async resolveMembers(
     tenantId: string,
     roles: string[],
   ): Promise<Array<{ id: string; email: string; phone?: string }>> {
-    // For now, return all users in the tenant (role filtering comes with E02)
-    const users = await this.prisma.user.findMany({
-      where: { tenantId },
+    const memberships = await this.prisma.membership.findMany({
+      where: {
+        tenantId,
+        ...(roles.length > 0 ? { role: { in: roles as TenantRole[] } } : {}),
+      },
+      include: { user: true },
     });
 
-    // If roles includes 'owner', we return all users as a stub
-    // E02 will provide proper role-based filtering
-    if (roles.length === 0) return users;
-
-    return users.map((u) => ({
-      id: u.id,
-      email: u.email,
+    return memberships.map((m) => ({
+      id: m.user.id,
+      email: m.user.email,
       phone: undefined,
     }));
   }
