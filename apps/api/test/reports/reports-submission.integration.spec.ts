@@ -169,6 +169,54 @@ describe('ReportsService.submit (integration)', () => {
     );
   });
 
+  it('still creates the report and resolves successfully when the notification send rejects', async () => {
+    const tenant = await makeTenant(prisma);
+    const product = await makeProduct(prisma, {
+      tenantId: tenant.id,
+      name: 'Glow Serum',
+    });
+    const notifications = makeFakeNotifications();
+    notifications.send.mockRejectedValue(
+      new Error('notification_service_down'),
+    );
+    const service = new ReportsService(
+      prisma,
+      new EventEmitter2(),
+      new FixedCaptcha(true),
+      new InMemoryConsent(),
+      notifications.asService(),
+    );
+    const scan = await prisma.scanEvent.create({
+      data: {
+        tenantId: tenant.id,
+        tier: 'tier2',
+        verdict: 'red',
+        source: 'qr',
+        codeRedacted: 'dwn***',
+        productId: product.id,
+      },
+    });
+
+    const result = await service.submit(
+      tenant.slug,
+      {
+        scanEventId: scan.id,
+        purchaseChannel: 'open_market' as never,
+        photoIds: [],
+        captchaToken: 'ok-demo',
+        contact: { email: 'consumer@example.com', consent: false },
+      } as never,
+      { ip: '10.0.0.3', ipHash: 'iphash-down' },
+    );
+
+    expect(result.reference).toMatch(/^RPT-/);
+    const stored = await prisma.report.findUnique({
+      where: { id: result.reportId },
+    });
+    expect(stored).not.toBeNull();
+    expect(stored?.reference).toBe(result.reference);
+  });
+
   it('rejects a scanEvent belonging to another tenant with 404', async () => {
     const tenantA = await makeTenant(prisma);
     const tenantB = await makeTenant(prisma);

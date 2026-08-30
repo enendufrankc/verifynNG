@@ -5,6 +5,7 @@ import {
   GoneException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
@@ -47,6 +48,8 @@ export interface SubmitContext {
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     private readonly eventEmitter: EventEmitter2,
@@ -188,12 +191,18 @@ export class ReportsService {
 
     if (dto.contact?.email) {
       const productName = await this.resolveProductName(report.productId);
-      await this.notifications.send(
-        'report.consumer_ack',
-        { email: dto.contact.email },
-        { reference: report.reference, productName, statusUrl },
-        { tenantId: tenant.id },
-      );
+      try {
+        await this.notifications.send(
+          'report.consumer_ack',
+          { email: dto.contact.email },
+          { reference: report.reference, productName, statusUrl },
+          { tenantId: tenant.id },
+        );
+      } catch (err) {
+        this.logger.error(
+          `report.consumer_ack notification failed for report ${report.id}: ${(err as Error).message}`,
+        );
+      }
     }
 
     return {
@@ -407,18 +416,24 @@ export class ReportsService {
         }),
         this.resolveProductName(report.productId),
       ]);
-      await this.notifications.send(
-        'report.consumer_update',
-        { email: report.contactEmail },
-        {
-          reference: report.reference,
-          productName,
-          status: input.status,
-          outcome: input.outcome,
-          statusUrl: `/v1/public/${tenant?.slug}/reports/${report.reference}`,
-        },
-        { tenantId },
-      );
+      try {
+        await this.notifications.send(
+          'report.consumer_update',
+          { email: report.contactEmail },
+          {
+            reference: report.reference,
+            productName,
+            status: input.status,
+            outcome: input.outcome,
+            statusUrl: `/v1/public/${tenant?.slug}/reports/${report.reference}`,
+          },
+          { tenantId },
+        );
+      } catch (err) {
+        this.logger.error(
+          `report.consumer_update notification failed for report ${report.id}: ${(err as Error).message}`,
+        );
+      }
     }
   }
 

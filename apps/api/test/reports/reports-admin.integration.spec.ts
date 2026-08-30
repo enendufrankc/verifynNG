@@ -283,6 +283,38 @@ describe('ReportsService admin flows (integration)', () => {
     );
   });
 
+  it('still applies the status change and resolves successfully when the notification send rejects', async () => {
+    const tenant = await makeTenant(prisma);
+    const operator = await makeUser(prisma);
+    const product = await makeProduct(prisma, {
+      tenantId: tenant.id,
+      name: 'Glow Serum',
+    });
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-NOTIFYDOWN',
+        productId: product.id,
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'notify-down',
+        contactEmail: 'consumer@example.com',
+      },
+    });
+
+    notifications.send.mockRejectedValueOnce(
+      new Error('notification_service_down'),
+    );
+
+    await service.changeStatus(tenant.id, report.id, operator.id, {
+      status: 'triaged',
+      notifyConsumer: true,
+    });
+
+    const detail = await service.detail(tenant.id, report.id);
+    expect(detail.status).toBe('triaged');
+  });
+
   it('does not send report.consumer_update when the report has no contact email', async () => {
     const tenant = await makeTenant(prisma);
     const operator = await makeUser(prisma);
