@@ -58,7 +58,8 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",
     "tailwind-merge": "^3.3.0",
-    "@tanstack/react-table": "^8.21.3"
+    "@tanstack/react-table": "^8.21.3",
+    "recharts": "^2.15.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

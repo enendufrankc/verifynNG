@@ -28,6 +28,7 @@ import { EventsModule } from './common/events.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { BatchesModule } from './modules/batches/batches.module';
 import { BullMQModule } from './jobs/bullmq.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { BullMQModule } from './jobs/bullmq.module';
     CatalogModule,
     BullMQModule,
     BatchesModule,
+    AnalyticsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },
