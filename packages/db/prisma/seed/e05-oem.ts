@@ -7,6 +7,19 @@
  * tier-1/tier-2 codes and writes an encrypted, signed manifest to MinIO in
  * the exact shape/encryption E04's ManifestService produces, since E05's
  * DeliveryService reads it back through that same code path.
+ *
+ * IMPORTANT — run this where `CORE_KEYS`/`MANIFEST_ENC_KEY` match whatever the
+ * `api` service actually uses, or the manifest this mints will fail signature
+ * verification for anyone trying to deliver it. `docker/compose.yml`'s `api`
+ * and `db-migrate` services hardcode those keys directly (not read from a
+ * shared `.env`), while a worktree's own `.env` (written by `scripts/epic
+ * start`) can set different ones for host-side tooling — so running `pnpm
+ * db:seed` from the host against a dockerised stack can silently mint an
+ * unverifiable batch if the two diverge. Prefer seeding *inside* the stack:
+ * `docker compose exec api sh -c "cd packages/db && npx prisma db seed"` (the
+ * `db-migrate` service also runs this automatically on `docker compose up`,
+ * but doesn't set `S3_ENDPOINT`, so a fresh mint there fails to reach MinIO —
+ * seed via the `api` container itself once it's up).
  */
 import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
