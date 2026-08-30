@@ -16,6 +16,10 @@ import { DatabaseModule } from './modules/database/database.module';
 import { VerifyModule } from './modules/verify/verify.module';
 import { VerifySmsModule } from './modules/verify-sms/verify-sms.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { AuditModule } from './modules/audit/audit.module.js';
+import { QuotaModule } from './modules/quota/quota.module.js';
+import { SecretsModule } from './modules/secrets/secrets.module.js';
 
 @Module({
   imports: [
@@ -34,6 +38,10 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     VerifyModule,
     VerifySmsModule,
     NotificationsModule,
+    EventEmitterModule.forRoot(),
+    AuditModule,
+    QuotaModule,
+    SecretsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

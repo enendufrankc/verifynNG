@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@verifynng/config": "workspace:*",
     "@verifyng/ui": "workspace:*",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-table": "^8.21.3",

@@ -13,6 +13,7 @@ Multi-tenant product-authenticity platform. Brands mint cryptographically secure
 | See what "production grade" means here              | [`docs/verify-platform-production-readiness.md`](docs/verify-platform-production-readiness.md)                       |
 | Pick up work as an agent or engineer                | [`AGENTS.md`](AGENTS.md) → [`docs/epics/README.md`](docs/epics/README.md)                                            |
 | See the running milestone-1 prototype               | [`legacy/verify-platform/`](legacy/verify-platform/) (`npm i && node cli.js setup && node cli.js mint && npm start`) |
+| Report a vulnerability, or see the security model   | [`SECURITY.md`](SECURITY.md) → [`docs/security/threat-model.md`](docs/security/threat-model.md)                      |
 
 ## Stack
 

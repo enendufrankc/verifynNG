@@ -146,6 +146,8 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      CORS_ORIGINS_ADMIN: http://localhost:${WEB_ADMIN_PORT:-3001}
+      CORS_ORIGINS_VERIFY: http://localhost:${WEB_VERIFY_PORT:-3000}
       # ── E14 Notifications ──
       MAIL_PROVIDER: smtp
       SMS_PROVIDER: fake
@@ -195,6 +197,12 @@ services:
       SMS_URL: http://fake-sms:4101
       CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
       CORE_ACTIVE_KID: k1
+    volumes:
+      # Directory (not the file itself) so a first `docker compose up`, before
+      # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
+      # missing file into an empty directory. EnvFileSecrets already handles
+      # a missing local.env by falling back to the CORE_KEYS_JSON env default.
+      - ./secrets:/app/docker/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy

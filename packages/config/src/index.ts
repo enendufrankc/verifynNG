@@ -1,4 +1,5 @@
 export { envSchema, type Env } from './env-schema.js';
+export * from './security/index.js';
 
 import { envSchema, type Env } from './env-schema.js';
 

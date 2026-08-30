@@ -152,6 +152,9 @@ importers:
       class-validator:
         specifier: ^0.15.1
         version: 0.15.1
+      helmet:
+        specifier: ^8.3.0
+        version: 8.3.0
       ioredis:
         specifier: 5.7.0
         version: 5.7.0
@@ -249,6 +252,9 @@ importers:
       '@verifyng/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@verifynng/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -319,6 +325,9 @@ importers:
 
   apps/web-verify:
     dependencies:
+      '@verifynng/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       next:
         specifier: 15.5.24
         version: 15.5.24(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(@types/node@22.18.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -5154,6 +5163,10 @@ packages:
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
+
+  helmet@8.3.0:
+    resolution: {integrity: sha512-Qgpiaws3Sm30Av8Eah6sjMCZZwjlBu+E68rhpCWBshY1lb09HtLwj5GviX0OyQIn+ulUS0iX0AxN5n3tLZzz1w==}
+    engines: {node: '>=18.0.0'}
 
   help-me@5.0.0:
     resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
@@ -11883,6 +11896,8 @@ snapshots:
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
+
+  helmet@8.3.0: {}
 
   help-me@5.0.0: {}
 
