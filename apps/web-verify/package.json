@@ -11,16 +11,16 @@
   },
   "dependencies": {
     "@verifynng/config": "workspace:*",
-    "next": "15.5.24",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "4.1.11",
-    "@types/node": "22.18.1",
-    "@types/react": "19.1.9",
-    "@types/react-dom": "19.1.9",
-    "tailwindcss": "4.1.11",
-    "typescript": "5.9.2"
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.4.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2"
   }
 }
