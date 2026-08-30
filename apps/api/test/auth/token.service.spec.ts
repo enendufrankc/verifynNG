@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { JwtService } from '@nestjs/jwt';
+import { UnauthorizedException } from '@nestjs/common';
 import type { PrismaClient } from '@prisma/client';
 import {
   createTestDatabase,
@@ -84,6 +85,7 @@ describe('TokenService', () => {
         tid: 'tenant-1',
         role: 'owner',
         sid: 'session-old',
+        typ: 'access',
       },
       {
         secret: Buffer.from(K1_SECRET_HEX, 'hex'),
@@ -207,5 +209,12 @@ describe('TokenService', () => {
       sessionId: 'session-1',
     });
     expect(() => tokenService.verifyMfaToken(accessToken)).toThrow();
+  });
+
+  it('rejects an MFA challenge token when used as an access token (no pre-2FA sessions)', async () => {
+    const mfaToken = await tokenService.issueMfaToken(userId);
+    expect(() => tokenService.verifyAccessToken(mfaToken)).toThrow(
+      UnauthorizedException,
+    );
   });
 });

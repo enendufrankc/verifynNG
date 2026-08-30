@@ -78,13 +78,36 @@ export async function POST(req: NextRequest) {
             mfaRequired: true,
             mfaToken: data.mfaToken,
           });
+        // E02's login returns tokens only; the principal, memberships and active tenant
+        // come from /auth/me. Without this the console has no tenant context (Team,
+        // Settings render empty) — found by browser E2E on 2026-08-30.
+        let me: {
+          user?: unknown;
+          activeTenantId?: string | null;
+          memberships?: Array<{
+            tenantId: string;
+            role: string;
+            tenant?: unknown;
+          }>;
+        } = {};
+        try {
+          const meRes = await fetch(`${apiUrl}/auth/me`, {
+            headers: { Authorization: `Bearer ${data.accessToken}` },
+          });
+          if (meRes.ok) me = await meRes.json();
+        } catch {
+          /* tolerate: client can still call /auth/me itself */
+        }
+        const active =
+          me.memberships?.find((m) => m.tenantId === me.activeTenantId) ??
+          me.memberships?.[0];
         const response = NextResponse.json({
           accessToken: data.accessToken,
           expiresIn: data.expiresIn,
-          user: data.user,
-          memberships: data.memberships,
-          activeTenantId: data.activeTenantId,
-          activeRole: data.activeRole,
+          user: me.user,
+          memberships: me.memberships ?? [],
+          activeTenantId: active?.tenantId ?? me.activeTenantId ?? null,
+          activeRole: active?.role ?? null,
         });
         response.cookies.set('vg_refresh', data.refreshToken, {
           httpOnly: true,
@@ -156,13 +179,35 @@ export async function POST(req: NextRequest) {
       });
       if (apiRes.ok) {
         const data: RefreshApiResponse = await apiRes.json();
+        // Same as login: repopulate principal/tenant context from /auth/me so a page
+        // reload doesn't leave the console without a tenant.
+        let me: {
+          user?: unknown;
+          activeTenantId?: string | null;
+          memberships?: Array<{
+            tenantId: string;
+            role: string;
+            tenant?: unknown;
+          }>;
+        } = {};
+        try {
+          const meRes = await fetch(`${apiUrl}/auth/me`, {
+            headers: { Authorization: `Bearer ${data.accessToken}` },
+          });
+          if (meRes.ok) me = await meRes.json();
+        } catch {
+          /* tolerate */
+        }
+        const active =
+          me.memberships?.find((m) => m.tenantId === me.activeTenantId) ??
+          me.memberships?.[0];
         const response = NextResponse.json({
           accessToken: data.accessToken,
           expiresIn: data.expiresIn,
-          user: data.user,
-          memberships: data.memberships,
-          activeTenantId: data.activeTenantId,
-          activeRole: data.activeRole,
+          user: me.user,
+          memberships: me.memberships ?? [],
+          activeTenantId: active?.tenantId ?? me.activeTenantId ?? null,
+          activeRole: active?.role ?? null,
         });
         response.cookies.set('vg_refresh', data.refreshToken, {
           httpOnly: true,

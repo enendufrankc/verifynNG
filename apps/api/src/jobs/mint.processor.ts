@@ -45,6 +45,12 @@ export class MintProcessor extends WorkerHost {
     job: Job<{ tenantId: string; batchId: string; count: number }>,
   ): Promise<void> {
     const { tenantId, batchId, count } = job.data;
+    const tenantSlug = (
+      await this.prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+        select: { slug: true },
+      })
+    ).slug;
     const env = loadEnv();
     const chunkSize = env.MINT_CHUNK;
 
@@ -80,12 +86,12 @@ export class MintProcessor extends WorkerHost {
         for (let i = chunkStart; i < chunkEnd; i++) {
           const serial = i + 1;
           const { code: tier1Code } = generateCode(this.ring, {
-            tenant: tenantId,
+            tenant: tenantSlug,
             tier: 1 as Tier,
             watermark: batch.watermark,
           });
           const { code: tier2Code } = generateCode(this.ring, {
-            tenant: tenantId,
+            tenant: tenantSlug,
             tier: 2 as Tier,
             watermark: batch.watermark,
           });
@@ -132,7 +138,7 @@ export class MintProcessor extends WorkerHost {
     }
 
     const watermark = deriveBatchWatermark(this.ring, {
-      tenant: tenantId,
+      tenant: tenantSlug,
       batchId,
     });
     await this.prisma.batch.update({

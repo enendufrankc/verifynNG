@@ -125,6 +125,13 @@ export class MintService {
     });
     if (!oem) throw new ConflictException('oem_not_found');
 
+    // Codes embed the tenant *slug* (E06 resolves the tenant from it); the id is a cuid.
+    const tenantRow = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    const tenantSlug = tenantRow.slug;
+
     // Create batch row with placeholder watermark, then derive the real one
     const batch = await this.prisma.batch.create({
       data: {
@@ -142,7 +149,7 @@ export class MintService {
     });
 
     const watermark = deriveBatchWatermark(this.ring, {
-      tenant: tenantId,
+      tenant: tenantSlug,
       batchId: batch.id,
     });
     await this.prisma.batch.update({
@@ -206,12 +213,12 @@ export class MintService {
         for (let i = chunkStart; i < chunkEnd; i++) {
           const serial = i + 1;
           const { code: tier1Code } = generateCode(this.ring, {
-            tenant: tenantId,
+            tenant: tenantSlug,
             tier: 1 as Tier,
             watermark,
           });
           const { code: tier2Code } = generateCode(this.ring, {
-            tenant: tenantId,
+            tenant: tenantSlug,
             tier: 2 as Tier,
             watermark,
           });

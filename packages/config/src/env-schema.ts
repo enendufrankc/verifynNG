@@ -15,11 +15,9 @@ const e00Schema = z.object({
   API_PORT: z.coerce.number().default(4000),
   // MinIO / S3
   S3_ENDPOINT: z.string().default('http://localhost:9000'),
-  // Used only when presigning download URLs: in compose, S3_ENDPOINT is the
-  // container-internal hostname (`minio:9000`), which the SDK needs for its
-  // own put/get calls but which an external client (a browser, curl on the
-  // host) can never resolve. Presigned URLs must carry a host the caller can
-  // actually reach, so getSignedUrl() signs against this endpoint instead.
+  // Browser-reachable MinIO URL for presigned PUT/GET links — the api
+  // container talks to `minio:9000` over the compose network, but a
+  // browser on the host can't resolve that hostname.
   S3_PUBLIC_ENDPOINT: z.string().default('http://localhost:9000'),
   S3_ACCESS_KEY: z.string().default('minioadmin'),
   S3_SECRET_KEY: z.string().default('minioadmin'),
@@ -31,6 +29,12 @@ const e00Schema = z.object({
   SMTP_PASS: z.string().default(''),
   // Next.js
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:4000'),
+  // ── E03: tenant lifecycle ───────────────────────────────────
+  OFFBOARDING_GRACE_DAYS: z.coerce.number().int().nonnegative().default(30),
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  // Runs the tenant-offboarding BullMQ worker in the api process until
+  // E04's api-worker service exists.
+  WORKER_INLINE: z.coerce.boolean().default(true),
 });
 
 // ── E02 Identity & Access ──────────────────────────────────────
@@ -105,9 +109,88 @@ const e06Schema = z.object({
   // and E06's VerifySmsController both read that single value.
 });
 
-// ── Sections for other epics will be added here ────────────────
-// E14 will add EMAIL_FROM, etc.
+// ── E13 Audit & Security ────────────────────────────────────────
+const e13Schema = z.object({
+  // Core keys for HMAC signing (JSON format preferred)
+  CORE_KEYS_JSON: z.string().default(
+    '{"active":"k1","keys":{"k1":"0000000000000000000000000000000000000000000000000000000000000000"}}',
+  ),
+  // CORE_KEYS / CORE_ACTIVE_KID (legacy E01 format) are defined in e06Schema.
+  // CORS
+  CORS_ORIGINS_ADMIN: z.string().default('http://localhost:3001'),
+  CORS_ORIGINS_VERIFY: z.string().default('http://localhost:3000'),
+  // CSP
+  CSP_REPORT_ONLY: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Secrets file
+  SECRETS_FILE: z.string().default('docker/secrets/local.env'),
+  // Real deployments set DEPLOYMENT_ENV=production; NODE_ENV=production alone is
+  // also what local Docker images run with, so it cannot be the trigger.
+  DEPLOYMENT_ENV: z.enum(['local', 'staging', 'production']).default('local'),
+});
 
-export const envSchema = e02Schema.merge(e04Schema).merge(e06Schema);
+// ── E17 Observability ───────────────────────────────────────────
+const e17Schema = z.object({
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4317'),
+  OTEL_TRACES_SAMPLER: z.string().default('always_on'),
+  OTEL_TRACES_SAMPLER_ARG: z.string().optional(),
+  OTEL_SERVICE_NAME: z.string().default('api'),
+  OTEL_EXPORTER_OTLP_PROTOCOL: z.string().default('grpc'),
+  PROBE_KEY: z.string().default('probe-secret-local'),
+  PROBE_FIXTURE_CODE: z.string().default('PROBE_TIER1_OK'),
+  SENTRY_DSN: z.string().optional(),
+  OPS_ALERT_EMAILS: z.string().default('ops@verifynng.local'),
+  ALERT_WEBHOOK_SECRET: z.string().default('alert-webhook-secret-local'),
+  GRAFANA_PORT: z.coerce.number().default(3100),
+  LOKI_PORT: z.coerce.number().default(3101),
+  TEMPO_PORT: z.coerce.number().default(3102),
+  PROMETHEUS_PORT: z.coerce.number().default(3103),
+  OTEL_COLLECTOR_PORT: z.coerce.number().default(3104),
+  UPTIME_PROBE_PORT: z.coerce.number().default(3105),
+  METRICS_PORT: z.coerce.number().default(9464),
+  LOKI_URL: z.string().default('http://loki:3100'),
+  VERIFY_ARTIFICIAL_DELAY_MS: z.coerce.number().default(0),
+});
+
+
+
+// ── E14 Notifications ──────────────────────────────────────────
+const e14Schema = z.object({
+  MAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
+  RESEND_API_KEY: z.string().default(''),
+  SMS_PROVIDER: z.enum(['fake', 'termii']).default('fake'),
+  TERMII_API_KEY: z.string().default(''),
+  TERMII_SENDER: z.string().default('VerifyN'),
+  FAKE_SMS_URL: z.string().default('http://localhost:4101'),
+  WHATSAPP_PROVIDER: z.enum(['fake', 'meta']).default('fake'),
+  META_WA_PHONE_NUMBER_ID: z.string().default(''),
+  META_WA_ACCESS_TOKEN: z.string().default(''),
+  META_WA_BUSINESS_ACCOUNT_ID: z.string().default(''),
+  NOTIFICATIONS_FROM: z.string().default('VerifyN <noreply@verifyn.ng>'),
+  FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
+});
+
+const ZERO_KEY = '0'.repeat(64);
+
+export const envSchema = e02Schema
+  .merge(e06Schema)
+  .merge(e17Schema)
+  .merge(e14Schema)
+  .merge(e13Schema)
+  .merge(e04Schema)
+  .superRefine((env, ctx) => {
+    if (env.DEPLOYMENT_ENV !== 'production') return;
+    // Fail fast in real deployments: dev defaults must never reach production.
+    if (env.JWT_KEYS.includes(ZERO_KEY))
+      ctx.addIssue({ code: 'custom', path: ['JWT_KEYS'], message: 'dev default key not allowed in production' });
+    if (env.MFA_ENC_KEY === ZERO_KEY)
+      ctx.addIssue({ code: 'custom', path: ['MFA_ENC_KEY'], message: 'dev default key not allowed in production' });
+    if (env.CORE_KEYS_JSON.includes(ZERO_KEY) || env.CORE_KEYS.includes(ZERO_KEY))
+      ctx.addIssue({ code: 'custom', path: ['CORE_KEYS_JSON'], message: 'dev default core key not allowed in production' });
+    if (env.CSP_REPORT_ONLY)
+      ctx.addIssue({ code: 'custom', path: ['CSP_REPORT_ONLY'], message: 'CSP must be enforced (CSP_REPORT_ONLY=false) in production' });
+  });
 
 export type Env = z.infer<typeof envSchema>;

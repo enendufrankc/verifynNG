@@ -12,9 +12,32 @@ datasource db {
 
 enum TenantStatus {
   pending
+  in_review
+  rejected
   active
   suspended
+  restricted
   offboarded
+}
+
+enum VerificationDocumentKind {
+  cac_certificate
+  trademark_certificate
+  director_id
+  other
+}
+
+enum VerificationDocumentStatus {
+  awaiting_upload
+  uploaded
+  accepted
+  rejected
+}
+
+enum PolicyKind {
+  aup
+  tos
+  privacy
 }
 
 enum UnitState {
@@ -57,7 +80,18 @@ model Tenant {
   slug      String       @unique
   name      String
   legalName String?
+  trademarkNumber String?
+  country String? @db.Char(2)
   status    TenantStatus @default(pending)
+  statusReason String?
+  statusChangedAt DateTime?
+  verifiedAt DateTime?
+  suspendedAt DateTime?
+  offboardedAt DateTime?
+  scheduledDeletionAt DateTime?
+  branding Json?
+  supportEmail String?
+  websiteUrl String?
   verifyRateLimitPerMin Int @default(600)   // E06: per-tenant verify rate limit
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -69,6 +103,10 @@ model Tenant {
   units      Unit[]
   scanEvents ScanEvent[]
   auditLogs  AuditLog[]
+  verificationDocuments VerificationDocument[]
+  reviewNotes TenantReviewNote[]
+  policyAcceptances PolicyAcceptance[]
+  exports TenantExport[]
   memberships Membership[] // E02
 }
 
@@ -95,6 +133,73 @@ model User {
   sessions          Session[]
   passwordResetTokens PasswordResetToken[]
 
+  @@index([tenantId])
+}
+
+
+model VerificationDocument {
+  id String @id @default(cuid())
+  tenantId String
+  kind VerificationDocumentKind
+  status VerificationDocumentStatus @default(awaiting_upload)
+  objectKey String @unique
+  fileName String
+  contentType String
+  sizeBytes Int
+  uploadedBy String
+  reviewedBy String?
+  reviewNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId, kind])
+}
+
+model TenantReviewNote {
+  id String @id @default(cuid())
+  tenantId String
+  authorId String
+  visibleToTenant Boolean @default(true)
+  body String
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId, createdAt])
+}
+
+model PolicyDocument {
+  id String @id @default(cuid())
+  kind PolicyKind
+  version String
+  markdown String
+  effectiveFrom DateTime
+  createdAt DateTime @default(now())
+  @@unique([kind, version])
+}
+
+model PolicyAcceptance {
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  kind PolicyKind
+  version String
+  ipPrefix String?
+  userAgent String?
+  acceptedAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, kind, version])
+  @@index([tenantId])
+}
+
+model TenantExport {
+  id String @id @default(cuid())
+  tenantId String
+  status String
+  objectKey String?
+  sizeBytes Int?
+  error String?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
 }
 
@@ -313,12 +418,204 @@ model AuditLog {
   target    String
   payload   Json
   prevHash  String?
-  hash      String
+  hash      String   @unique
   createdAt DateTime @default(now())
+
+  // E13 — AuditLog extensions
+  seq          BigInt          @unique @default(autoincrement())
+  actorType    AuditActorType  @default(user)
+  actorIp      String?
+  requestId    String?
+  targetType   String          @default("")
+  targetId     String          @default("")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@index([targetType, targetId])
+}
+
+enum AuditActorType {
+  user
+  system
+  oem
+  support
+  apikey
+}
+
+// E13 — Audit chain verification checkpoints
+model AuditChainCheckpoint {
+  id            String   @id @default(cuid())
+  fromSeq       BigInt
+  toSeq         BigInt
+  headHash      String
+  ok            Boolean
+  rowsChecked   Int
+  firstBadSeq   BigInt?
+  triggeredById String?
+  createdAt     DateTime @default(now())
+}
+
+// E13 — Per-tenant quota overrides
+model QuotaOverride {
+  id          String   @id @default(cuid())
+  tenantId    String
+  kind        String
+  limit       Int
+  window      String
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, kind])
+}
+
+// ── E14 Notifications ──────────────────────────────────────────
+
+enum NotificationChannel {
+  email
+  sms
+  whatsapp
+}
+
+enum OutboxStatus {
+  queued
+  sending
+  sent
+  failed
+  suppressed
+  bounced
+}
+
+enum DeliveryEventType {
+  queued
+  sent
+  delivered
+  bounced
+  complained
+  failed
+  retried
+}
+
+enum SuppressionReason {
+  bounce
+  complaint
+  unsubscribe
+  manual
+}
+
+enum SenderVerification {
+  pending
+  verified
+  failed
+}
+
+model NotificationOutbox {
+  id                String              @id @default(cuid())
+  tenantId          String?
+  templateId        String
+  channel           NotificationChannel
+  recipient         String
+  recipientUserId   String?
+  data              Json
+  renderedSubject   String?
+  idempotencyKey    String              @unique
+  status            OutboxStatus        @default(queued)
+  attempts          Int                 @default(0)
+  lastError         String?
+  providerMessageId String?
+  scheduledAt       DateTime            @default(now())
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  events            NotificationDeliveryEvent[]
+
+  @@index([tenantId, createdAt])
+  @@index([status, scheduledAt])
+  @@index([providerMessageId])
+}
+
+model NotificationDeliveryEvent {
+  id              String             @id @default(cuid())
+  outboxId        String
+  type            DeliveryEventType
+  providerPayload Json?
+  createdAt       DateTime           @default(now())
+
+  outbox NotificationOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+
+  @@index([outboxId])
+}
+
+model NotificationRoutingRule {
+  id         String                @id @default(cuid())
+  tenantId   String
+  eventName  String
+  templateId String
+  channels   NotificationChannel[]
+  roles      String[]
+  enabled    Boolean               @default(true)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@unique([tenantId, eventName, templateId])
+  @@index([tenantId])
+}
+
+model NotificationSuppression {
+  id        String             @id @default(cuid())
+  tenantId  String?
+  channel   NotificationChannel
+  recipient String
+  reason    SuppressionReason
+  source    String
+  createdAt DateTime           @default(now())
+
+  @@unique([channel, recipient])
+}
+
+model TenantSenderIdentity {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  channel            NotificationChannel
+  fromName           String
+  fromAddress        String
+  replyTo            String?
+  domain             String?
+  verificationStatus SenderVerification @default(pending)
+  dnsRecords         Json?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([tenantId, channel])
+}
+
+// ─── E17 Observability ──────────────────────────────────────────────────────
+model ProbeResult {
+  id         String   @id @default(cuid())
+  target     String
+  ok         Boolean
+  statusCode Int?
+  latencyMs  Int
+  verdict    String?
+  region     String   @default("local")
+  at         DateTime
+
+  @@index([target, at])
+}
+
+model StatusDaily {
+  id       String   @id @default(cuid())
+  target   String
+  date     DateTime @db.Date
+  checks   Int
+  failures Int
+  p95Ms    Int
+
+  @@unique([target, date])
 }
 
 // ── E04 Catalog & Minting ───────────────────────────────────────

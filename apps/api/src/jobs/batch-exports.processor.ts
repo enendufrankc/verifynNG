@@ -6,7 +6,7 @@ import { Writable } from 'node:stream';
 import crypto from 'node:crypto';
 import * as React from 'react';
 import { toBuffer as qrToBuffer } from 'qrcode';
-import { ZipArchive } from 'archiver';
+import archiver from 'archiver';
 import {
   Document,
   Image,
@@ -156,6 +156,21 @@ export class BatchExportsProcessor extends WorkerHost {
     const manifest = await this.manifestService.open(batchId);
     const units = (manifest.units as unknown as ManifestUnit[]) ?? [];
 
+    // Exports are built in memory today (ZIP, PDF, all-zip). Until they stream
+    // (E04 follow-up), refuse to build artefacts above the cap instead of OOMing
+    // the worker; the manifest is still available to the OEM flow.
+    const exportsCap = Number(process.env.EXPORTS_MAX_UNITS ?? 5000);
+    if (units.length > exportsCap) {
+      this.logger.warn(
+        `Batch ${batchId} has ${units.length} units > EXPORTS_MAX_UNITS=${exportsCap}; exports deferred`,
+      );
+      await this.prisma.batch.update({
+        where: { id: batchId },
+        data: { failedReason: 'exports_deferred_over_cap' },
+      });
+      return;
+    }
+
     // Each unit's tier-1/tier-2 QR PNGs are generated once and shared by
     // both the ZIP and the PDF sheet — encoding 2×count QR codes twice over
     // (once per artefact) doesn't hold up at six- and seven-figure batch
@@ -273,7 +288,7 @@ export class BatchExportsProcessor extends WorkerHost {
       },
     });
 
-    const archive = new ZipArchive({ zlib: { level: 6 } });
+    const archive = archiver('zip', { zlib: { level: 6 } });
     archive.pipe(sink);
 
     for (const png of pngs) {
@@ -388,7 +403,7 @@ export class BatchExportsProcessor extends WorkerHost {
       },
     });
 
-    const archive = new ZipArchive({ zlib: { level: 6 } });
+    const archive = archiver('zip', { zlib: { level: 6 } });
     archive.pipe(sink);
 
     archive.append(qrZip, { name: 'qr.zip' });

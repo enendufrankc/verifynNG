@@ -1,5 +1,6 @@
 import { PrismaClient, type TenantRole } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { seedPolicies } from './seed/policies';
 
 const prisma = new PrismaClient();
 
@@ -30,11 +31,24 @@ async function upsertMember(
 }
 
 async function main() {
-  // Create the ivoryglow tenant. `id` is pinned to the slug because
-  // @TenantId() is still E02's placeholder — it returns the literal string
-  // 'ivoryglow' rather than resolving the :tenantId path param against a
-  // real session, so every tenant-scoped query needs a tenant whose `id`
-  // is that exact string until E02 ships real auth.
+  await seedPolicies(prisma);
+  if (process.argv.includes('--policies-bump')) {
+    await prisma.policyDocument.upsert({
+      where: { kind_version: { kind: 'tos', version: '2026-09-01' } },
+      update: {},
+      create: {
+        kind: 'tos',
+        version: '2026-09-01',
+        effectiveFrom: new Date('2026-09-01T00:00:00Z'),
+        markdown:
+          'Updated terms: the platform may suspend service on evidence of counterfeiting, abuse, or unlawful use, and may share verification outcomes with law enforcement where required.',
+      },
+    });
+    console.log(
+      'Seeded a newer ToS version (2026-09-01) to test the policy-acceptance gate.',
+    );
+  }
+  // Create the ivoryglow tenant
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'ivoryglow' },
     update: {},
@@ -43,6 +57,8 @@ async function main() {
       slug: 'ivoryglow',
       name: 'IVORY GLOW',
       legalName: 'Tunnel Light Global Concept Ltd',
+      trademarkNumber: 'NG/TM/O/2020/11950',
+      country: 'NG',
       status: 'active',
     },
   });
@@ -88,6 +104,60 @@ async function main() {
       status: 'active',
     },
   });
+  // ── E14: Seed default notification routing rules for ivoryglow ──
+  const defaultRules = [
+    {
+      eventName: 'anomaly.detected',
+      templateId: 'anomaly.alert',
+      channels: ['email'],
+      roles: ['owner'],
+    },
+    {
+      eventName: 'report.created',
+      templateId: 'report.received',
+      channels: ['email'],
+      roles: ['owner', 'operator'],
+    },
+    {
+      eventName: 'batch.minted',
+      templateId: 'batch.minted',
+      channels: ['email'],
+      roles: ['owner'],
+    },
+    {
+      eventName: 'manifest.delivered',
+      templateId: 'manifest.delivered',
+      channels: ['email'],
+      roles: ['owner'],
+    },
+    {
+      eventName: 'receipt.mismatch',
+      templateId: 'receipt.mismatch',
+      channels: ['email', 'sms'],
+      roles: ['owner'],
+    },
+  ];
+
+  for (const rule of defaultRules) {
+    await prisma.notificationRoutingRule.upsert({
+      where: {
+        tenantId_eventName_templateId: {
+          tenantId: tenant.id,
+          eventName: rule.eventName,
+          templateId: rule.templateId,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        eventName: rule.eventName,
+        templateId: rule.templateId,
+        channels: rule.channels as any,
+        roles: rule.roles,
+        enabled: true,
+      },
+    });
+  }
 
   // ── E02 Identity & Access — dev users ────────────────────────
   const passwordHash = await hashDevPassword();
@@ -126,7 +196,7 @@ async function main() {
   });
 
   console.log(
-    `Seeded tenant ${tenant.name} with ${products.length} products, 1 OEM, 3 ivoryglow members, and 1 support user`,
+    `Seeded tenant ${tenant.name} with ${products.length} products, 3 ivoryglow members, 1 support user, and ${defaultRules.length} notification rules`,
   );
 }
 

@@ -12,6 +12,7 @@ describe('MintService idempotency', () => {
       jobId: null,
     };
     const prisma = {
+      tenant: { findUniqueOrThrow: async () => ({ slug: 'tenant-1' }) },
       batch: { findUnique: async () => existing },
     } as never;
     const service = new MintService(
@@ -58,6 +59,7 @@ describe('MintService collision retry', () => {
       }
     });
     const prisma = {
+      tenant: { findUniqueOrThrow: async () => ({ slug: 'tenant-1' }) },
       batch: {
         findUnique: async () => null,
         create: async () => batch,
