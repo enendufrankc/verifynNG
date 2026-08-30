@@ -88,11 +88,21 @@ export class AuditInterceptor implements NestInterceptor {
       : requestIdHeader;
 
     await this.auditService.record({
-      // No tenant context until E02 ships auth — AuditLog.tenantId is nullable for this reason.
-      tenantId: user.tenantId,
+      // A platform-support-only principal's JWT carries tid:"" (no active
+      // tenant), not null/undefined — passed straight through, that empty
+      // string violates AuditLog's tenantId foreign key (found via E19's
+      // @Audited('retention.run') on a support-only route: every such call
+      // was silently failing to audit-log at all, logged only as a caught
+      // "Failed to record audit" error). AuditLog.tenantId is nullable for
+      // exactly the "no tenant context" case this normalizes to.
+      tenantId: user.tenantId || undefined,
       actor: {
-        type: user.id ? 'user' : 'system',
-        id: user.id,
+        // req.user.id is E02's deprecated alias — real principals set
+        // userId; reading only .id meant actorId was empty on every
+        // @Audited() call platform-wide since E02's real auth replaced the
+        // header-stub era this field name predates.
+        type: (user.userId ?? user.id) ? 'user' : 'system',
+        id: user.userId ?? user.id,
         ip: req.ip ?? req.connection?.remoteAddress,
       },
       action: opts.action,
