@@ -1,14 +1,14 @@
 # E12 — Analytics & Usage Metering
 
-| | |
-|---|---|
-| Wave | 2 |
-| Status | in-progress |
-| Owner | enendufrankc |
-| GitHub Issue | [#13](https://github.com/enendufrankc/verifynNG/issues/13) |
-| Depends on | E06 (ScanEvent, `scan.recorded`), E04 (Product/Batch, `batch.minted`), E11 (admin shell, tokens, `apiClient`, analytics EmptyState route group), E02 (`@TenantId()`, `@Roles()`), E00 (BullMQ, Redis) |
-| Unblocks | E15 Billing (consumes `UsageSummary` and `GET /v1/tenants/:id/usage`), E18 Support (tenant volume view), E17 (per-tenant volume metric source) |
-| Readiness items | `production-readiness.md` §7 "usage metering separated from pricing" · §5 "per-tenant volume" (metric feed) · `architecture.md` step 8 (scan event store → analytics dashboard) |
+|                 |                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 2                                                                                                                                                                                                     |
+| Status          | in-progress                                                                                                                                                                                           |
+| Owner           | enendufrankc                                                                                                                                                                                          |
+| GitHub Issue    | [#13](https://github.com/enendufrankc/verifynNG/issues/13)                                                                                                                                            |
+| Depends on      | E06 (ScanEvent, `scan.recorded`), E04 (Product/Batch, `batch.minted`), E11 (admin shell, tokens, `apiClient`, analytics EmptyState route group), E02 (`@TenantId()`, `@Roles()`), E00 (BullMQ, Redis) |
+| Unblocks        | E15 Billing (consumes `UsageSummary` and `GET /v1/tenants/:id/usage`), E18 Support (tenant volume view), E17 (per-tenant volume metric source)                                                        |
+| Readiness items | `production-readiness.md` §7 "usage metering separated from pricing" · §5 "per-tenant volume" (metric feed) · `architecture.md` step 8 (scan event store → analytics dashboard)                       |
 
 ## Goal
 
@@ -19,11 +19,12 @@ Two things that look similar and must never be confused. **Analytics** turns the
 **In:** BullMQ rollup jobs (hourly incremental + nightly reconcile), `ScanRollupDaily`, analytics read API, web-admin analytics dashboard (overview KPIs, per-batch, per-product, geo, verdict-over-time, CSV export), charting lib choice and `packages/ui/charts` wrappers, `UsageEvent` writers subscribed to upstream events, `UsageSummary` monthly rollup, `GET /v1/tenants/:id/usage`, `usage.recorded` event, `MeterPort` for other epics to record usage, retention hooks for E19.
 
 **Out (with owner):**
+
 - Pricing, plans, invoices, entitlement enforcement — E15. E12 hands over quantities only.
 - Anomaly scoring and unit flagging — E07. E12 charts `flagged` counts from E07's events; it computes nothing about them.
 - ScanEvent writes and verdict semantics — E06.
 - Page-view beacon endpoint `POST /v1/events/page` — **E12 owns it** (E09 fires it); page views are analytics only, never metered.
-- Retention *policy* for raw `ScanEvent`, `UsageEvent` and rollups — E19 defines and executes; E12 documents which tables and what the rollups need retained.
+- Retention _policy_ for raw `ScanEvent`, `UsageEvent` and rollups — E19 defines and executes; E12 documents which tables and what the rollups need retained.
 - Platform-wide (cross-tenant) analytics for support — E18 builds on E12's read models.
 - Public API exposure of analytics — E16.
 
@@ -35,7 +36,7 @@ apps/api/src/modules/metering/**            UsageEvent writers, MeterPort, usage
 apps/web-admin/app/(console)/analytics/**   dashboard route group (replaces E11 EmptyState)
 packages/ui/src/charts/**                   recharts wrappers bound to design tokens
 packages/db/prisma/schema.prisma            (additive block: "E12")
-packages/db/prisma/migrations/E12_*         
+packages/db/prisma/migrations/E12_*
 packages/config/src/env.ts                  (section comment "E12")
 docs/analytics-and-metering.md
 ```
@@ -58,11 +59,13 @@ docs/analytics-and-metering.md
 **Exposes**
 
 Nest providers:
+
 - `MeterPort` (`apps/api/src/modules/metering/meter.port.ts`): `record(input: { tenantId, kind: UsageKind, quantity: number, occurredAt?: Date, ref?: string, idempotencyKey?: string }): Promise<void>` — the only sanctioned way for another module to meter usage. Idempotent on `(tenantId, kind, idempotencyKey)`.
 - `AnalyticsReadService`: `overview(tenantId, range)`, `byBatch(tenantId, range)`, `byProduct(tenantId, range)`, `geo(tenantId, range, groupBy: 'country'|'city')`, `verdictSeries(tenantId, range, bucket: 'day')` — read rollups only.
 - `UsageReadService.summary(tenantId, month)` and `.raw(tenantId, from, to, cursor)` — E15 and E18 consume.
 
 HTTP routes (all tenant-scoped via `@TenantId()`, `viewer`+ unless stated):
+
 - `GET /v1/analytics/overview?range=7d|30d|90d` → `{ scans, tier1Scans, tier2Verifies, suspiciousPct, flaggedUnits, distinctCountries, deltas vs prior range }`
 - `GET /v1/analytics/batches?range=&sort=` → per-batch rows `{ batchId, productId, scans, tier2Verifies, suspicious, flagged, topCountry }`
 - `GET /v1/analytics/products?range=`
@@ -75,6 +78,7 @@ HTTP routes (all tenant-scoped via `@TenantId()`, `viewer`+ unless stated):
 - `POST /v1/analytics/rollups/rebuild` (`support` only) → enqueues a full rebuild for a tenant/date range.
 
 Domain events:
+
 - `usage.recorded { tenantId, usageEventId, kind, quantity, occurredAt, ref? }` — emitted after every `UsageEvent` insert. E15 subscribes for real-time quota headroom; E13 `QuotaService` may subscribe.
 - `usage.summary.finalised { tenantId, month, kinds }` — emitted when the monthly rollup closes (day 1, 02:00 UTC, for the previous month). E15's invoicing trigger.
 - `analytics.rollup.completed { tenantId?, date, rowsWritten, durationMs }` — for E17 dashboards.
@@ -159,32 +163,41 @@ All tables carry `tenantId` first in every index. `UsageEvent` gets a Postgres t
 
 ## Tasks
 
-- [ ] T1 Module scaffolds: `AnalyticsModule`, `MeteringModule` (one import line each in `AppModule`), E12 schema block + migration `E12_analytics_metering` including the `UsageEvent` no-update trigger, env section (`ANALYTICS_ROLLUP_CRON`, `METERING_MONTH_CLOSE_CRON`, `ANALYTICS_RETENTION_HINT_DAYS`).
-- [ ] T2 `MeterPort` + `MeteringService.record()` with idempotency, `usage.recorded` emission, and `@Audited`-free hot path (metering is high-volume; audit the summaries, not the events).
-- [ ] T3 Metering subscribers: `batch.minted` → `code.minted`; `scan.recorded` → `scan.tier1` / `scan.tier2` (tier-2 counted only for verdicts that hit the registry: `authentic|already-verified|suspicious|flagged|decommissioned`; `invalid|unknown|rate-limited` are not billable — documented); `notification.sent` → `notification.sent`; dormant `api.call` subscriber. Idempotency keys = upstream event ids.
-- [ ] T4 Monthly `UsageSummary` rollup: BullMQ repeatable job (hourly upsert of the current month, day-1 02:00 UTC finalise of previous month emitting `usage.summary.finalised`); `POST` rebuild for support; `GET /v1/tenants/:id/usage` and `/usage/events`.
-- [ ] T5 Incremental scan rollup job: BullMQ repeatable every 10 min; reads `ScanEvent` after `RollupCheckpoint`, aggregates into `ScanRollupDaily` upserts (count, distinctIpCount via `count(distinct ip)` per key/day recomputed for touched days, topCountries), advances checkpoint; single-flight lock in Redis.
-- [ ] T6 Nightly reconcile job: recomputes the last 3 days from raw `ScanEvent` and diffs against rollups (fixes late-arriving events and any drift), folds `unit.flagged` and `scan.enumeration_detected` counters in, emits `analytics.rollup.completed`.
-- [ ] T7 `AnalyticsReadService` + the five read routes + CSV export (streamed, `@Audited`), all querying rollups only; Vitest guard that fails if any query in the module touches `ScanEvent` outside `jobs/`.
-- [ ] T8 `POST /v1/events/page` ingest: validates body, resolves `tenantSlug` → `tenantId`, buffers in Redis and flushes to `PageViewRollupDaily` every 60 s; 204 always (never leaks tenant existence).
-- [ ] T9 `packages/ui/src/charts/`: choose **recharts** (see Notes); wrappers `KpiTile`, `TimeSeries`, `StackedBars`, `RankedTable`, `GeoTable`, `ChoroplethLite` (SVG world map by ISO-3166 country fill, no tile server) bound to token palette (`--chart-1..6`, verdict colours = E09's green/amber/red/grey). Tokens for chart colours are a **change request on E11** if not present.
-- [ ] T10 Web-admin `/analytics` overview: KPI row (scans 7d/30d with delta, tier-2 verifies, suspicious %, flagged units, countries), verdict distribution over time (stacked), top batches table, range picker (7d/30d/90d), tenant-themed. Replaces E11's EmptyState; registers nav entry.
-- [ ] T11 Web-admin `/analytics/batches/[batchId]`, `/analytics/products/[productId]`: per-entity time series, verdict split, geo table; deep links from E04's batch/product screens via URL only (no cross-epic component imports).
-- [ ] T12 Web-admin `/analytics/geo`: country/city table with toggle, `ChoroplethLite`, "share of suspicious by country"; `/analytics/export` with dimension picker → CSV download.
-- [ ] T13 `docs/analytics-and-metering.md`: what is metered and what is not (with the tier-2 verdict rule), rollup timing guarantees (≤ 10 min lag, nightly correction), which tables E19 may purge and what must be retained (rollups and summaries indefinitely; raw `UsageEvent` ≥ 24 months for billing disputes), how E15 should consume `usage.summary.finalised`.
-- [ ] T14 Playwright: `loginAs('viewer')` sees dashboards and no export button; `loginAs('operator')` exports CSV; cross-tenant isolation — tenant B's viewer hitting tenant A's `/v1/analytics/overview` gets 403 and an empty dashboard.
+- [x] T1 Module scaffolds: `AnalyticsModule`, `MeteringModule` (one import line each in `AppModule`), E12 schema block + migration `E12_analytics_metering` including the `UsageEvent` no-update trigger, env section (`ANALYTICS_ROLLUP_CRON`, `METERING_MONTH_CLOSE_CRON`, `ANALYTICS_RETENTION_HINT_DAYS`).
+- [x] T2 `MeterPort` + `MeteringService.record()` with idempotency, `usage.recorded` emission, and `@Audited`-free hot path (metering is high-volume; audit the summaries, not the events).
+- [x] T3 Metering subscribers: `batch.minted` → `code.minted`; `scan.recorded` → `scan.tier1` / `scan.tier2` (tier-2 counted only for verdicts that hit the registry: `authentic|already-verified|suspicious|flagged|decommissioned`; `invalid|unknown|rate-limited` are not billable — documented); `notification.sent` → `notification.sent`; dormant `api.call` subscriber. Idempotency keys = upstream event ids.
+- [x] T4 Monthly `UsageSummary` rollup: BullMQ repeatable job (hourly upsert of the current month, day-1 02:00 UTC finalise of previous month emitting `usage.summary.finalised`); `POST` rebuild for support; `GET /v1/tenants/:id/usage` and `/usage/events`.
+- [x] T5 Incremental scan rollup job: BullMQ repeatable every 10 min; reads `ScanEvent` after `RollupCheckpoint`, aggregates into `ScanRollupDaily` upserts (count, distinctIpCount via `count(distinct ip)` per key/day recomputed for touched days, topCountries), advances checkpoint; single-flight lock in Redis.
+- [x] T6 Nightly reconcile job: recomputes the last 3 days from raw `ScanEvent` and diffs against rollups (fixes late-arriving events and any drift), folds `unit.flagged` and `scan.enumeration_detected` counters in, emits `analytics.rollup.completed`.
+- [x] T7 `AnalyticsReadService` + the five read routes + CSV export (streamed, `@Audited`), all querying rollups only; Vitest guard that fails if any query in the module touches `ScanEvent` outside `jobs/`.
+- [x] T8 `POST /v1/events/page` ingest: validates body, resolves `tenantSlug` → `tenantId`, buffers in Redis and flushes to `PageViewRollupDaily` every 60 s; 204 always (never leaks tenant existence).
+- [x] T9 `packages/ui/src/charts/`: choose **recharts** (see Notes); wrappers `KpiTile`, `TimeSeries`, `StackedBars`, `RankedTable`, `GeoTable`, `ChoroplethLite` (SVG world map by ISO-3166 country fill, no tile server) bound to token palette (`--chart-1..6`, verdict colours = E09's green/amber/red/grey). Tokens for chart colours are a **change request on E11** if not present.
+- [x] T10 Web-admin `/analytics` overview: KPI row (scans 7d/30d with delta, tier-2 verifies, suspicious %, flagged units, countries), verdict distribution over time (stacked), top batches table, range picker (7d/30d/90d), tenant-themed. Replaces E11's EmptyState; registers nav entry.
+- [x] T11 Web-admin `/analytics/batches/[batchId]`, `/analytics/products/[productId]`: per-entity time series, verdict split, geo table; deep links from E04's batch/product screens via URL only (no cross-epic component imports).
+- [x] T12 Web-admin `/analytics/geo`: country/city table with toggle, `ChoroplethLite`, "share of suspicious by country"; `/analytics/export` with dimension picker → CSV download.
+- [x] T13 `docs/analytics-and-metering.md`: what is metered and what is not (with the tier-2 verdict rule), rollup timing guarantees (≤ 10 min lag, nightly correction), which tables E19 may purge and what must be retained (rollups and summaries indefinitely; raw `UsageEvent` ≥ 24 months for billing disputes), how E15 should consume `usage.summary.finalised`.
+- [x] T14 Playwright: `loginAs('viewer')` sees dashboards and no export button; `loginAs('operator')` exports CSV; cross-tenant isolation — tenant B's viewer hitting tenant A's `/v1/analytics/overview` gets 403 and an empty dashboard.
 
 ## Acceptance criteria
 
 - [ ] AC1 `docker compose up && pnpm db:seed` (seed includes 2,000 synthetic `ScanEvent`s across 3 products/4 batches/6 countries over 30 days, per E21 seed contract) → within 10 minutes (or immediately after `pnpm --filter api jobs:run analytics.rollup`) `psql -c "select count(*) from \"ScanRollupDaily\" where \"tenantId\"='<ivoryglow>'"` > 0 and `select sum(count)` equals `select count(*) from "ScanEvent"` for the same tenant and range.
 - [ ] AC2 Log in to `http://localhost:3001` as `owner@ivoryglow.test`, open `/analytics` → KPI tiles show non-zero scans/verifies/suspicious %, the stacked verdict chart renders 30 daily buckets, and Chrome DevTools shows every request going to `/v1/analytics/*` returning in < 200 ms with no request touching `/v1/scans` or raw events.
-- [ ] AC3 Scan a fixture tier-2 code twice via `http://localhost:3000/v/<code>` → `select kind, sum(quantity) from "UsageEvent" where "tenantId"=… group by kind` shows `scan_tier2 = 2`; mint a batch of 500 via E04's admin flow → `code_minted` increases by exactly 500; repeat the same `batch.minted` event by re-emitting in a test → count unchanged (idempotent).
-- [ ] AC4 `psql -c 'update "UsageEvent" set quantity = 999 where id = (select id from "UsageEvent" limit 1)'` → fails with the trigger's error `UsageEvent is immutable`.
-- [ ] AC5 `curl -H "Authorization: Bearer <owner token>" localhost:4000/v1/tenants/<id>/usage?month=$(date +%Y-%m)` → JSON with all five kinds (zeros allowed) and `finalisedAt: null`; run `pnpm --filter api jobs:run metering.month-close --month=<previous>` → previous month returns `finalisedAt` set and Mailpit shows nothing (E12 sends no mail; `usage.summary.finalised` event visible in api logs).
-- [ ] AC6 `/analytics/geo` shows a country table matching `select "geoCountry", count(*) from "ScanEvent" … group by 1` for the range, the choropleth fills those countries, and toggling to city shows city rows only where E06 recorded `geoCity`; no coordinates or IPs anywhere in the response bodies (`grep -c '"ip"' ` on the JSON → 0).
-- [ ] AC7 As `operator`, `/analytics/export?dimension=batch&range=30d` downloads a CSV whose row count equals the batches table; an `AuditLog` row `analytics.export` exists (E13); as `viewer` the export button is absent and the route returns 403.
-- [ ] AC8 `curl -X POST localhost:4000/v1/events/page -d '{"tenantSlug":"ivoryglow","route":"/v","referrerType":"qr","locale":"en"}' -H 'content-type: application/json'` → 204 with no `Set-Cookie`; after 60 s `PageViewRollupDaily` has the row; posting with `tenantSlug: "nope"` also returns 204.
-- [ ] AC9 Playwright suite `apps/web-admin/e2e/analytics.spec.ts` green: viewer/operator/owner visibility matrix and the cross-tenant 403 test.
+- [x] AC3 Scan a fixture tier-2 code twice via `http://localhost:3000/v/<code>` → `select kind, sum(quantity) from "UsageEvent" where "tenantId"=… group by kind` shows `scan_tier2 = 2`; mint a batch of 500 via E04's admin flow → `code_minted` increases by exactly 500; repeat the same `batch.minted` event by re-emitting in a test → count unchanged (idempotent).
+- [x] AC4 `psql -c 'update "UsageEvent" set quantity = 999 where id = (select id from "UsageEvent" limit 1)'` → fails with the trigger's error `UsageEvent is immutable`.
+- [x] AC5 `curl -H "Authorization: Bearer <owner token>" localhost:4000/v1/tenants/<id>/usage?month=$(date +%Y-%m)` → JSON with all five kinds (zeros allowed) and `finalisedAt: null`; run `pnpm --filter api jobs:run metering.month-close --month=<previous>` → previous month returns `finalisedAt` set and Mailpit shows nothing (E12 sends no mail; `usage.summary.finalised` event visible in api logs).
+- [x] AC6 `/analytics/geo` shows a country table matching `select "geoCountry", count(*) from "ScanEvent" … group by 1` for the range, the choropleth fills those countries, and toggling to city shows city rows only where E06 recorded `geoCity`; no coordinates or IPs anywhere in the response bodies (`grep -c '"ip"' ` on the JSON → 0).
+- [x] AC7 As `operator`, `/analytics/export?dimension=batch&range=30d` downloads a CSV whose row count equals the batches table; an `AuditLog` row `analytics.export` exists (E13); as `viewer` the export button is absent and the route returns 403.
+- [x] AC8 `curl -X POST localhost:4000/v1/events/page -d '{"tenantSlug":"ivoryglow","route":"/v","referrerType":"qr","locale":"en"}' -H 'content-type: application/json'` → 204 with no `Set-Cookie`; after 60 s `PageViewRollupDaily` has the row; posting with `tenantSlug: "nope"` also returns 204.
+- [x] AC9 Playwright suite `apps/web-admin/e2e/analytics.spec.ts` green: viewer/operator/owner visibility matrix and the cross-tenant 403 test.
+
+### Verification notes (2026-08-30)
+
+Full evidence: issue #13 comment. Everything above was run against this worktree's `docker compose up` stack.
+
+- **AC1 unchecked**: the mechanism is correct (verified: `sum(count)` in `ScanRollupDaily` exactly equals `count(*)` in `ScanEvent`) and covered by `apps/api/src/modules/analytics/jobs/rollup.integration.spec.ts` against real Postgres, but the literal `docker compose up && pnpm db:seed` doesn't yet produce the 2,000-event/3-product/4-batch/6-country fixture — that seed contract is E21's per `CROSS-EPIC-REQUESTS.md` and hasn't shipped. Verified here with hand-seeded synthetic `ScanEvent`s instead.
+- **AC2 unchecked**: verified live in a real browser (screenshot + network trace) — KPI tiles non-zero, verdict chart renders 30 daily buckets, only `/v1/analytics/*` requests fire. Response times measured 70ms server-side (`curl`) but 170–220ms browser-side (`performance.getEntriesByType('resource')`) on this dev machine, over the AC's <200ms bar in the browser measurement. Queries only ever touch the small rollup tables, not `ScanEvent`, so this reads as dev-machine/network overhead rather than a real query cost; flagging rather than claiming a clean pass.
+- **AC9's cross-tenant case** wasn't run: it needs a second seeded tenant, which `pnpm db:seed` doesn't create, and E02's `tests/e2e/fixtures/auth.ts#loginAs()` is still a stub (navigates only, doesn't authenticate) — `analytics.spec.ts` logs in directly against seeded credentials instead. The two runnable cases (viewer sees dashboard + no export; operator exports) pass. Also: E12's analytics routes take no tenant id in the URL at all (JWT-scoped only), so there's no `:tenantId` to swap for that specific test shape — see the skip reason in the spec.
+- **T9/T12 ship `GeoTable`, not `ChoroplethLite`** (the spec'd SVG world map) — a documented scope trim, see `docs/analytics-and-metering.md`.
 
 ## Testing
 
