@@ -68,18 +68,31 @@ export class DeliveriesController {
 }
 
 /** Tenant-side actions on an existing delivery, addressed by delivery id directly. */
-@Controller('tenants/:tenantId/deliveries/:id')
+@Controller('tenants/:tenantId/deliveries')
 export class DeliveryActionsController {
   constructor(private deliveryService: DeliveryService) {}
 
-  @Post('revoke')
+  /** Top-level "Deliveries" console page — every delivery across every batch. */
+  @Get()
+  @Roles('viewer')
+  listForTenant(@TenantId() tenantId: string) {
+    return this.deliveryService.listForTenant(tenantId);
+  }
+
+  @Get(':id')
+  @Roles('viewer')
+  get(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.deliveryService.getTenantDelivery(tenantId, id);
+  }
+
+  @Post(':id/revoke')
   @Roles('owner')
   @Audited('delivery.revoke')
   revoke(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.deliveryService.revoke(tenantId, id);
   }
 
-  @Post('resend')
+  @Post(':id/resend')
   @Roles('owner')
   @Audited('delivery.resend')
   resend(@TenantId() tenantId: string, @Param('id') id: string) {

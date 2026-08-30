@@ -3,6 +3,7 @@ import {
   Package,
   Factory,
   Layers,
+  Truck,
   ScanLine,
   Activity,
   ShieldAlert,
@@ -60,6 +61,14 @@ export const NAV: NavEntry[] = [
     icon: Layers,
     section: 'catalog',
     order: 30,
+  },
+  {
+    id: 'catalog.deliveries',
+    label: 'Deliveries',
+    href: '/deliveries',
+    icon: Truck,
+    section: 'catalog',
+    order: 40,
   },
   {
     id: 'monitoring.units',

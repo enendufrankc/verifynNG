@@ -66,6 +66,20 @@ export class DeliveryService {
     });
   }
 
+  /** Tenant console's top-level Deliveries list — across every batch. */
+  async listForTenant(tenantId: string) {
+    return this.prisma.manifestDelivery.findMany({
+      where: { tenantId },
+      orderBy: { deliveredAt: 'desc' },
+      include: {
+        oem: true,
+        downloads: true,
+        receipts: true,
+        batch: { include: { product: true } },
+      },
+    });
+  }
+
   async getTenantDelivery(tenantId: string, deliveryId: string) {
     const delivery = await this.prisma.manifestDelivery.findFirst({
       where: { id: deliveryId, tenantId },

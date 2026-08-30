@@ -88,6 +88,42 @@ async function createSessionAndToken(
   return signAccessToken({ sub: userId, tid: tenantId, role, sid: session.id });
 }
 
+/**
+ * E19's TenantStatusGuard blocks every non-GET route for an owner whose
+ * tenant has pending AUP/ToS acceptance (this shared dev DB has real
+ * PolicyDocument rows once `pnpm db:seed` has run) — accept the current
+ * version of each so the owner token this test mints can actually write.
+ */
+async function acceptCurrentPolicies(
+  prisma: PrismaClient,
+  tenantId: string,
+  userId: string,
+): Promise<void> {
+  const now = new Date();
+  const documents = await prisma.policyDocument.findMany({
+    where: { effectiveFrom: { lte: now } },
+    orderBy: { effectiveFrom: 'desc' },
+  });
+  const latestByKind = new Map<string, string>();
+  for (const doc of documents) {
+    if (!latestByKind.has(doc.kind)) latestByKind.set(doc.kind, doc.version);
+  }
+  for (const [kind, version] of latestByKind) {
+    // The guard checks acceptance by (tenantId, userId, kind, version), but the
+    // DB unique constraint is only (tenantId, kind, version) — so only one
+    // user's acceptance of a given version can be on record for a tenant at a
+    // time. Re-pointing it at *this* owner is correct for a suite where each
+    // test mints its own owner for the same shared fixture tenant.
+    await prisma.policyAcceptance.upsert({
+      where: {
+        tenantId_kind_version: { tenantId, kind: kind as never, version },
+      },
+      update: { userId },
+      create: { tenantId, userId, kind: kind as never, version },
+    });
+  }
+}
+
 async function createOwner(prisma: PrismaClient, tenantId: string) {
   const user = await prisma.user.create({
     data: {
@@ -98,6 +134,7 @@ async function createOwner(prisma: PrismaClient, tenantId: string) {
   await prisma.membership.create({
     data: { userId: user.id, tenantId, role: 'owner' },
   });
+  await acceptCurrentPolicies(prisma, tenantId, user.id);
   const token = await createSessionAndToken(prisma, user.id, tenantId, 'owner');
   return { user, token };
 }

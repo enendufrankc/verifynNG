@@ -4,7 +4,7 @@ export interface Membership {
   tenantId: string;
   tenantName: string;
   tenantSlug: string;
-  role: 'owner' | 'operator' | 'viewer';
+  role: 'owner' | 'operator' | 'viewer' | 'oem';
 }
 
 export interface AuthUser {
@@ -66,7 +66,7 @@ export function useAuth() {
     user: store.user,
     memberships: store.memberships,
     activeTenantId: store.activeTenantId,
-    role: store.activeRole as 'owner' | 'operator' | 'viewer' | null,
+    role: store.activeRole as 'owner' | 'operator' | 'viewer' | 'oem' | null,
     platformRole: store.user?.platformRole ?? null,
     switchTenant: store.setActiveTenant,
     logout: store.clear,
