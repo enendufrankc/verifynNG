@@ -172,6 +172,13 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+// ─── E05 OEM Manifest Delivery ──────────────────────────────────
+const e05Schema = z.object({
+  OEM_PORTAL_BASE_URL: z.string().default('http://localhost:3001'),
+  DELIVERY_DEFAULT_EXPIRY_HOURS: z.coerce.number().default(72),
+  DELIVERY_DEFAULT_MAX_DOWNLOADS: z.coerce.number().default(5),
+});
+
 // ── E09 Consumer Verify Web ─────────────────────────────────────
 const e09Schema = z.object({
   NEXT_PUBLIC_MINIO_PUBLIC_URL: z.string().default('http://localhost:9000'),
@@ -214,6 +221,7 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .merge(e04Schema)
+  .merge(e05Schema)
   .merge(e09Schema)
   .merge(e12Schema)
   .merge(e19Schema)

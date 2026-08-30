@@ -7,6 +7,7 @@ import * as argon2 from 'argon2';
 import { seedPolicies } from './seed/policies';
 import { seedLegalDocuments } from './seed/legal-documents';
 import { seedAnalyticsFixtures } from './seed/e12-analytics-fixtures';
+import { seedOemDelivery } from './seed/e05-oem';
 
 const prisma = new PrismaClient();
 
@@ -177,13 +178,34 @@ async function main() {
   // ── E02 Identity & Access — dev users ────────────────────────
   const passwordHash = await hashDevPassword();
 
-  await upsertMember(
+  const owner = await upsertMember(
     'owner@ivoryglow.local',
     'Ivory Glow Owner',
     tenant.id,
     'owner',
     passwordHash,
   );
+  // TenantStatusGuard blocks every non-GET route for an owner with pending
+  // AUP/ToS acceptance; record it for the seeded owner so the seed is usable
+  // through the real UI immediately, the same way signup's accept step would.
+  for (const doc of await prisma.policyDocument.findMany()) {
+    await prisma.policyAcceptance.upsert({
+      where: {
+        tenantId_kind_version: {
+          tenantId: tenant.id,
+          kind: doc.kind,
+          version: doc.version,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        userId: owner.id,
+        kind: doc.kind,
+        version: doc.version,
+      },
+    });
+  }
   await upsertMember(
     'operator@ivoryglow.local',
     'Ivory Glow Operator',
@@ -216,6 +238,9 @@ async function main() {
   console.log(
     `Seeded tenant ${tenant.name} with ${products.length} products, 3 ivoryglow members, 1 support user, and ${defaultRules.length} notification rules`,
   );
+
+  // ── E05: OEM Manifest Delivery — dev fixtures ────────────────
+  await seedOemDelivery(prisma);
 }
 
 main()

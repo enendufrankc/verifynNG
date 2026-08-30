@@ -21,6 +21,7 @@
     "db:seed": "pnpm --filter @verifynng/db db:seed",
     "db:seed:realistic": "pnpm --filter @verifynng/db db:seed:realistic",
     "secrets:rotate-core-key": "node tools/scripts/secrets/rotate-core-key.mjs",
+    "oem:receipt": "pnpm --filter @verifynng/oem-receipt start",
     "test:smoke": "pnpm test:e2e --grep @smoke",
     "test:contract": "vitest run --config tests/vitest.config.ts contracts/",
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
