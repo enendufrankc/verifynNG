@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullMQModule } from '../../jobs/bullmq.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ScanEventsModule } from '../scan-events/scan-events.module';
 import { CAPTCHA_PORT } from './captcha/captcha-port';
 import { TurnstileCaptcha } from './captcha/turnstile-captcha.provider';
 import { FakeCaptcha } from './captcha/fake-captcha.provider';
@@ -22,7 +23,7 @@ const devControllers =
   process.env.NODE_ENV === 'production' ? [] : [ReportsDevController];
 
 @Module({
-  imports: [ConfigModule, BullMQModule, NotificationsModule],
+  imports: [ConfigModule, BullMQModule, NotificationsModule, ScanEventsModule],
   providers: [
     TurnstileCaptcha,
     FakeCaptcha,

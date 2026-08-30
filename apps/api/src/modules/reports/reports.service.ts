@@ -16,6 +16,7 @@ import { CONSENT_PORT, type ConsentPort } from './consent/consent-port';
 import { generateUniqueReference } from './reference.util';
 import type { SubmitReportDto } from './dto/submit-report.dto';
 import { NotificationService } from '../notifications/notifications.service';
+import { ScanEventsService } from '../scan-events/scan-events.service';
 
 const REPORTABLE_VERDICTS = new Set([
   'red',
@@ -57,6 +58,7 @@ export class ReportsService {
     @Inject(CAPTCHA_PORT) private readonly captcha: CaptchaPort,
     @Inject(CONSENT_PORT) private readonly consent: ConsentPort,
     private readonly notifications: NotificationService,
+    private readonly scanEvents: ScanEventsService,
   ) {}
 
   /** Falls back to a generic label rather than failing the notification. */
@@ -320,7 +322,10 @@ export class ReportsService {
     });
     if (!report || report.tenantId !== tenantId)
       throw new NotFoundException('report_not_found');
-    return report;
+    const scanHistory = report.unitId
+      ? await this.scanEvents.forUnit(report.unitId, 'tier2', { limit: 20 })
+      : [];
+    return { ...report, scanHistory };
   }
 
   async assign(

@@ -191,6 +191,22 @@ export default function ReportDetailPage() {
                 </li>
               ))}
             </ul>
+
+            <h3 className="font-medium">Scan history</h3>
+            {report.scanHistory.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No tier-2 scans for this unit.
+              </p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {report.scanHistory.map((s) => (
+                  <li key={s.id}>
+                    {s.verdict} ({s.tier}) —{' '}
+                    {new Date(s.createdAt).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}

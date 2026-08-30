@@ -21,6 +21,7 @@ import { InMemoryConsent } from '../../src/modules/reports/consent/in-memory-con
 import type { CaptchaPort } from '../../src/modules/reports/captcha/captcha-port';
 import type { PhotosService } from '../../src/modules/reports/photos.service';
 import type { NotificationService } from '../../src/modules/notifications/notifications.service';
+import type { ScanEventsService } from '../../src/modules/scan-events/scan-events.service';
 import { QuotaService } from '../../src/modules/quota/quota.service.js';
 import { hashIp } from '../../src/common/ip-utils';
 
@@ -43,6 +44,13 @@ function makeFakeNotifications() {
     asService: () => ({ send }) as unknown as NotificationService,
   };
 }
+
+// None of the tests below exercise ReportsService.detail() (that's covered
+// against a real Postgres/ScanEvent in reports-admin.integration.spec.ts),
+// so a never-called stub is enough here.
+const fakeScanEvents = {
+  forUnit: async () => [],
+} as unknown as ScanEventsService;
 
 describe('ReportsService.submit (integration)', () => {
   let prisma: PrismaClient;
@@ -68,6 +76,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(true),
       new InMemoryConsent(),
       makeFakeNotifications().asService(),
+      fakeScanEvents,
     );
 
     const redScan = await prisma.scanEvent.create({
@@ -132,6 +141,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(true),
       new InMemoryConsent(),
       notifications.asService(),
+      fakeScanEvents,
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -185,6 +195,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(true),
       new InMemoryConsent(),
       notifications.asService(),
+      fakeScanEvents,
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -227,6 +238,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(true),
       new InMemoryConsent(),
       makeFakeNotifications().asService(),
+      fakeScanEvents,
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -260,6 +272,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(false),
       new InMemoryConsent(),
       makeFakeNotifications().asService(),
+      fakeScanEvents,
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -293,6 +306,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(true),
       new InMemoryConsent(),
       makeFakeNotifications().asService(),
+      fakeScanEvents,
     );
     await expect(
       service.submit(
@@ -317,6 +331,7 @@ describe('ReportsService.submit (integration)', () => {
       new FixedCaptcha(true),
       new InMemoryConsent(),
       makeFakeNotifications().asService(),
+      fakeScanEvents,
     );
     const scan = await prisma.scanEvent.create({
       data: {
@@ -380,6 +395,7 @@ describe('ReportsPublicController.submit (integration) — captcha-before-quota 
       new FixedCaptcha(captchaOk),
       new InMemoryConsent(),
       makeFakeNotifications().asService(),
+      fakeScanEvents,
     );
     const config = new ConfigService({
       TRUST_PROXY: false,

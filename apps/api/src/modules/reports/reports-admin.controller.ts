@@ -84,6 +84,8 @@ export class ReportsAdminController {
   @Get(':id')
   @Roles('viewer')
   async detail(@TenantId() tenantId: string, @Param('id') id: string) {
+    // report.scanHistory already comes from E06's ScanEventsService via
+    // ReportsService.detail().
     const report = await this.reports.detail(tenantId, id);
     // E07 not yet shipped — anomalies stubbed to [] per CROSS-EPIC-REQUESTS.md.
     return { ...report, anomalies: [] as unknown[] };

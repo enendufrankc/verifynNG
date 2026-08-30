@@ -10,13 +10,18 @@ import {
   tenant as makeTenant,
   user as makeUser,
   product as makeProduct,
+  batch as makeBatch,
+  unit as makeUnit,
+  scanEvent as makeScanEvent,
 } from '@verifynng/db/testing';
 import type { PrismaClient } from '@prisma/client';
+import type { ConfigService } from '@nestjs/config';
 import {
   ReportsService,
   canTransition,
 } from '../../src/modules/reports/reports.service';
 import { InMemoryConsent } from '../../src/modules/reports/consent/in-memory-consent.provider';
+import { ScanEventsService } from '../../src/modules/scan-events/scan-events.service';
 import type { NotificationService } from '../../src/modules/notifications/notifications.service';
 
 function makeFakeNotifications() {
@@ -54,12 +59,16 @@ describe('ReportsService admin flows (integration)', () => {
     prisma = db.prisma;
     schemaName = db.schemaName;
     notifications = makeFakeNotifications();
+    const scanEvents = new ScanEventsService(prisma, {
+      get: () => 'test-salt',
+    } as unknown as ConfigService);
     service = new ReportsService(
       prisma,
       new EventEmitter2(),
       { verify: async () => ({ ok: true }) },
       new InMemoryConsent(),
       notifications.asService(),
+      scanEvents,
     );
   });
 
@@ -335,5 +344,73 @@ describe('ReportsService admin flows (integration)', () => {
     });
 
     expect(notifications.send).not.toHaveBeenCalled();
+  });
+
+  it('includes the unit’s tier-2 scan history, oldest first, in detail()', async () => {
+    const tenant = await makeTenant(prisma);
+    const product = await makeProduct(prisma, { tenantId: tenant.id });
+    const batch = await makeBatch(prisma, {
+      tenantId: tenant.id,
+      productId: product.id,
+    });
+    const unit = await makeUnit(prisma, {
+      tenantId: tenant.id,
+      batchId: batch.id,
+    });
+    const olderScan = await makeScanEvent(prisma, {
+      tenantId: tenant.id,
+      unitId: unit.id,
+      tier: 'tier2',
+      verdict: 'green',
+    });
+    const newerScan = await makeScanEvent(prisma, {
+      tenantId: tenant.id,
+      unitId: unit.id,
+      tier: 'tier2',
+      verdict: 'red',
+    });
+    // A tier-1 scan on the same unit must not leak into the tier-2 history.
+    await makeScanEvent(prisma, {
+      tenantId: tenant.id,
+      unitId: unit.id,
+      tier: 'tier1',
+      verdict: 'green',
+    });
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-SCANHIST1',
+        unitId: unit.id,
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'scan-history',
+      },
+    });
+
+    const detail = await service.detail(tenant.id, report.id);
+
+    expect(detail.scanHistory).toHaveLength(2);
+    expect(detail.scanHistory.map((s) => s.id)).toEqual([
+      olderScan.id,
+      newerScan.id,
+    ]);
+    expect(detail.scanHistory.map((s) => s.verdict)).toEqual(['green', 'red']);
+  });
+
+  it('returns an empty scan history for a report with no unitId', async () => {
+    const tenant = await makeTenant(prisma);
+    const report = await prisma.report.create({
+      data: {
+        tenantId: tenant.id,
+        reference: 'RPT-SCANHIST2',
+        verdictAtReport: 'red',
+        purchaseChannel: 'open_market',
+        ipHash: 'no-unit',
+      },
+    });
+
+    const detail = await service.detail(tenant.id, report.id);
+
+    expect(detail.scanHistory).toEqual([]);
   });
 });

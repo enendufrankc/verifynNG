@@ -49,12 +49,22 @@ export interface ReportStatusChangeEntry {
   createdAt: string;
 }
 
+// Shape returned by E06's ScanEventsService.forUnit().
+export interface ReportScanHistoryEntry {
+  id: string;
+  tier: string;
+  verdict: string;
+  source: string;
+  createdAt: string;
+}
+
 export interface ReportDetail extends Report {
   contactEmail: string | null;
   contactPhone: string | null;
   photos: ReportPhoto[];
   notes: ReportNote[];
   statusChanges: ReportStatusChangeEntry[];
+  scanHistory: ReportScanHistoryEntry[];
   anomalies: unknown[];
 }
 

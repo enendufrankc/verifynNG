@@ -11,6 +11,7 @@ import { InMemoryConsent } from './consent/in-memory-consent.provider';
 import type { CaptchaPort } from './captcha/captcha-port';
 import type { SubmitReportDto } from './dto/submit-report.dto';
 import type { NotificationService } from '../notifications/notifications.service';
+import type { ScanEventsService } from '../scan-events/scan-events.service';
 
 function makeFakeNotifications() {
   const send = vi
@@ -21,6 +22,13 @@ function makeFakeNotifications() {
     asService: () => ({ send }) as unknown as NotificationService,
   };
 }
+
+// None of the tests below exercise ReportsService.detail() (that's covered
+// against a real Postgres/ScanEvent in reports-admin.integration.spec.ts),
+// so a never-called stub is enough here.
+const fakeScanEvents = {
+  forUnit: async () => [],
+} as unknown as ScanEventsService;
 
 // Fast, DB-free unit coverage of ReportsService's branching logic (tenant
 // status gates, cross-tenant isolation, verdict gating, photo ownership).
@@ -174,6 +182,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       await expect(service.resolveTenantBySlug('nope')).rejects.toBeInstanceOf(
         NotFoundException,
@@ -190,6 +199,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       await expect(service.resolveTenantBySlug('acme')).rejects.toBeInstanceOf(
         GoneException,
@@ -206,6 +216,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       const tenant = await service.resolveTenantBySlug('acme');
       expect(tenant.id).toBe('t1');
@@ -228,6 +239,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(false),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       await expect(
         service.submit('acme', baseDto(), { ip: '1.2.3.4', ipHash: 'h1' }),
@@ -254,6 +266,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       const crossTenant = service.submit('acme', baseDto(), {
         ip: '1.2.3.4',
@@ -295,6 +308,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       await expect(
         service.submit('acme', baseDto(), { ip: '1.2.3.4', ipHash: 'h1' }),
@@ -329,6 +343,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       await expect(
         service.submit('acme', baseDto({ photoIds: ['photo-1'] }), {
@@ -366,6 +381,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       await expect(
         service.submit('acme', baseDto({ photoIds: ['photo-1'] }), {
@@ -395,6 +411,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       const result = await service.submit('acme', baseDto(), {
         ip: '1.2.3.4',
@@ -437,6 +454,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         notifications.asService(),
+        fakeScanEvents,
       );
 
       const result = await service.submit(
@@ -479,6 +497,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         notifications.asService(),
+        fakeScanEvents,
       );
 
       await service.submit('acme', baseDto(), {
@@ -513,6 +532,7 @@ describe('ReportsService', () => {
         new FixedCaptcha(true),
         new InMemoryConsent(),
         makeFakeNotifications().asService(),
+        fakeScanEvents,
       );
       const { reference } = await service.submit('acme', baseDto(), {
         ip: '1.2.3.4',
