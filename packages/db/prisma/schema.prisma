@@ -41,6 +41,7 @@ model Tenant {
   name      String
   legalName String?
   status    TenantStatus @default(pending)
+  verifyRateLimitPerMin Int @default(600)   // E06: per-tenant verify rate limit
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
@@ -141,23 +142,45 @@ model Unit {
   @@index([tenantId])
 }
 
+enum ScanTier {
+  tier1
+  tier2
+}
+
+enum ScanSource {
+  qr
+  manual
+  sms
+  api
+}
+
 model ScanEvent {
-  id         String   @id @default(cuid())
+  id         String     @id @default(cuid())
   tenantId   String
   unitId     String?
-  tier       Int
+  tier       ScanTier
   verdict    String
-  ip         String?
-  geoCountry String?
+  batchId    String?
+  productId  String?
+  source     ScanSource  @default(qr)
+  codeRedacted String
+  ipHash     String?
+  ipPrefix   String?
+  geoCountry String?    @db.Char(2)
+  geoRegion  String?
   geoCity    String?
+  deviceClass String?
   userAgent  String?
-  createdAt  DateTime @default(now())
+  latencyMs  Int?
+  createdAt  DateTime   @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   unit   Unit?  @relation(fields: [unitId], references: [id])
 
-  @@index([tenantId])
-  @@index([unitId])
+  @@index([tenantId, createdAt])
+  @@index([unitId, tier, createdAt])
+  @@index([tenantId, verdict, createdAt])
+  @@index([ipHash, createdAt])
 }
 
 // ─── E02 Identity & Access models ──────────────────────────────────
@@ -235,4 +258,18 @@ model AuditLog {
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+}
+
+// ─── E06 ───────────────────────────────────────────────────────────────
+
+model IpBlock {
+  id           String   @id @default(cuid())
+  ipHash       String
+  tenantSlug   String?
+  reason       String   // enumeration
+  invalidCount Int
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([ipHash, expiresAt])
 }
