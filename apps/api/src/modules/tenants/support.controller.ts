@@ -11,6 +11,10 @@ import {
 import { prisma } from '@verifynng/db';
 import { Req } from '@nestjs/common';
 import { PrincipalRequest } from '../../common/principal';
+import {
+  AllowWhenSuspended,
+  RequireTenantStatus,
+} from '../../common/tenant-status/decorators';
 import { TenantLifecycleService } from './tenant-lifecycle.service';
 
 @Controller('support')
@@ -41,7 +45,9 @@ export class SupportTenantsController {
       orderBy: { createdAt: 'asc' },
     });
   }
-  @Post('tenants/:tenantId/approve') async approve(
+  @Post('tenants/:tenantId/approve')
+  @RequireTenantStatus('in_review')
+  async approve(
     @Param('tenantId') id: string,
     @Req() req: PrincipalRequest,
   ): Promise<any> {
@@ -57,7 +63,9 @@ export class SupportTenantsController {
       )
       .then(() => this.lifecycle.get(id));
   }
-  @Post('tenants/:tenantId/reject') async reject(
+  @Post('tenants/:tenantId/reject')
+  @RequireTenantStatus('in_review')
+  async reject(
     @Param('tenantId') id: string,
     @Body() body: { reason: string; canResubmit?: boolean },
     @Req() req: PrincipalRequest,
@@ -75,7 +83,9 @@ export class SupportTenantsController {
       )
       .then(() => this.lifecycle.get(id));
   }
-  @Post('tenants/:tenantId/suspend') async suspend(
+  @Post('tenants/:tenantId/suspend')
+  @AllowWhenSuspended()
+  async suspend(
     @Param('tenantId') id: string,
     @Body() body: { reason: string; note?: string },
     @Req() req: PrincipalRequest,
@@ -97,7 +107,9 @@ export class SupportTenantsController {
       )
       .then(() => this.lifecycle.get(id));
   }
-  @Post('tenants/:tenantId/reactivate') async reactivate(
+  @Post('tenants/:tenantId/reactivate')
+  @AllowWhenSuspended()
+  async reactivate(
     @Param('tenantId') id: string,
     @Req() req: PrincipalRequest,
   ): Promise<any> {
