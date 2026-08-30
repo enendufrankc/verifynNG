@@ -23,12 +23,25 @@ enum UnitState {
   decommissioned
 }
 
+// ─── E02 Identity & Access ────────────────────────────────────────
+
+enum TenantRole {
+  owner
+  operator
+  viewer
+}
+
+enum PlatformRole {
+  support
+}
+
 model Tenant {
   id        String       @id @default(cuid())
   slug      String       @unique
   name      String
   legalName String?
   status    TenantStatus @default(pending)
+  verifyRateLimitPerMin Int @default(600)   // E06: per-tenant verify rate limit
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
@@ -39,6 +52,7 @@ model Tenant {
   units      Unit[]
   scanEvents ScanEvent[]
   auditLogs  AuditLog[]
+  memberships Membership[] // E02
 }
 
 model User {
@@ -50,7 +64,19 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  // E02 Identity & Access fields
+  mfaEnabled       Boolean       @default(false)
+  mfaSecret        String?       // base32, AES-GCM encrypted with MFA_ENC_KEY
+  recoveryCodes    String[]      // argon2 hashes of unused codes
+  platformRole     PlatformRole?
+  lastLoginAt      DateTime?
+  failedLoginCount Int           @default(0)
+  lockedUntil      DateTime?
+
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
+  memberships       Membership[]
+  sessions          Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([tenantId])
 }
@@ -116,23 +142,106 @@ model Unit {
   @@index([tenantId])
 }
 
+enum ScanTier {
+  tier1
+  tier2
+}
+
+enum ScanSource {
+  qr
+  manual
+  sms
+  api
+}
+
 model ScanEvent {
-  id         String   @id @default(cuid())
+  id         String     @id @default(cuid())
   tenantId   String
   unitId     String?
-  tier       Int
+  tier       ScanTier
   verdict    String
-  ip         String?
-  geoCountry String?
+  batchId    String?
+  productId  String?
+  source     ScanSource  @default(qr)
+  codeRedacted String
+  ipHash     String?
+  ipPrefix   String?
+  geoCountry String?    @db.Char(2)
+  geoRegion  String?
   geoCity    String?
+  deviceClass String?
   userAgent  String?
-  createdAt  DateTime @default(now())
+  latencyMs  Int?
+  createdAt  DateTime   @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   unit   Unit?  @relation(fields: [unitId], references: [id])
 
+  @@index([tenantId, createdAt])
+  @@index([unitId, tier, createdAt])
+  @@index([tenantId, verdict, createdAt])
+  @@index([ipHash, createdAt])
+}
+
+// ─── E02 Identity & Access models ──────────────────────────────────
+
+model Membership {
+  id        String     @id @default(cuid())
+  userId    String
+  tenantId  String
+  role      TenantRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, role])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  tenantId         String?            // active tenant at issue time
+  refreshTokenHash String    @unique // hashForStorage(rawToken); rotated on every /auth/refresh
+  familyId         String            // stable across rotations; reuse of superseded hash revokes the family
+  userAgent        String?
+  ipPrefix         String?           // /24 or /48 truncated per E19
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokedReason    String?
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime                     // 30 min
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ApiClient {
+  id         String    @id @default(cuid())
+  tenantId   String?                     // null = platform-level (jobs, fakes)
+  name       String
+  keyHash    String    @unique          // hashForStorage(rawKey); rawKey shown once
+  keyPrefix  String                      // first 8 chars for display
+  scopes     String[]
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
   @@index([tenantId])
-  @@index([unitId])
 }
 
 model AuditLog {
@@ -176,3 +285,16 @@ model StatusDaily {
   @@unique([target, date])
 }
 
+// ─── E06 ───────────────────────────────────────────────────────────────
+
+model IpBlock {
+  id           String   @id @default(cuid())
+  ipHash       String
+  tenantSlug   String?
+  reason       String   // enumeration
+  invalidCount Int
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([ipHash, expiresAt])
+}

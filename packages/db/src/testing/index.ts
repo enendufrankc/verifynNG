@@ -21,3 +21,12 @@ export {
   type UnitOverrides,
   type ScanEventOverrides,
 } from './factories.js';
+export {
+  createTwoTenants,
+  assertTenantIsolation,
+  type TenantFixture,
+  type TenantFixtureMember,
+  type IsolationRoute,
+  type IsolationMethod,
+  type NestAppLike,
+} from './tenant-isolation.js';
