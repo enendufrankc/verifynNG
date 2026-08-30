@@ -21,7 +21,7 @@
     "db:seed:realistic": "pnpm --filter @verifynng/db db:seed:realistic",
     "secrets:rotate-core-key": "node tools/scripts/secrets/rotate-core-key.mjs",
     "test:smoke": "pnpm test:e2e --grep @smoke",
-    "test:contract": "echo 'TODO(E16): contract tests pending E16 public API'",
+    "test:contract": "vitest run --config tests/vitest.config.ts contracts/",
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
     "notifications:preview": "pnpm --filter @verifynng/api notifications:preview",
     "prepare": "husky"
@@ -47,6 +47,7 @@
     "typescript": "5.9.2",
     "typescript-eslint": "^8.68.0",
     "@nestjs/testing": "11.2.3",
+    "@verifynng/db": "workspace:*",
     "vitest": "4.1.11"
   }
 }

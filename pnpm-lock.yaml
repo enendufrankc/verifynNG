@@ -25,6 +25,9 @@ importers:
       '@prisma/client':
         specifier: 6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.2))(typescript@5.9.2)
+      '@verifynng/db':
+        specifier: workspace:*
+        version: link:packages/db
       depcheck:
         specifier: 1.4.7
         version: 1.4.7
