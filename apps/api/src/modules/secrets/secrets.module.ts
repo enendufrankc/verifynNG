@@ -17,41 +17,50 @@ const devControllers =
   controllers: [...devControllers],
   providers: [
     {
-      provide: SECRETS_TOKEN,
+      provide: EnvFileSecrets,
       useFactory: (configService: ConfigService) => {
         const secretsFile = configService.get<string>('SECRETS_FILE')!;
         return new EnvFileSecrets(secretsFile);
       },
       inject: [ConfigService],
     },
+    // Alias so other epics (E15/E18) can inject the port abstraction instead
+    // of the concrete adapter.
     {
-      provide: 'KEY_RING',
-      useFactory: (configService: ConfigService) => {
-        const coreKeysJson = configService.get<string>('CORE_KEYS_JSON')!;
-        const legacyCoreKeys = configService.get<string>('CORE_KEYS');
-        const legacyActiveKid = configService.get<string>('CORE_ACTIVE_KID');
-        return new SecretsKeyRing(
-          coreKeysJson,
-          legacyCoreKeys,
-          legacyActiveKid,
-        );
-      },
-      inject: [ConfigService],
+      provide: SECRETS_TOKEN,
+      useExisting: EnvFileSecrets,
     },
-    // Re-export SecretsKeyRing as a provider itself for direct injection
     {
       provide: SecretsKeyRing,
-      useFactory: (configService: ConfigService) => {
-        const coreKeysJson = configService.get<string>('CORE_KEYS_JSON')!;
-        const legacyCoreKeys = configService.get<string>('CORE_KEYS');
-        const legacyActiveKid = configService.get<string>('CORE_ACTIVE_KID');
+      useFactory: async (
+        envSecrets: EnvFileSecrets,
+        configService: ConfigService,
+      ) => {
+        // getFromFile (not the SecretsPort.get() process.env-first lookup):
+        // Nest's ConfigModule validate option writes the zod-defaulted
+        // CORE_KEYS_JSON back into process.env, so a plain get() would
+        // always see "set" there and never reach a real rotated file value.
+        const coreKeysJson =
+          (await envSecrets.getFromFile('CORE_KEYS_JSON')) ??
+          configService.get<string>('CORE_KEYS_JSON')!;
+        const legacyCoreKeys =
+          (await envSecrets.getFromFile('CORE_KEYS')) ??
+          configService.get<string>('CORE_KEYS');
+        const legacyActiveKid =
+          (await envSecrets.getFromFile('CORE_ACTIVE_KID')) ??
+          configService.get<string>('CORE_ACTIVE_KID');
         return new SecretsKeyRing(
           coreKeysJson,
           legacyCoreKeys,
           legacyActiveKid,
         );
       },
-      inject: [ConfigService],
+      inject: [EnvFileSecrets, ConfigService],
+    },
+    // Alias so consumers can inject either the concrete class or the token.
+    {
+      provide: 'KEY_RING',
+      useExisting: SecretsKeyRing,
     },
   ],
   exports: [SECRETS_TOKEN, 'KEY_RING', SecretsKeyRing],

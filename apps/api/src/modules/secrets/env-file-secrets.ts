@@ -26,6 +26,21 @@ export class EnvFileSecrets implements SecretsPort {
     return entries.get(name);
   }
 
+  /**
+   * Read a secret from the file only, ignoring process.env.
+   *
+   * Nest's ConfigModule `validate` option writes the zod-defaulted config
+   * back into process.env, so a key with a schema default (like
+   * CORE_KEYS_JSON) always appears "set" there even when no operator ever
+   * provided it — get()'s process.env-first behavior would otherwise always
+   * shadow a real rotated file value. Callers that need "does the rotation
+   * file actually have this" (e.g. SecretsKeyRing) use this instead.
+   */
+  async getFromFile(name: string): Promise<string | undefined> {
+    const entries = this.loadFile();
+    return entries.get(name);
+  }
+
   async list(prefix: string): Promise<string[]> {
     const entries = this.loadFile();
     const envKeys = Object.keys(process.env).filter((k) =>
