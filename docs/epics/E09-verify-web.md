@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 2 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | Frank Enendu (@enendufrankc) |
 | GitHub Issue | [#10](https://github.com/enendufrankc/verifynNG/issues/10) |
 | Depends on | E06 (verify API, verdicts, ScanEvent), E01 (`normalizeCode`, `redactCode`, fixture codes), E03 (public tenant profile), E08 (`ReportForm`), E11 (design tokens in `packages/ui`) |
 | Unblocks | E10 (product-page slot in the tier-1 verdict view), E17 (`/status` route lives in this app), E19 (`/legal/**` lives in this app), E12 (`POST /v1/events/page` beacon source) |
