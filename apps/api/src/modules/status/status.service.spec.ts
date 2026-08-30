@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { StatusService } from './status.service';
-import { PrismaClient } from '@verifynng/db';
+import { PrismaClient, prisma } from '@verifynng/db';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('StatusService', () => {
@@ -18,7 +18,7 @@ describe('StatusService', () => {
     } as unknown as PrismaClient;
 
     const emitterMock = { emit: vi.fn() } as unknown as EventEmitter2;
-    const service = new StatusService(emitterMock, prismaMock);
+    const service = new StatusService(emitterMock, prismaMock as unknown as typeof prisma);
 
     const state = await service.deriveComponentState('verify-api');
     expect(state).toBe('operational');
@@ -38,7 +38,7 @@ describe('StatusService', () => {
     } as unknown as PrismaClient;
 
     const emitterMock = { emit: vi.fn() } as unknown as EventEmitter2;
-    const service = new StatusService(emitterMock, prismaMock);
+    const service = new StatusService(emitterMock, prismaMock as unknown as typeof prisma);
 
     const state = await service.deriveComponentState('verify-api');
     expect(state).toBe('outage');
