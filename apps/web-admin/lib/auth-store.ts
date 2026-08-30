@@ -21,6 +21,16 @@ interface AuthState {
   memberships: Membership[];
   activeTenantId: string | null;
   activeRole: string | null;
+  /** False until AuthBootstrap's cookie-refresh attempt settles (success,
+   * failure, or "already had a token, nothing to do"). Every role/
+   * platformRole gate checked on first render — before this flips true —
+   * sees a false-empty state on a hard page reload, since the zustand
+   * store starts empty and only AuthBootstrap's async refresh repopulates
+   * it. Found via E19's own new layout guards (legal-docs/incidents/
+   * retention) 404ing on a fresh navigation straight to those routes;
+   * apps/web-admin/app/(console)/support/layout.tsx has the same
+   * unguarded check and the same latent bug, not fixed here (E11-owned). */
+  hasBootstrapped: boolean;
   setAuth: (data: {
     accessToken: string;
     user: AuthUser;
@@ -30,6 +40,7 @@ interface AuthState {
   }) => void;
   setAccessToken: (token: string) => void;
   setActiveTenant: (tenantId: string, role: string) => void;
+  setBootstrapped: () => void;
   clear: () => void;
 }
 
@@ -39,6 +50,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   memberships: [],
   activeTenantId: null,
   activeRole: null,
+  hasBootstrapped: false,
   setAuth: (data) =>
     set({
       accessToken: data.accessToken,
@@ -50,6 +62,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAccessToken: (token) => set({ accessToken: token }),
   setActiveTenant: (tenantId, role) =>
     set({ activeTenantId: tenantId, activeRole: role }),
+  setBootstrapped: () => set({ hasBootstrapped: true }),
   clear: () =>
     set({
       accessToken: null,
@@ -71,5 +84,6 @@ export function useAuth() {
     switchTenant: store.setActiveTenant,
     logout: store.clear,
     isAuthenticated: !!store.accessToken,
+    hasBootstrapped: store.hasBootstrapped,
   };
 }

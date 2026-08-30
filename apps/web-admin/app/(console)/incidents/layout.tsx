@@ -8,8 +8,10 @@ export default function IncidentsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { platformRole } = useAuth();
+  const { platformRole, hasBootstrapped } = useAuth();
 
+  // See legal-docs/layout.tsx for why this waits on hasBootstrapped.
+  if (!hasBootstrapped) return null;
   if (platformRole !== 'support') notFound();
 
   return <div className="space-y-6">{children}</div>;
