@@ -91,13 +91,59 @@ async function barcodePng(gtin) {
 }
 const qr = (text) => QRCode.toBuffer(text, { errorCorrectionLevel: 'M', margin: 1, width: 360 });
 
+function instructionPage(doc, p, n) {
+  const W = L.pageW * mm, M = 16 * mm;
+  doc.addPage();
+  doc.fillColor('#111').font('Helvetica-Bold').fontSize(18).text(`${cfg.brand} — Verification labels`, M, 18 * mm, { width: W - 2 * M });
+  doc.font('Helvetica').fontSize(11).fillColor('#444')
+    .text(`${p.name}  ·  Batch ${batchId}  ·  ${n.toLocaleString()} units  ·  NAFDAC ${p.nafdac || '—'}  ·  EAN ${p.gtin || '—'}`, M, 27 * mm, { width: W - 2 * M });
+  doc.moveTo(M, 34 * mm).lineTo(W - M, 34 * mm).lineWidth(0.5).strokeColor('#bbb').stroke();
+  const sections = [
+    ['Read this first', [
+      'Every label on the following pages is unique and belongs to exactly ONE bottle. Never print or apply the same label twice.',
+      'Each label carries TWO QR codes. They must be applied to the SAME bottle, in the two positions described below.',
+      'This document is confidential. The hidden codes inside it can be used to fake genuine products. Do not photograph, scan, email or share these pages beyond the production line; shred spoiled sheets and return unused sheets.',
+    ]],
+    ['1. Public QR (left, black frame) — "SCAN TO VERIFY PRODUCT"', [
+      'Apply on the OUTSIDE of the bottle where the customer can see and scan it in the shop.',
+      'Recommended position: back label, near the barcode. Keep at least 3 mm of clear space around the code; do not curve it around a tight edge.',
+      'Consumers may scan this code any number of times; it is safe to be visible.',
+    ]],
+    ['2. Hidden QR (right, red dashed frame) — "HIDDEN CODE — SCRATCH-OFF LABEL"', [
+      'Must NOT be visible before purchase. Cover it with a scratch-off panel, or place it under the cap seal or inside the carton.',
+      'The scratch-off coating must fully cover the QR and the words under it. Test that a coin removes the coating cleanly without damaging the print.',
+      'Do not photograph or record these codes. A visible hidden code lets counterfeiters copy this unit.',
+    ]],
+    ['3. Print and application checks', [
+      'Print at 100% scale (no "fit to page"), 300 dpi or better, black on white. Minimum finished QR size 18 mm; the sheet uses 26 mm.',
+      'Before the full run: print ONE page, scan both QRs on a bottle with a phone. Both must open https://verifyproduct.app and show a code reference. If a scan fails, stop and contact the brand.',
+      'Keep the unit number (e.g. ' + batchId + '-000001) readable under the codes. It links the bottle to this batch for recalls.',
+      'The page header shows product, batch and page number. Use the correct product file for each production line — the NAFDAC number and barcode differ per product.',
+    ]],
+    ['4. Reconciliation', [
+      'Record the unit-number range actually applied per production run and report it to the brand with counts of spoiled/unused labels.',
+      'Return or destroy all unused sheets. Any label not applied to a genuine bottle is a security risk.',
+    ]],
+  ];
+  let y = 40 * mm;
+  for (const [title, lines] of sections) {
+    doc.font('Helvetica-Bold').fontSize(11.5).fillColor('#111').text(title, M, y, { width: W - 2 * M }); y += 6.5 * mm;
+    doc.font('Helvetica').fontSize(9.5).fillColor('#222');
+    for (const t of lines) { doc.text('•  ' + t, M + 4 * mm, y, { width: W - 2 * M - 4 * mm, lineGap: 1.5 }); y = doc.y + 2.2 * mm; }
+    y += 3 * mm;
+  }
+  doc.fontSize(8).fillColor('#666').text(`Issued ${new Date().toISOString().slice(0, 10)} by ${cfg.brand} via VerifyProduct. Codes are permanent; this sheet is valid for batch ${batchId} only.`, M, L.pageH * mm - 14 * mm, { width: W - 2 * M });
+}
+
 for (const p of cfg.products) {
   const mine = units.filter(u => u.productId === p.id);
-  const file = path.join(out, `${p.id}-labels.pdf`);
+  const slug = p.name.replace(/\s*\d+ml\s*$/i, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+  const file = path.join(out, `${cfg.brand.replace(/\s+/g, '-')}-${slug}-${p.id.toUpperCase()}-verification-labels.pdf`);
   const doc = new PDFDocument({ size: [L.pageW * mm, L.pageH * mm], margin: 0, autoFirstPage: false,
     info: { Title: `${p.name} — verification labels — ${batchId}` } });
   doc.pipe(fs.createWriteStream(file));
   const bc = p.gtin ? await barcodePng(p.gtin) : null;
+  instructionPage(doc, p, mine.length);
   let idx = 0;
   for (const u of mine) {
     if (idx % (L.cols * L.rows) === 0) {
