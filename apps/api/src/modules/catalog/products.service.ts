@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   NotFoundException,
   Inject,
@@ -64,8 +65,8 @@ export class ProductsService {
 
     if (gtin) {
       if (!validateGtin(gtin)) {
-        throw new ConflictException({
-          statusCode: 409,
+        throw new BadRequestException({
+          statusCode: 400,
           message: 'gtin_check_digit',
         });
       }
