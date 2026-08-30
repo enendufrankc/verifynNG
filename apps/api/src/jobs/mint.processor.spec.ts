@@ -36,6 +36,9 @@ describe('MintProcessor resume', () => {
     const createMany = vi.fn(async (_args: { data: unknown[] }) => undefined);
     const prisma = {
       tenant: { findUniqueOrThrow: async () => ({ slug: 'tenant-1' }) },
+      product: {
+        findUniqueOrThrow: async () => ({ name: 'Product', sku: 'SKU-1' }),
+      },
       batch: {
         findUnique: async () => batch,
         update: async ({ data }: { data: Record<string, unknown> }) => ({

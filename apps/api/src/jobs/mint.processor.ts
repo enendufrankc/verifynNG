@@ -146,6 +146,10 @@ export class MintProcessor extends WorkerHost {
       data: { status: 'minted', mintedAt: new Date(), watermark },
     });
 
+    const mintedProduct = await this.prisma.product.findUniqueOrThrow({
+      where: { id: batch.productId },
+      select: { name: true, sku: true },
+    });
     await this.events.emit('batch.minted', {
       tenantId,
       batchId,
@@ -155,6 +159,11 @@ export class MintProcessor extends WorkerHost {
       watermark,
       kid: this.ring.active().kid,
       at: new Date(),
+      // Fields the E14 'batch.minted' template renders (template-data.ts).
+      productName: mintedProduct.name,
+      batchSku: mintedProduct.sku,
+      unitCount: count,
+      dashboardUrl: `${loadEnv().APP_BASE_URL}/batches/${batchId}`,
     });
 
     // Generate manifest

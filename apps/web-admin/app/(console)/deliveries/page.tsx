@@ -101,7 +101,12 @@ export default function DeliveriesPage() {
   });
 
   const mintedBatches = useMemo(
-    () => batchesQuery.data?.filter((b) => b.status === 'minted') ?? [],
+    // Only batches whose encrypted manifest exists can be delivered (E05
+    // opens it to re-sign for the OEM) — status alone isn't enough.
+    () =>
+      batchesQuery.data?.filter(
+        (b) => b.status === 'minted' && b.manifestObjectKey,
+      ) ?? [],
     [batchesQuery.data],
   );
   const activeOems = useMemo(

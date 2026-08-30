@@ -275,6 +275,12 @@ export class MintService {
       watermark,
       kid: this.ring.active().kid,
       at: new Date(),
+      // Fields the E14 'batch.minted' template renders (template-data.ts) —
+      // EventRouter passes this payload through as the template data.
+      productName: product.name,
+      batchSku: product.sku,
+      unitCount: count,
+      dashboardUrl: `${loadEnv().APP_BASE_URL}/batches/${batch.id}`,
     });
 
     // Generate manifest (holds tier2Codes in memory, then encrypts and clears)

@@ -19,7 +19,8 @@ test.describe('E08 Consumer Fake Reporting', () => {
   test('AC5: operator triages a seeded report end to end', async ({ page }) => {
     await loginAs(page, 'operator');
     await page.goto('/reports');
-    await page.getByText('RPT-SEED00').click();
+    // DataTable renders a desktop table and mobile cards (both in the DOM).
+    await page.getByRole('link', { name: 'RPT-SEED00' }).first().click();
 
     await page.getByRole('button', { name: 'Assign to me' }).click();
     await page

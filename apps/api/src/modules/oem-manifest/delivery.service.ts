@@ -199,6 +199,13 @@ export class DeliveryService {
       deliveryId: delivery.id,
       expiresAt,
       recipientEmails,
+      // Fields the E14 'manifest.delivered' template renders — EventRouter
+      // passes this payload straight through as template data, so routed
+      // copies (routing rules) need the same fields notifyDelivered() sends.
+      oemName: oem.name,
+      batchSku: batch.product.sku,
+      unitCount: batch.count,
+      dashboardUrl: `${loadEnv().APP_BASE_URL}/deliveries/${delivery.id}`,
     });
 
     return this.getTenantDelivery(tenantId, delivery.id);

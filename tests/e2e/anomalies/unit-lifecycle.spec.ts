@@ -65,6 +65,9 @@ test.describe('AC6: unit lifecycle @e07', () => {
     await page.getByRole('button', { name: 'Restore' }).click();
     await page.getByRole('textbox', { name: 'Reason' }).fill('restore test');
     await clickConfirm(page);
+    // Wait for the refetched transitions table, not just an 'active' text match
+    // (which can resolve elsewhere on the page before the refetch paints).
+    await expect(page.getByText('restore test')).toBeVisible();
     await expect(
       page.getByText('active', { exact: true }).first(),
     ).toBeVisible();
