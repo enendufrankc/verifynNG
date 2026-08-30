@@ -97,7 +97,8 @@ function instructionPage(doc, p, n) {
   doc.fillColor('#111').font('Helvetica-Bold').fontSize(18).text(`${cfg.brand} — Verification labels`, M, 18 * mm, { width: W - 2 * M });
   doc.font('Helvetica').fontSize(11).fillColor('#444')
     .text(`${p.name}  ·  Batch ${batchId}  ·  ${n.toLocaleString()} units  ·  NAFDAC ${p.nafdac || '—'}  ·  EAN ${p.gtin || '—'}`, M, 27 * mm, { width: W - 2 * M });
-  doc.moveTo(M, 34 * mm).lineTo(W - M, 34 * mm).lineWidth(0.5).strokeColor('#bbb').stroke();
+  const ruleY = doc.y + 3 * mm;
+  doc.moveTo(M, ruleY).lineTo(W - M, ruleY).lineWidth(0.5).strokeColor('#bbb').stroke();
   const sections = [
     ['Read this first', [
       'Every label on the following pages is unique and belongs to exactly ONE bottle. Never print or apply the same label twice.',
@@ -125,7 +126,7 @@ function instructionPage(doc, p, n) {
       'Return or destroy all unused sheets. Any label not applied to a genuine bottle is a security risk.',
     ]],
   ];
-  let y = 40 * mm;
+  let y = ruleY + 6 * mm;
   for (const [title, lines] of sections) {
     doc.font('Helvetica-Bold').fontSize(11.5).fillColor('#111').text(title, M, y, { width: W - 2 * M }); y += 6.5 * mm;
     doc.font('Helvetica').fontSize(9.5).fillColor('#222');
