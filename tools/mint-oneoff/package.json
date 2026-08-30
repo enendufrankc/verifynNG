@@ -1,0 +1,16 @@
+{
+  "name": "mint-oneoff",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "One-off production code mint for a tenant using @verifynng/core (outputs stay outside the repo)",
+  "scripts": {
+    "mint": "node mint.mjs"
+  },
+  "dependencies": {
+    "@verifynng/core": "file:../../packages/core",
+    "bwip-js": "4.5.1",
+    "pdfkit": "0.15.2",
+    "qrcode": "1.5.4"
+  }
+}

@@ -5,12 +5,14 @@
  */
 
 import { Controller, Post, Get, Req } from '@nestjs/common';
+import { Public } from '../../common/tenant';
 import { Audited } from './audited.decorator.js';
 import { AuditService } from './audit.service.js';
 import { AuditChainService } from './audit-chain.service.js';
 import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 
 @Controller('v1/_dev/audit-demo')
+@Public()
 export class DevAuditController {
   constructor(
     private readonly auditService: AuditService,

@@ -11,7 +11,7 @@ const rootPrisma = new PrismaClient();
  */
 export async function createTestDatabase(
   testFilePath?: string,
-): Promise<{ prisma: PrismaClient; schemaName: string }> {
+): Promise<{ prisma: PrismaClient; schemaName: string; databaseUrl: string }> {
   const slug = testFilePath
     ? testFilePath
         .replace(/[^a-zA-Z0-9]/g, '_')
@@ -43,6 +43,7 @@ export async function createTestDatabase(
   return {
     prisma: testPrisma,
     schemaName,
+    databaseUrl: testDatabaseUrl,
   };
 }
 

@@ -1,13 +1,13 @@
 import type { Request } from 'express';
 
-/**
- * Request shape once E02 attaches req.user. Until then, user is undefined
- * and callers fall back to placeholder tenant/actor values.
- */
+/** Request with E02's principal attached by TenantContextGuard. */
 export interface AuthenticatedRequest extends Request {
   user?: {
+    userId?: string;
+    /** @deprecated use userId */
     id?: string;
     tenantId?: string;
     role?: string;
+    platformRole?: string;
   };
 }

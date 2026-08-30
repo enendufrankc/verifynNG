@@ -23,6 +23,10 @@ pnpm + Turborepo monorepo · NestJS + Prisma + PostgreSQL · Redis + BullMQ · N
 
 Wave 0: E00 Foundation → E01 Code Engine
 Wave 1: E02 Identity · E03 Tenant Lifecycle · E04 Catalog & Minting · E06 Verification · E11 Admin Shell · E13 Audit & Security · E14 Notifications
+
+## Notifications
+
+E14 exposes `NotificationService.send()` and routes delivery through the Postgres outbox and BullMQ worker. Local email uses Mailpit; SMS and WhatsApp use the fake service. See [`docs/notifications/templates.md`](docs/notifications/templates.md), [`deliverability.md`](docs/notifications/deliverability.md), and [`routing.md`](docs/notifications/routing.md). Run `pnpm notifications:preview` to preview the catalog on port 4110.
 Wave 2: E05 OEM Manifest · E07 Anomaly Detection · E08 Fake Reporting · E09 Verify Web · E12 Analytics & Metering · E17 Observability · E19 Compliance
 Wave 3: E10 Product Pages · E15 Billing · E16 Public API & Webhooks · E18 Support Tooling · E20 SSO
 Cross-cutting: E21 Quality Engineering

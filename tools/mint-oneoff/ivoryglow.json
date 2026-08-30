@@ -1,0 +1,35 @@
+{
+  "tenant": "ivoryglow",
+  "brand": "IVORY GLOW",
+  "baseUrl": "https://verifyproduct.app",
+  "kid": "k1",
+  "count": 10000,
+  "batchSuffix": "A",
+  "layout": {
+    "pageW": 210,
+    "pageH": 297,
+    "margin": 8,
+    "cols": 3,
+    "rows": 4
+  },
+  "products": [
+    {
+      "id": "ig004",
+      "name": "Turmeric & Curcumin Shower Gel 1000ml",
+      "gtin": "5067254398586",
+      "nafdac": "A2-108822"
+    },
+    {
+      "id": "ig005",
+      "name": "Retinol & Amino Acids Shower Gel 1000ml",
+      "gtin": "5067254398593",
+      "nafdac": "A2-108801"
+    },
+    {
+      "id": "ig006",
+      "name": "Vitamin C & B3 Shower Gel + Collagen Peptide 24 1000ml",
+      "gtin": "5067254398579",
+      "nafdac": "A2-108802"
+    }
+  ]
+}
