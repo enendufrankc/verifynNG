@@ -26,6 +26,10 @@ export interface SubmitContext {
   ipHash: string;
   userAgent?: string;
   locale?: string;
+  // Set by ReportsPublicController once it has already verified the captcha
+  // token itself (ahead of the quota check). Skips the redundant re-verify
+  // below so a valid submission doesn't hit the captcha provider twice.
+  captchaVerified?: boolean;
 }
 
 @Injectable()
@@ -56,12 +60,14 @@ export class ReportsService {
   ): Promise<{ reference: string; statusUrl: string; reportId: string }> {
     const tenant = await this.resolveTenantBySlug(tenantSlug);
 
-    const captchaResult = await this.captcha.verify(dto.captchaToken, ctx.ip);
-    if (!captchaResult.ok)
-      throw new ForbiddenException({
-        error: 'captcha_failed',
-        reason: captchaResult.reason,
-      });
+    if (!ctx.captchaVerified) {
+      const captchaResult = await this.captcha.verify(dto.captchaToken, ctx.ip);
+      if (!captchaResult.ok)
+        throw new ForbiddenException({
+          error: 'captcha_failed',
+          reason: captchaResult.reason,
+        });
+    }
 
     const scanEvent = await this.prisma.scanEvent.findUnique({
       where: { id: dto.scanEventId },
@@ -155,6 +161,8 @@ export class ReportsService {
     });
 
     if (dto.contact?.email) {
+      // Listener + notification template land in Task 10 of the E08 plan
+      // (docs/superpowers/plans/2026-08-30-e08-consumer-reporting.md).
       this.eventEmitter.emit('report.consumer_ack.requested', {
         reportId: report.id,
         tenantId: tenant.id,

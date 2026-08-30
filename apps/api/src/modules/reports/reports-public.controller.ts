@@ -87,6 +87,14 @@ export class ReportsPublicController {
   ) {
     const tenant = await this.reports.resolveTenantBySlug(tenantSlug);
     const { ip, ipHash } = this.ipContext(req);
+
+    const captchaResult = await this.captcha.verify(dto.captchaToken, ip);
+    if (!captchaResult.ok) {
+      throw new ForbiddenException({
+        error: 'captcha_failed',
+        reason: captchaResult.reason,
+      });
+    }
     await this.quota.assertWithinQuota(tenant.id, 'reports_per_ip_per_hour', {
       key: ipHash,
     });
@@ -96,6 +104,7 @@ export class ReportsPublicController {
       ipHash,
       userAgent,
       locale: acceptLanguage?.split(',')[0],
+      captchaVerified: true,
     });
 
     const photoIds = await this.reports.listPhotoIds(result.reportId);
