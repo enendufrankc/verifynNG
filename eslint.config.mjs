@@ -17,6 +17,9 @@ export default tseslint.config(
       // Service worker script — runs in its own global scope (self,
       // caches, fetch as globals), not the app's TS/React lint surface.
       'apps/web-verify/public/**',
+      // Node CommonJS config file (lhci reads it directly, not via the
+      // TS/bundler pipeline) — process/require/module are real globals here.
+      'apps/web-verify/lighthouserc.js',
     ],
   },
   {

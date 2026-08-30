@@ -25,7 +25,15 @@ export function middleware(request: NextRequest) {
 
   const cspHeaders = buildCsp({
     nonce,
-    apiOrigin: env.NEXT_PUBLIC_API_URL,
+    // `process.env.NEXT_PUBLIC_API_URL` here (not `env.NEXT_PUBLIC_API_URL`
+    // from loadEnv()) is deliberate: Next.js statically inlines NEXT_PUBLIC_*
+    // vars at build time wherever they're referenced as a literal property
+    // access, so this resolves to the same browser-facing origin baked into
+    // lib/beacon.ts's client bundle — not the container-internal address
+    // loadEnv() reads at runtime (API_INTERNAL_URL, used by lib/api.ts's
+    // server-only fetches). A mismatch here silently blocks the T12 beacon
+    // via CSP — confirmed via a live Lighthouse "inspector-issues" audit.
+    apiOrigin: process.env.NEXT_PUBLIC_API_URL || env.NEXT_PUBLIC_API_URL,
     reportOnly: env.CSP_REPORT_ONLY,
     defaultSrc: ["'self'"],
     imgSrc: [env.NEXT_PUBLIC_MINIO_PUBLIC_URL],
