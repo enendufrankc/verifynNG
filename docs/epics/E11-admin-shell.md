@@ -1,13 +1,13 @@
 # E11 — Admin Console Shell & Design System
 
-| | |
-|---|---|
-| Wave | 1 |
-| Status | in-progress |
-| Owner | enendufrankc |
-| GitHub Issue | [#12](https://github.com/enendufrankc/verifynNG/issues/12) |
-| Depends on | E02 (interfaces: `/auth/*` routes, JWT claims, `memberships`, roles), E00 (web-admin skeleton hand-off) |
-| Unblocks | every epic with a console screen: E03, E04, E07, E08, E10, E12, E13, E15, E18, E19; E21 (Playwright fixtures, axe in CI) |
+|                 |                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 1                                                                                                                           |
+| Status          | in-progress                                                                                                                 |
+| Owner           | enendufrankc                                                                                                                |
+| GitHub Issue    | [#12](https://github.com/enendufrankc/verifynNG/issues/12)                                                                  |
+| Depends on      | E02 (interfaces: `/auth/*` routes, JWT claims, `memberships`, roles), E00 (web-admin skeleton hand-off)                     |
+| Unblocks        | every epic with a console screen: E03, E04, E07, E08, E10, E12, E13, E15, E18, E19; E21 (Playwright fixtures, axe in CI)    |
 | Readiness items | none directly — enables §1 "real IdP for admin console" screens, §9 self-service surfaces; `architecture.md` step 7 console |
 
 ## Goal
@@ -43,6 +43,7 @@ docs/console.md
 ## Interfaces
 
 **Consumes**
+
 - E02 routes: `POST /auth/login`, `/auth/mfa/challenge`, `/auth/refresh`, `/auth/logout`, `/auth/switch-tenant`, `GET /auth/me`, `/auth/password/forgot|reset|change`, `/auth/mfa/setup|enable|disable|recovery-codes/rotate`, `GET/DELETE /auth/sessions`, `/tenants/:tenantId/members/*`. JWT claims `tid`, `role`, `prole`.
 - E03 (soft): `GET /tenants/:tenantId` for status banner (`pending`/`suspended`) and `branding` for theme variables; until E03 ships the shell reads `activeTenant` from `/auth/me` only.
 - E00: `NEXT_PUBLIC_API_URL`, web-admin Dockerfile and port 3001.
@@ -50,6 +51,7 @@ docs/console.md
 **Exposes**
 
 `packages/ui` (`@verifyng/ui`):
+
 ```ts
 // tokens.css — CSS variables on :root and [data-theme]; default = IVORY GLOW from legacy sheet.js
 --vg-*  tokens come from docs/design/foundations/ (Claude Design output; direction A or B — see docs/design/README.md).
@@ -66,6 +68,7 @@ applyTenantTheme(el: HTMLElement, branding: { primaryColor?: string; accentColor
 ```
 
 `apps/web-admin` conventions (documented in `docs/console.md`):
+
 ```ts
 // nav.config.ts — the registry
 export type NavEntry = {
@@ -100,6 +103,7 @@ defaultOptions: staleTime 30 s, retry 1 (never on 4xx), refetchOnWindowFocus fal
 ```
 
 Route-group skeleton (each is a `page.tsx` rendering `EmptyState` with the owning epic's name, replaced by that epic):
+
 ```
 /                (dashboard → E12)      /products (E04)   /oems (E04)   /batches (E04)   /units (E07)   /scans (E12)
 /anomalies (E07)  /reports (E08)        /analytics (E12)  /team (E11)   /audit (E13)     /billing (E15)
@@ -117,19 +121,19 @@ None. (Reads E02/E03 models via HTTP.)
 
 Design input: `docs/design/README.md` and `docs/design/foundations/foundations-v0.2-turquoise.dc.html` (open in a browser) are the specification for tokens, type, verdict family and usage rules. `docs/design/design-system-brief.md` lists the full component inventory and states to build. Follow them; where the canvas is silent, decide and record the decision in `docs/design/README.md`.
 
-- [ ] T0a Import `docs/design/foundations/tokens-v0.2-turquoise.css` into `packages/ui` as Tailwind v4 `@theme` tokens under the `--vg-*` namespace; map verdict tokens to E06 `severity` per the table in `docs/design/README.md`; add a CI check that the `packages/ui` token values match the file in `docs/design/foundations/` (single source, no drift).
+- [x] T0a Import `docs/design/foundations/tokens-v0.2-turquoise.css` into `packages/ui` as Tailwind v4 `@theme` tokens under the `--vg-*` namespace; map verdict tokens to E06 `severity` per the table in `docs/design/README.md`; add a CI check that the `packages/ui` token values match the file in `docs/design/foundations/` (single source, no drift).
 - [ ] T0b Storybook "Foundations" stories reproducing the canvas: type scale, neutrals, brand, verdict family with all four channels (notch, icon, band texture, label) — reviewed against the `.dc.html` side by side before any component work.
-- [ ] T1 `packages/ui` scaffold: Tailwind preset, `tokens.css` with the IVORY GLOW palette + semantic verdict colours + dark-mode values, `applyTenantTheme`, shadcn/ui init (Radix-based) with components generated into the package, tsup build, Storybook 8 with a11y addon; Storybook served on `pnpm --filter @verifyng/ui storybook` (port 6006) and built in CI.
-- [ ] T2 Primitives batch 1: Button, IconButton, Input, Textarea, Select, Checkbox, Switch, RadioGroup, Label, FormField/FormMessage, Badge, StatusChip, Skeleton, Kbd — each with a story and an axe test in Storybook test-runner.
-- [ ] T3 Primitives batch 2: Table, DataTable (TanStack Table; column defs, sorting, cursor pagination, row actions menu, empty state slot, sticky header, mobile card fallback), Dialog, ConfirmDialog, Sheet, Toast + provider, Tabs, PageHeader, Breadcrumbs, EmptyState, ProgressBar, CodeBlock.
-- [ ] T4 web-admin shell: root layout with providers (QueryClient, Toast, theme), `(console)/layout.tsx` with collapsible sidebar (drawer < 1024 px), topbar (tenant switcher, user menu, dark-mode toggle), breadcrumbs from route segments; `nav.config.ts` with all entries seeded and `section`/`order` rendering; role + platform-role filtering.
-- [ ] T5 Auth plumbing: `lib/api-client.ts`, zustand auth store, `/api/auth/session` route handlers (login/refresh/logout proxy setting the httpOnly refresh cookie), `middleware.ts` redirecting to `/login?next=`, silent refresh on 401 with single-flight lock, logout on refresh failure, `useTenantPath`.
-- [ ] T6 `(auth)` screens: `/login` (email + password, error states, "forgot?"), `/login/mfa` (6-digit TOTP with paste support + recovery-code toggle), `/forgot-password`, `/reset-password?token=`, `/set-password?token=` (invite); all built with the form conventions; brand mark + ivory background.
-- [ ] T7 Tenant switcher + status banner: lists `memberships` from `/auth/me`, switch calls `/auth/switch-tenant` then resets the QueryClient; single-membership users see the tenant name only; banner for `pending|in_review` ("Your business is under review") and `suspended` ("Console is read-only") using `GET /tenants/:id` when available.
-- [ ] T8 Route-group skeleton: every module page as `EmptyState` naming its epic and linking to `docs/epics/EXX`; `settings/layout.tsx` with sub-nav; `support/` layout gated on `platformRole=support` (404 otherwise); document the "replace the file, don't ask" rule in `docs/console.md`.
-- [ ] T9 TanStack Query + forms conventions: `lib/query.ts` (client, keys factory, `usePagedQuery`), `lib/forms.ts` (`Form`, `setServerErrors`), one reference implementation each used by `team/` so other epics copy a working example.
-- [ ] T10 `settings/security`: change password, MFA setup wizard (QR via `otpauthUri` → `qrcode.react`, code confirm, recovery codes download/copy), disable MFA, sessions list with "this device" + revoke / revoke-all — all over E02 routes.
-- [ ] T11 `team/`: members DataTable (name, email, role, joined), invite dialog (email + role), change-role inline select, remove with ConfirmDialog, last-owner error surfaced from E02's 409; register nav `organization.team` (`minRole: 'viewer'`, actions hidden below owner).
+- [ ] T1 `packages/ui` scaffold: Tailwind preset, `tokens.css` with the IVORY GLOW palette + semantic verdict colours + dark-mode values, `applyTenantTheme`, shadcn/ui init (Radix-based) with components generated into the package, tsup build, Storybook 8 with a11y addon; Storybook served on `pnpm --filter @verifyng/ui storybook` (port 6006) and built in CI. — done except Storybook itself (not scaffolded yet, see T0b).
+- [ ] T2 Primitives batch 1: Button, IconButton, Input, Textarea, Select, Checkbox, Switch, RadioGroup, Label, FormField/FormMessage, Badge, StatusChip, Skeleton, Kbd — each with a story and an axe test in Storybook test-runner. — components exist and are in use (team/settings-security); stories/axe tests still pending T0b/Storybook.
+- [ ] T3 Primitives batch 2: Table, DataTable (TanStack Table; column defs, sorting, cursor pagination, row actions menu, empty state slot, sticky header, mobile card fallback), Dialog, ConfirmDialog, Sheet, Toast + provider, Tabs, PageHeader, Breadcrumbs, EmptyState, ProgressBar, CodeBlock. — components exist and are in use; stories/axe tests still pending T0b/Storybook. Fixed two real defects found while using them: shadcn-default token names (bg-background, text-foreground, …) had no matching CSS variables (bridged in tokens.css), and Toast's exported prop type was missing `variant`.
+- [x] T4 web-admin shell: root layout with providers (QueryClient, Toast, theme), `(console)/layout.tsx` with collapsible sidebar (drawer < 1024 px), topbar (tenant switcher, user menu, dark-mode toggle), breadcrumbs from route segments; `nav.config.ts` with all entries seeded and `section`/`order` rendering; role + platform-role filtering.
+- [x] T5 Auth plumbing: `lib/api-client.ts`, zustand auth store, `/api/auth/session` route handlers (login/refresh/logout proxy setting the httpOnly refresh cookie), `middleware.ts` redirecting to `/login?next=`, silent refresh on 401 with single-flight lock, logout on refresh failure, `useTenantPath`. Also added `AuthBootstrap` (silent refresh on mount) so role/tenant state survives a full page reload, not just client-side navigation.
+- [x] T6 `(auth)` screens: `/login` (email + password, error states, "forgot?"), `/login/mfa` (6-digit TOTP with paste support + recovery-code toggle), `/forgot-password`, `/reset-password?token=`, `/set-password?token=` (invite); all built with the form conventions; brand mark + platform-default background (IVORY GLOW is a tenant theme, not the platform default — see Notes).
+- [x] T7 Tenant switcher + status banner: lists `memberships` from `/auth/me`, switch calls `/auth/switch-tenant` then resets the QueryClient; single-membership users see the tenant name only; banner for `pending|in_review` ("Your business is under review") and `suspended` ("Console is read-only") using `GET /tenants/:id` when available. Status banner is currently hardcoded to `active` pending E03's `GET /tenants/:id`.
+- [ ] T8 Route-group skeleton: every module page as `EmptyState` naming its epic and linking to `docs/epics/EXX`; `settings/layout.tsx` with sub-nav; `support/` layout gated on `platformRole=support` (404 otherwise); document the "replace the file, don't ask" rule in `docs/console.md`. — everything done except the `docs/console.md` rule itself (T13).
+- [x] T9 TanStack Query + forms conventions: `lib/query.ts` (client, keys factory, `usePagedQuery`), `lib/forms.ts` (`Form`, `setServerErrors`), one reference implementation each used by `team/` so other epics copy a working example. Added the `<Form>` wrapper (was missing from the WIP); file is now `lib/forms.tsx`.
+- [ ] T10 `settings/security`: change password, MFA setup wizard (QR via `otpauthUri` → `qrcode.react`, code confirm, recovery codes download/copy), disable MFA, sessions list with "this device" + revoke / revoke-all — all over E02 routes. — built and wired to the documented E02 interface (degrades to an error state until E02 ships real endpoints); recovery codes are shown in a `CodeBlock` but still need copy/download buttons.
+- [x] T11 `team/`: members DataTable (name, email, role, joined), invite dialog (email + role), change-role inline select, remove with ConfirmDialog, last-owner error surfaced from E02's 409; register nav `organization.team` (`minRole: 'viewer'`, actions hidden below owner). Built against the documented E02 interface; can't be exercised end-to-end until E02 ships (see AC5/AC6 notes below).
 - [ ] T12 Playwright: `playwright.config.ts` targeting `http://localhost:3001` (compose) with `webServer` off, `e2e/fixtures/index.ts` exporting `loginAs`, `expectNoA11yViolations`; specs: login happy/unhappy, MFA challenge, forgot→reset via Mailpit API (`http://localhost:8025/api/v1/messages`), tenant switch, role-aware nav (viewer sees no owner-only entries), every skeleton route renders without console errors and passes axe. Wire `pnpm --filter web-admin test:e2e` and `test:a11y` into CI (E21 owns the matrix; E11 adds the jobs).
 - [ ] T13 `docs/console.md`: how to add a module (route group + nav entry + query keys + isolation via `useTenantPath`), theming, component catalogue link, fixture usage, a11y rules (labels, focus order, contrast ≥ 4.5:1, no colour-only verdicts — pair icon + text).
 
@@ -160,9 +164,10 @@ None. Optional dev-only `storybook` is run from `pnpm`, not compose.
 ## Notes and decisions
 
 - **Refresh token in an httpOnly cookie via a Next route-handler proxy, access token in memory.** E02's API accepts the refresh token in the body; the browser must never hold it in JS-readable storage, so `/api/auth/session` on the Next server exchanges cookie ↔ body. Access tokens (15 min) stay in memory and are re-acquired on reload via one refresh call.
-- shadcn/ui components are generated *into* `packages/ui` (owned source, not a dependency) so tenant theming is done in one place via CSS variables; Radix primitives provide the a11y baseline.
+- shadcn/ui components are generated _into_ `packages/ui` (owned source, not a dependency) so tenant theming is done in one place via CSS variables; Radix primitives provide the a11y baseline.
 - The platform has its own identity (see `docs/design/`); IVORY GLOW is tenant #1's theme, shipped as the worked example of `applyTenantTheme` and as seed branding. `--vg-brand*` is what tenants override; verdict tokens are locked.
 - Design source of truth is `docs/design/foundations/`. E11's first task is to import the chosen direction's tokens into `packages/ui` and delete the other.
 - Verdict colours are semantic tokens shared with E09 so a consumer page and the console show the same green/amber/red/grey for the same verdict; never colour-only (icon + label always).
 - `EmptyState` placeholders are deliberately owned by E11 only until the owning epic's first PR; that PR replaces the file, no coordination needed. Nav entries are seeded by E11 so the information architecture is fixed in wave 1 and other epics only edit their own entry.
 - `team/` and `settings/security` are the exception to "E11 builds no business screens": they exercise every convention against real E02 routes and serve as the reference implementation other epics copy.
+- **2026-08-29 progress note:** the shell (T4–T7, T9, T11) is built and manually verified end-to-end in a browser (login → dashboard → team → settings/security → logout, viewer role-nav filtering, tenant switching with query-cache reset, mobile drawer) — see PR #36 for the full walkthrough and the bugs it caught (cookie path scoping broke the entire auth gate; auth store didn't rehydrate on reload; shadcn primitives referenced token names that didn't exist in `tokens.css`). Not yet done: Storybook (T0b/T1 tail/T2/T3 stories), `docs/console.md` (T13), Playwright fixtures/specs (T12), recovery-code copy/download buttons in T10. No acceptance criterion is ticked below yet — verification so far was via `pnpm start`, not a fresh-clone `docker compose up`, and Team/`settings/security` can't be functionally exercised past the "identity service unreachable" state until E02 ships real endpoints (AC3, AC5, AC6 depend on it).

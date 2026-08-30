@@ -130,9 +130,7 @@ export default function SignupPage() {
   const headers = useMemo(
     () => ({
       'content-type': 'application/json',
-      'x-user-id': 'development-user',
       'x-user-email': email || 'owner@local.verifyng',
-      ...(tenant ? { 'x-tenant-id': tenant.id } : {}),
     }),
     [email, tenant?.id],
   );

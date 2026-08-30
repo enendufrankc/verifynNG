@@ -1,6 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
+import type { Principal as AuthPrincipal } from '../modules/auth/types/principal';
+import { isApiClientPrincipal } from '../modules/auth/types/principal';
 
+/** E03's view of the caller, derived from E02's authenticated principal. */
 export interface Principal {
   userId: string;
   email?: string;
@@ -11,17 +14,23 @@ export interface Principal {
 
 export type PrincipalRequest = Request & { principal?: Principal };
 
+/**
+ * Adapts E02's `req.user` (set by TenantContextGuard) into `req.principal` for
+ * E03's TenantStatusGuard and controllers. Never reads request headers.
+ */
 @Injectable()
-export class PrincipalGuard implements CanActivate {
+export class PrincipalAdapterGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<PrincipalRequest>();
-    req.principal = {
-      userId: String(req.header('x-user-id') ?? 'development-user'),
-      email: req.header('x-user-email') ?? undefined,
-      tenantId: req.header('x-tenant-id') ?? undefined,
-      role: req.header('x-role') ?? 'owner',
-      platformRole: req.header('x-platform-role') ?? undefined,
-    };
+    const user = (req as Request & { user?: AuthPrincipal }).user;
+    if (user && !isApiClientPrincipal(user)) {
+      req.principal = {
+        userId: user.userId,
+        tenantId: user.tenantId || undefined,
+        role: user.role,
+        platformRole: user.platformRole,
+      };
+    }
     return true;
   }
 }

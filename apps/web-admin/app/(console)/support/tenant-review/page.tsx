@@ -44,8 +44,6 @@ export default function TenantReviewPage() {
         ...init,
         headers: {
           'content-type': 'application/json',
-          'x-platform-role': 'support',
-          'x-user-id': 'support-agent',
           ...init.headers,
         },
       }),

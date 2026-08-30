@@ -76,7 +76,7 @@ export class TenantLifecycleService {
         },
       });
       await tx.membership.upsert({
-        where: { tenantId_userId: { tenantId: created.id, userId: owner.id } },
+        where: { userId_tenantId: { userId: owner.id, tenantId: created.id } },
         update: { role: 'owner' },
         create: { tenantId: created.id, userId: owner.id, role: 'owner' },
       });

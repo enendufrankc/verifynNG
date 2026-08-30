@@ -1,0 +1,272 @@
+### E02 Identity & Access — REST Client / httpyac request collection
+### Run with the VS Code "REST Client" extension, or `npx httpyac send auth.http --all`.
+### Adjust @baseUrl / @apiPort to this worktree's port (see `scripts/epic ports E02` or `.env`).
+
+@baseUrl = http://localhost:4000
+@ownerEmail = owner@ivoryglow.local
+@operatorEmail = operator@ivoryglow.local
+@viewerEmail = viewer@ivoryglow.local
+@supportEmail = support@verifyng.local
+@devPassword = Passw0rd!Passw0rd!
+
+### Register a new user (creates the User only — E03 creates the tenant + owner membership)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "a@x.io",
+  "password": "Passw0rd!Passw0rd!",
+  "displayName": "A"
+}
+
+### Login as the seeded ivoryglow owner
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{ownerEmail}}",
+  "password": "{{devPassword}}"
+}
+
+### Login as the seeded operator
+# @name loginOperator
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{operatorEmail}}",
+  "password": "{{devPassword}}"
+}
+
+### Login as the seeded viewer
+# @name loginViewer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{viewerEmail}}",
+  "password": "{{devPassword}}"
+}
+
+### Login as platform support
+# @name loginSupport
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{supportEmail}}",
+  "password": "{{devPassword}}"
+}
+
+### Who am I — decode the access token's claims by hand:
+### echo '<accessToken>' | cut -d. -f2 | base64 -d | jq
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Refresh — rotates the refresh token; the OLD one becomes invalid immediately after
+# @name refresh
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.refreshToken}}"
+}
+
+### Replaying the OLD refresh token after the rotation above → 401 refresh_reuse_detected,
+### and revokes the whole session family.
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.refreshToken}}"
+}
+
+### Logout — revokes the current session
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh.response.body.refreshToken}}"
+}
+
+### List my active sessions/devices
+GET {{baseUrl}}/auth/sessions
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Revoke a specific session
+# DELETE {{baseUrl}}/auth/sessions/<sessionId>
+# Authorization: Bearer {{login.response.body.accessToken}}
+
+### Revoke every session except the current one
+DELETE {{baseUrl}}/auth/sessions
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### ── MFA ──────────────────────────────────────────────────
+
+### Set up MFA — returns a secret + otpauth:// URI + QR data URL
+# @name mfaSetup
+POST {{baseUrl}}/auth/mfa/setup
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Enable MFA — generate a code first: `oathtool --totp -b <secret>` or `npx otplib-cli totp <secret>`
+POST {{baseUrl}}/auth/mfa/enable
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+### Login again — now returns { mfaRequired: true, mfaToken } instead of tokens
+# @name loginWithMfa
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{ownerEmail}}",
+  "password": "{{devPassword}}"
+}
+
+### Complete the MFA challenge with a TOTP code
+POST {{baseUrl}}/auth/mfa/challenge
+Content-Type: application/json
+
+{
+  "mfaToken": "{{loginWithMfa.response.body.mfaToken}}",
+  "code": "123456"
+}
+
+### Complete the MFA challenge with a recovery code instead (single use — fails a second time)
+POST {{baseUrl}}/auth/mfa/challenge
+Content-Type: application/json
+
+{
+  "mfaToken": "{{loginWithMfa.response.body.mfaToken}}",
+  "recoveryCode": "AAAA-BBBB"
+}
+
+### Rotate recovery codes
+POST {{baseUrl}}/auth/mfa/recovery-codes/rotate
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "code": "123456"
+}
+
+### Disable MFA
+POST {{baseUrl}}/auth/mfa/disable
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "password": "{{devPassword}}",
+  "code": "123456"
+}
+
+### ── Password reset / change ──────────────────────────────
+
+### Forgot password — always 202, check Mailpit at http://localhost:8025 for the link
+POST {{baseUrl}}/auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "{{ownerEmail}}"
+}
+
+### Forgot password for a nonexistent email — also 202, no mail sent (no user enumeration)
+POST {{baseUrl}}/auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "nobody@x.io"
+}
+
+### Reset password with the token from the Mailpit email link (?token=...) — revokes all sessions
+POST {{baseUrl}}/auth/password/reset
+Content-Type: application/json
+
+{
+  "token": "<paste-from-mailpit>",
+  "newPassword": "NewPassw0rd!NewPassw0rd!"
+}
+
+### Change password while logged in — revokes all OTHER sessions, keeps the current one
+POST {{baseUrl}}/auth/password/change
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{devPassword}}",
+  "newPassword": "NewPassw0rd!NewPassw0rd!"
+}
+
+### ── Members (RBAC) ───────────────────────────────────────
+
+### List members of my tenant — any role (viewer+)
+GET {{baseUrl}}/tenants/{{login.response.body.user.tenantId}}/members
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Invite a new member — owner only
+POST {{baseUrl}}/tenants/{{login.response.body.user.tenantId}}/members/invite
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "email": "new@x.io",
+  "role": "operator"
+}
+
+### Same invite attempted by a viewer → 403
+POST {{baseUrl}}/tenants/{{loginViewer.response.body.user.tenantId}}/members/invite
+Authorization: Bearer {{loginViewer.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "email": "new2@x.io",
+  "role": "operator"
+}
+
+### Change a member's role — owner only
+# PATCH {{baseUrl}}/tenants/<tenantId>/members/<userId>
+# Authorization: Bearer {{login.response.body.accessToken}}
+# Content-Type: application/json
+#
+# { "role": "viewer" }
+
+### Remove a member — owner only (409 last_owner if they're the last owner)
+# DELETE {{baseUrl}}/tenants/<tenantId>/members/<userId>
+# Authorization: Bearer {{login.response.body.accessToken}}
+
+### Cross-tenant access — 404, not 403, and a spoofed header is ignored
+### (swap <other-tenant-id> for a real tenant this user is NOT a member of)
+# GET {{baseUrl}}/tenants/<other-tenant-id>/members
+# Authorization: Bearer {{login.response.body.accessToken}}
+# X-Tenant-Id: <other-tenant-id>
+
+### Support can read any tenant's members and it's logged as support.tenant.accessed
+### (check `docker compose logs api | grep support.tenant.accessed`)
+GET {{baseUrl}}/tenants/{{login.response.body.user.tenantId}}/members
+Authorization: Bearer {{loginSupport.response.body.accessToken}}
+
+### A non-support user calling the support-only internal endpoint → 403
+POST {{baseUrl}}/internal/api-clients
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{
+  "name": "should-fail",
+  "scopes": []
+}
+
+### ── Service-to-service auth ──────────────────────────────
+
+### Whoami as an internal ApiClient (use a raw key from INTERNAL_API_KEYS, e.g. the worker key)
+# GET {{baseUrl}}/internal/whoami
+# Authorization: Bearer vk_<prefix>_<secret>
+
+### A made-up key → 401
+GET {{baseUrl}}/internal/whoami
+Authorization: Bearer vk_00000000_0000000000000000000000000000000000000000000000000000000000000000

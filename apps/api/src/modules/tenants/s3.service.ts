@@ -19,7 +19,7 @@ export class TenantS3Service {
   private readonly publicClient: S3Client;
   private readonly bucket: string;
   constructor(config: ConfigService) {
-    this.bucket = config.get<string>('S3_BUCKET', 'verifyng');
+    this.bucket = config.get<string>('S3_BUCKET', 'verifynng');
     const credentials = {
       accessKeyId: config.get<string>('S3_ACCESS_KEY', 'minioadmin'),
       secretAccessKey: config.get<string>('S3_SECRET_KEY', 'minioadmin'),

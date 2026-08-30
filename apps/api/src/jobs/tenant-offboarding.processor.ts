@@ -5,10 +5,8 @@ import { prisma } from '@verifynng/db';
 import { TenantEventBus } from '../modules/tenants/tenant-events';
 import { TenantS3Service } from '../modules/tenants/s3.service';
 import { ndjson, exportRows } from '../modules/tenants/tenant-export.data';
-import {
-  RETENTION_POLICY,
-  RetentionPolicy,
-} from '../modules/tenants/retention-policy';
+import { RETENTION_POLICY } from '../modules/tenants/retention-policy';
+import type { RetentionPolicy } from '../modules/tenants/retention-policy';
 
 @Injectable()
 export class TenantOffboardingProcessor {
@@ -172,13 +170,24 @@ export class TenantOffboardingProcessor {
     const cutoff = new Date(
       Date.now() - this.retention.scanEventsDays * 86400000,
     );
-    await prisma.scanEvent.updateMany({
-      where: { tenantId, createdAt: { gte: cutoff } },
-      data: { unitId: null, ip: null, userAgent: null, geoCity: null },
-    });
-    await prisma.scanEvent.deleteMany({
-      where: { tenantId, createdAt: { lt: cutoff } },
-    });
+    // ScanEvent is append-only (E06 trigger). Offboarding/retention is the documented
+    // exception (docs/verification.md): lift the trigger only for this anonymise+purge step.
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "ScanEvent" DISABLE TRIGGER "scan_event_no_update"',
+    );
+    try {
+      await prisma.scanEvent.updateMany({
+        where: { tenantId, createdAt: { gte: cutoff } },
+        data: { unitId: null, ipHash: null, ipPrefix: null, userAgent: null, geoCity: null },
+      });
+      await prisma.scanEvent.deleteMany({
+        where: { tenantId, createdAt: { lt: cutoff } },
+      });
+    } finally {
+      await prisma.$executeRawUnsafe(
+        'ALTER TABLE "ScanEvent" ENABLE TRIGGER "scan_event_no_update"',
+      );
+    }
     await prisma.unit.deleteMany({ where: { tenantId } });
     await prisma.batch.deleteMany({ where: { tenantId } });
     await prisma.product.deleteMany({ where: { tenantId } });
