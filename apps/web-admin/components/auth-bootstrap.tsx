@@ -12,7 +12,10 @@ import { useAuthStore } from '@/lib/auth-store';
  */
 export function AuthBootstrap() {
   useEffect(() => {
-    if (useAuthStore.getState().accessToken) return;
+    if (useAuthStore.getState().accessToken) {
+      useAuthStore.getState().setBootstrapped();
+      return;
+    }
 
     (async () => {
       try {
@@ -36,6 +39,8 @@ export function AuthBootstrap() {
         }
       } catch {
         /* no valid session — middleware will redirect on next navigation */
+      } finally {
+        useAuthStore.getState().setBootstrapped();
       }
     })();
   }, []);

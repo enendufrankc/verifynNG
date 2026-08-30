@@ -172,6 +172,15 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+// ── E19 Compliance & Data Governance ─────────────────────────────
+const e19Schema = z.object({
+  CONSENT_SALT: z.string().default('dev-consent-salt'),
+  DSAR_EXPORT_TTL_HOURS: z.coerce.number().default(24),
+  RETENTION_CRON: z.string().default('0 2 * * *'),
+  RETENTION_DRY_RUN_DEFAULT: z.coerce.boolean().default(false),
+  DSAR_EXPORT_BUCKET: z.string().default('dsar-exports'),
+});
+
 // ── E07 Anomaly Detection & Unit Lifecycle ──────────────────────
 const e07Schema = z.object({
   ANOMALY_SWEEP_CRON: z.string().default('*/15 * * * *'),
@@ -186,6 +195,7 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .merge(e04Schema)
+  .merge(e19Schema)
   .merge(e07Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;

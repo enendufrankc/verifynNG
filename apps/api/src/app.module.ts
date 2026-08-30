@@ -28,6 +28,11 @@ import { EventsModule } from './common/events.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { BatchesModule } from './modules/batches/batches.module';
 import { BullMQModule } from './jobs/bullmq.module';
+import { LegalModule } from './modules/legal/legal.module';
+import { ConsentModule } from './modules/consent/consent.module';
+import { DsarModule } from './modules/dsar/dsar.module';
+import { RetentionModule } from './modules/retention/retention.module';
+import { IncidentsModule } from './modules/incidents/incidents.module';
 import { UnitsModule } from './modules/units/units.module';
 import { AnomalyModule } from './modules/anomaly/anomaly.module';
 
@@ -60,6 +65,11 @@ import { AnomalyModule } from './modules/anomaly/anomaly.module';
     CatalogModule,
     BullMQModule,
     BatchesModule,
+    LegalModule,
+    ConsentModule,
+    DsarModule,
+    RetentionModule,
+    IncidentsModule,
     UnitsModule,
     AnomalyModule,
   ],

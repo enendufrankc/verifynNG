@@ -90,6 +90,22 @@ const samples: { [T in TemplateId]: TemplateData[T] } = {
     message: 'Template smoke test',
     timestamp: '2026-08-29T00:00:00.000Z',
   },
+  'dsar.verify': {
+    verifyUrl: 'https://example.test/dsar/verify/token',
+    expiresIn: '30 minutes',
+  },
+  'dsar.ready': {
+    downloadUrl: 'https://example.test/dsar/download/token',
+    expiresIn: '24 hours',
+  },
+  'dsar.erased': {
+    requestedAt: '2026-08-29T00:00:00.000Z',
+  },
+  'legal.reaccept': {
+    documentTitle: 'Terms of Service',
+    version: '2026-09-01',
+    reacceptUrl: 'https://example.test/legal',
+  },
 };
 
 describe('TemplateRegistry', () => {

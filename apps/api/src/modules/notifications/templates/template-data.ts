@@ -12,7 +12,11 @@ export type TemplateId =
   | 'invoice.failed'
   | 'password.reset'
   | 'mfa.recovery'
-  | 'notification.test';
+  | 'notification.test'
+  | 'dsar.verify'
+  | 'dsar.ready'
+  | 'dsar.erased'
+  | 'legal.reaccept';
 
 // Branded types to reject keys named 'code' or 'tier2Code' at type level
 type NoCodeKeys<T> = {
@@ -107,6 +111,15 @@ export interface TemplateData {
   'notification.test': NoCodeKeys<{
     message: string;
     timestamp: string;
+  }>;
+  // ── E19 Compliance & Data Governance ──────────────────────────
+  'dsar.verify': NoCodeKeys<{ verifyUrl: string; expiresIn: string }>;
+  'dsar.ready': NoCodeKeys<{ downloadUrl: string; expiresIn: string }>;
+  'dsar.erased': NoCodeKeys<{ requestedAt: string }>;
+  'legal.reaccept': NoCodeKeys<{
+    documentTitle: string;
+    version: string;
+    reacceptUrl: string;
   }>;
 }
 
