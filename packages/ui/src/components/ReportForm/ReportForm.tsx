@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -14,6 +14,7 @@ import {
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { ProgressBar } from '../ui/progress-bar';
+import { StatusChip } from '../ui/status-chip';
 import { downscaleImage } from './downscale';
 import type { FormStep, PurchaseChannel, ReportFormProps } from './types';
 
@@ -51,6 +52,15 @@ export function ReportForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!captchaSiteKey) {
+      console.warn(
+        '[ReportForm] No captchaSiteKey provided — rendering the dev-only captcha bypass input. ' +
+          'A real tenant page (E09) must always pass captchaSiteKey; if this warning appears outside local dev/Storybook/tests, the public reporting form is unprotected.',
+      );
+    }
+  }, [captchaSiteKey]);
+
   async function uploadPhoto(file: File) {
     const blob = await downscaleImage(file);
     const contentType = file.type || 'image/jpeg';
@@ -68,11 +78,12 @@ export function ReportForm({
     );
     if (!upRes.ok) throw new Error('upload_url_failed');
     const { photoId, uploadUrl } = await upRes.json();
-    await fetch(uploadUrl, {
+    const putRes = await fetch(uploadUrl, {
       method: 'PUT',
       headers: { 'Content-Type': contentType },
       body: blob,
     });
+    if (!putRes.ok) throw new Error('photo_put_failed');
     setPhotos((prev) => [
       ...prev,
       { id: photoId, name: file.name, progress: 100 },
@@ -262,15 +273,27 @@ export function ReportForm({
                 data-sitekey={captchaSiteKey}
               />
             ) : (
-              <Input
-                id="captchaToken"
-                placeholder="ok-demo (dev captcha token)"
-                value={captchaToken}
-                onChange={(e) => setCaptchaToken(e.target.value)}
-              />
+              // Dev-only fallback — a real tenant page (E09) must always pass
+              // captchaSiteKey; omitting it here would ship an unprotected
+              // public form.
+              <div className="space-y-1">
+                <StatusChip variant="warning">
+                  Dev mode — captcha bypass
+                </StatusChip>
+                <Input
+                  id="captchaToken"
+                  placeholder="ok-demo (dev captcha token)"
+                  value={captchaToken}
+                  onChange={(e) => setCaptchaToken(e.target.value)}
+                />
+              </div>
             )}
           </div>
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep('photos')}>
               Back
