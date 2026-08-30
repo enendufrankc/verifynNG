@@ -56,6 +56,9 @@ describe('RetentionRunnerService with Postgres', () => {
   });
 
   function proxyPrisma() {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const prismaAny = prisma as any;
+    const testDbAny = testDb.prisma as any;
     for (const model of [
       'retentionRun',
       'session',
@@ -77,26 +80,20 @@ describe('RetentionRunnerService with Postgres', () => {
         'delete',
         'update',
       ] as const) {
-        const target = (
-          prisma as never as Record<string, Record<string, unknown>>
-        )[model];
-        if (typeof target[method] === 'function') {
-          vi.spyOn(target, method as never).mockImplementation(((args: never) =>
-            (
-              testDb.prisma as never as Record<
-                string,
-                Record<string, (a: never) => unknown>
-              >
-            )[model][method](args)) as never);
+        if (typeof prismaAny[model][method] === 'function') {
+          vi.spyOn(prismaAny[model], method).mockImplementation(
+            (args: unknown) => testDbAny[model][method](args),
+          );
         }
       }
     }
-    vi.spyOn(prisma, '$executeRawUnsafe').mockImplementation(((
-      ...args: never[]
-    ) =>
-      (testDb.prisma.$executeRawUnsafe as (...a: never[]) => unknown)(
-        ...args,
-      )) as never);
+    vi.spyOn(prisma, '$executeRawUnsafe').mockImplementation(
+      (...args: unknown[]) =>
+        (testDbAny.$executeRawUnsafe as (...a: unknown[]) => unknown)(
+          ...args,
+        ) as never,
+    );
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   }
 
   it('lists all 8 declared policies', () => {

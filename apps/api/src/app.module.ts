@@ -32,6 +32,7 @@ import { LegalModule } from './modules/legal/legal.module';
 import { ConsentModule } from './modules/consent/consent.module';
 import { DsarModule } from './modules/dsar/dsar.module';
 import { RetentionModule } from './modules/retention/retention.module';
+import { IncidentsModule } from './modules/incidents/incidents.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { RetentionModule } from './modules/retention/retention.module';
     ConsentModule,
     DsarModule,
     RetentionModule,
+    IncidentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },
