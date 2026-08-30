@@ -16,6 +16,10 @@ import { ReportsQueryService } from './reports-query.service';
 import { ReportsRetentionService } from './reports-retention.service';
 import { ReportsPublicController } from './reports-public.controller';
 import { ReportsAdminController } from './reports-admin.controller';
+import { ReportsDevController } from './reports-dev.controller';
+
+const devControllers =
+  process.env.NODE_ENV === 'production' ? [] : [ReportsDevController];
 
 @Module({
   imports: [ConfigModule, BullMQModule, NotificationsModule],
@@ -47,7 +51,11 @@ import { ReportsAdminController } from './reports-admin.controller';
     ReportsQueryService,
     ReportsRetentionService,
   ],
-  controllers: [ReportsPublicController, ReportsAdminController],
+  controllers: [
+    ReportsPublicController,
+    ReportsAdminController,
+    ...devControllers,
+  ],
   exports: [
     CAPTCHA_PORT,
     ReportsS3Service,
