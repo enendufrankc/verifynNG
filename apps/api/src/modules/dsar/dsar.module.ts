@@ -24,6 +24,6 @@ import { TenantsModule } from '../tenants/tenants.module';
     DsarProcessor,
     { provide: REPORT_LOOKUP_PORT, useClass: NullReportLookupAdapter },
   ],
-  exports: [LegalHoldService],
+  exports: [LegalHoldService, DsarStorageService],
 })
 export class DsarModule {}

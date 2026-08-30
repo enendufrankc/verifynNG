@@ -31,6 +31,7 @@ import { BullMQModule } from './jobs/bullmq.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { ConsentModule } from './modules/consent/consent.module';
 import { DsarModule } from './modules/dsar/dsar.module';
+import { RetentionModule } from './modules/retention/retention.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { DsarModule } from './modules/dsar/dsar.module';
     LegalModule,
     ConsentModule,
     DsarModule,
+    RetentionModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },
