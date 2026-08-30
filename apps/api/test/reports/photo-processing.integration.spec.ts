@@ -137,6 +137,51 @@ describe('photo processing (integration)', () => {
     expect(photo.rejectReason).toBe('magic_mismatch');
   });
 
+  it('rejects an image whose decoded pixel count exceeds the configured cap', async () => {
+    // A real decompression-bomb fixture (tiny file, huge declared dimensions)
+    // would itself require generating gigabytes of pixel data to construct.
+    // Instead we prove the mechanism: point a processor at a tiny
+    // REPORT_MAX_INPUT_PIXELS cap and confirm a completely ordinary image
+    // (which would exceed that artificially low cap) is rejected gracefully
+    // rather than throwing uncaught out of processPhoto.
+    const tenant = await makeTenant(prisma);
+    const buf = readFileSync(
+      resolve(__dirname, '../fixtures/photo-with-gps.jpg'),
+    );
+    const tinyLimitProcessor = new PhotoProcessor(
+      prisma,
+      s3,
+      fakeConfig({ REPORT_MAX_INPUT_PIXELS: 100 }),
+    );
+
+    const { photoId, uploadUrl } = await photos.requestUpload(
+      tenant.id,
+      'image/jpeg',
+      buf.length,
+      'iphash4',
+    );
+    await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/jpeg' },
+      body: buf,
+    });
+    await prisma.reportPhoto.update({
+      where: { id: photoId },
+      data: { status: 'uploaded' },
+    });
+
+    await tinyLimitProcessor.process({
+      name: 'photo.process',
+      data: { photoId },
+    } as never);
+
+    const photo = await prisma.reportPhoto.findUniqueOrThrow({
+      where: { id: photoId },
+    });
+    expect(photo.status).toBe('rejected');
+    expect(photo.rejectReason).toBe('processing_error');
+  });
+
   it('actually strips GPS/EXIF data — verify with exifr against the processed object', async () => {
     // Additional assertion beyond the base plan: read the processed object back from
     // MinIO and confirm exifr finds no GPS tags, proving metadata is stripped by

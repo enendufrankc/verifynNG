@@ -86,7 +86,19 @@ export class PhotoProcessor extends WorkerHost {
         decodable = Buffer.from(converted);
       }
 
-      const image = sharp(decodable).rotate();
+      // Caps decoded pixel count well above any real phone-camera photo but
+      // far below a memory-exhausting decompression bomb (a tiny file with an
+      // enormous declared width/height). The raw byte-size check above bounds
+      // compressed size only, not decoded dimensions — sharp throws once it
+      // parses headers and finds width*height over this limit, which the
+      // catch block below turns into a `rejected` photo.
+      const maxInputPixels = this.config.get<number>(
+        'REPORT_MAX_INPUT_PIXELS',
+        40_000_000,
+      );
+      const image = sharp(decodable, {
+        limitInputPixels: maxInputPixels,
+      }).rotate();
       const metadata = await image.metadata();
       const resized = image.resize({
         width: MAX_DIMENSION,
