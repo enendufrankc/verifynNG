@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@verifynng/db';
 import type { PolicyDocument, PolicyKind } from '@prisma/client';
+import { EventsService } from '../../common/events.service';
+import { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 
 /**
  * Public, URL-facing document kind. Distinct from the DB's PolicyKind enum
@@ -22,7 +24,7 @@ export const LEGAL_DOC_KINDS: readonly LegalDocKind[] = [
   'subprocessors',
 ];
 
-const KIND_TO_DB: Record<LegalDocKind, PolicyKind> = {
+export const KIND_TO_DB: Record<LegalDocKind, PolicyKind> = {
   privacy: 'privacy',
   terms: 'tos',
   aup: 'aup',
@@ -61,6 +63,11 @@ export interface PublishInput {
 
 @Injectable()
 export class LegalDocumentService {
+  constructor(
+    private readonly events: EventsService,
+    private readonly tenantLifecycle: TenantLifecycleService,
+  ) {}
+
   async current(kind: LegalDocKind, locale = 'en'): Promise<LegalDocumentDto> {
     const doc = await prisma.policyDocument.findFirst({
       where: {
@@ -99,7 +106,37 @@ export class LegalDocumentService {
         effectiveFrom: input.effectiveFrom ?? new Date(),
       },
     });
+    await this.events.emit('legal.document.published', {
+      kind: input.kind,
+      version: doc.version,
+      locale: doc.locale,
+      publishedAt: doc.effectiveFrom.toISOString(),
+    });
     return this.toDto(doc);
+  }
+
+  /**
+   * Only `terms`/`aup` require re-acceptance today — delegates to E03's
+   * TenantLifecycleService, which already tracks TenantAcceptance
+   * (PolicyAcceptance) rows, rather than duplicating that comparison here.
+   */
+  async needsReacceptance(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ kind: LegalDocKind; version: string }[]> {
+    const [pending, current] = await Promise.all([
+      this.tenantLifecycle.pendingAcceptances(userId, tenantId) as Promise<
+        ('aup' | 'tos')[]
+      >,
+      this.tenantLifecycle.currentVersions() as Promise<{
+        aup: string;
+        tos: string;
+      }>,
+    ]);
+    return pending.map((kind) => ({
+      kind: DB_TO_KIND[kind],
+      version: current[kind],
+    }));
   }
 
   private toDto(doc: PolicyDocument): LegalDocumentDto {

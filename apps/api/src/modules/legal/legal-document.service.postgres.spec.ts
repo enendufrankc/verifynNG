@@ -15,10 +15,19 @@ import {
   vi,
 } from 'vitest';
 import { LegalDocumentService } from './legal-document.service';
+import { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 
 describe('LegalDocumentService with Postgres', () => {
   let testDb: Awaited<ReturnType<typeof createTestDatabase>>;
-  const service = new LegalDocumentService();
+  const events = { emit: vi.fn() };
+  const tenantLifecycle = {
+    pendingAcceptances: vi.fn().mockResolvedValue([]),
+    currentVersions: vi.fn().mockResolvedValue({ aup: '', tos: '' }),
+  };
+  const service = new LegalDocumentService(
+    events as never,
+    tenantLifecycle as unknown as TenantLifecycleService,
+  );
 
   beforeAll(async () => {
     testDb = await createTestDatabase('legal-document');
@@ -144,5 +153,25 @@ describe('LegalDocumentService with Postgres', () => {
     expect(stored?.publishedById).toBe('user-support-1');
     expect(stored?.locale).toBe('en');
     expect(stored?.requiresReacceptance).toBe(false);
+    expect(events.emit).toHaveBeenCalledWith(
+      'legal.document.published',
+      expect.objectContaining({ kind: 'subprocessors', version: '1' }),
+    );
+  });
+
+  it('needsReacceptance() translates E03 pending tos/aup kinds to terms/aup with current versions', async () => {
+    proxyPrisma();
+    tenantLifecycle.pendingAcceptances.mockResolvedValueOnce(['tos']);
+    tenantLifecycle.currentVersions.mockResolvedValueOnce({
+      aup: '2026-08-01',
+      tos: '2026-09-01',
+    });
+
+    const pending = await service.needsReacceptance('tenant-1', 'user-1');
+    expect(pending).toEqual([{ kind: 'terms', version: '2026-09-01' }]);
+    expect(tenantLifecycle.pendingAcceptances).toHaveBeenCalledWith(
+      'user-1',
+      'tenant-1',
+    );
   });
 });
