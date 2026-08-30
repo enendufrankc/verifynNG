@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 
 import { MAILER } from './ports/mailer.port';
@@ -45,7 +44,13 @@ import { WebhooksService } from './webhooks/webhooks.service';
       inject: [ConfigService],
     }),
     BullModule.registerQueue({ name: 'notifications' }),
-    EventEmitterModule.forRoot(),
+    // No EventEmitterModule.forRoot() here: EventRouter must share the
+    // application's one global EventEmitter2 (registered by the host app —
+    // AppModule / WorkerModule) to see events other modules emit. This
+    // module previously registered its own private instance here, so
+    // EventRouter was listening on an EventEmitter2 nothing else could ever
+    // reach — no event routed through it (batch.minted, anomaly.detected,
+    // ...) ever actually delivered a notification.
   ],
   controllers: [NotificationsController, WebhooksController, DevController],
   providers: [

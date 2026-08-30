@@ -1,5 +1,5 @@
 generator client {
-  provider   = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
@@ -61,6 +61,7 @@ enum OemStatus {
   active
   suspended
 }
+
 // ── end E04 enums ─────────────────────────────────────────────
 
 // ─── E02 Identity & Access ────────────────────────────────────────
@@ -76,38 +77,38 @@ enum PlatformRole {
 }
 
 model Tenant {
-  id        String       @id @default(cuid())
-  slug      String       @unique
-  name      String
-  legalName String?
-  trademarkNumber String?
-  country String? @db.Char(2)
-  status    TenantStatus @default(pending)
-  statusReason String?
-  statusChangedAt DateTime?
-  verifiedAt DateTime?
-  suspendedAt DateTime?
-  offboardedAt DateTime?
-  scheduledDeletionAt DateTime?
-  branding Json?
-  supportEmail String?
-  websiteUrl String?
-  verifyRateLimitPerMin Int @default(600)   // E06: per-tenant verify rate limit
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id                    String       @id @default(cuid())
+  slug                  String       @unique
+  name                  String
+  legalName             String?
+  trademarkNumber       String?
+  country               String?      @db.Char(2)
+  status                TenantStatus @default(pending)
+  statusReason          String?
+  statusChangedAt       DateTime?
+  verifiedAt            DateTime?
+  suspendedAt           DateTime?
+  offboardedAt          DateTime?
+  scheduledDeletionAt   DateTime?
+  branding              Json?
+  supportEmail          String?
+  websiteUrl            String?
+  verifyRateLimitPerMin Int          @default(600) // E06: per-tenant verify rate limit
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
-  users      User[]
-  products   Product[]
-  oems       Oem[]
-  batches    Batch[]
-  units      Unit[]
-  scanEvents ScanEvent[]
-  auditLogs  AuditLog[]
+  users                 User[]
+  products              Product[]
+  oems                  Oem[]
+  batches               Batch[]
+  units                 Unit[]
+  scanEvents            ScanEvent[]
+  auditLogs             AuditLog[]
   verificationDocuments VerificationDocument[]
-  reviewNotes TenantReviewNote[]
-  policyAcceptances PolicyAcceptance[]
-  exports TenantExport[]
-  memberships Membership[] // E02
+  reviewNotes           TenantReviewNote[]
+  policyAcceptances     PolicyAcceptance[]
+  exports               TenantExport[]
+  memberships           Membership[] // E02
 }
 
 model User {
@@ -121,102 +122,106 @@ model User {
 
   // E02 Identity & Access fields
   mfaEnabled       Boolean       @default(false)
-  mfaSecret        String?       // base32, AES-GCM encrypted with MFA_ENC_KEY
-  recoveryCodes    String[]      // argon2 hashes of unused codes
+  mfaSecret        String? // base32, AES-GCM encrypted with MFA_ENC_KEY
+  recoveryCodes    String[] // argon2 hashes of unused codes
   platformRole     PlatformRole?
   lastLoginAt      DateTime?
   failedLoginCount Int           @default(0)
   lockedUntil      DateTime?
 
-  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
-  memberships       Membership[]
-  sessions          Session[]
+  tenant              Tenant?              @relation(fields: [tenantId], references: [id])
+  memberships         Membership[]
+  sessions            Session[]
   passwordResetTokens PasswordResetToken[]
 
   @@index([tenantId])
 }
 
-
 model VerificationDocument {
-  id String @id @default(cuid())
-  tenantId String
-  kind VerificationDocumentKind
-  status VerificationDocumentStatus @default(awaiting_upload)
-  objectKey String @unique
-  fileName String
+  id          String                     @id @default(cuid())
+  tenantId    String
+  kind        VerificationDocumentKind
+  status      VerificationDocumentStatus @default(awaiting_upload)
+  objectKey   String                     @unique
+  fileName    String
   contentType String
-  sizeBytes Int
-  uploadedBy String
-  reviewedBy String?
-  reviewNote String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sizeBytes   Int
+  uploadedBy  String
+  reviewedBy  String?
+  reviewNote  String?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, kind])
 }
 
 model TenantReviewNote {
-  id String @id @default(cuid())
-  tenantId String
-  authorId String
-  visibleToTenant Boolean @default(true)
-  body String
-  createdAt DateTime @default(now())
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  tenantId        String
+  authorId        String
+  visibleToTenant Boolean  @default(true)
+  body            String
+  createdAt       DateTime @default(now())
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, createdAt])
 }
 
 model PolicyDocument {
-  id String @id @default(cuid())
-  kind PolicyKind
-  version String
-  markdown String
+  id            String     @id @default(cuid())
+  kind          PolicyKind
+  version       String
+  markdown      String
   effectiveFrom DateTime
-  createdAt DateTime @default(now())
+  createdAt     DateTime   @default(now())
+
   @@unique([kind, version])
 }
 
 model PolicyAcceptance {
-  id String @id @default(cuid())
-  tenantId String
-  userId String
-  kind PolicyKind
-  version String
-  ipPrefix String?
-  userAgent String?
-  acceptedAt DateTime @default(now())
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  tenantId   String
+  userId     String
+  kind       PolicyKind
+  version    String
+  ipPrefix   String?
+  userAgent  String?
+  acceptedAt DateTime   @default(now())
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@unique([tenantId, kind, version])
   @@index([tenantId])
 }
 
 model TenantExport {
-  id String @id @default(cuid())
-  tenantId String
-  status String
-  objectKey String?
-  sizeBytes Int?
-  error String?
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  tenantId    String
+  status      String
+  objectKey   String?
+  sizeBytes   Int?
+  error       String?
+  createdAt   DateTime  @default(now())
   completedAt DateTime?
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
 }
 
 model Product {
-  id        String   @id @default(cuid())
-  tenantId  String
-  sku       String
-  name      String
-  gtin      String?
+  id             String    @id @default(cuid())
+  tenantId       String
+  sku            String
+  name           String
+  gtin           String?
   // ─── E04 ────────────────────────────────────────────────────
-  description   String?
-  category      String?
+  description    String?
+  category       String?
   imageObjectKey String?
-  archivedAt    DateTime?
-  updatedAt    DateTime  @updatedAt
+  archivedAt     DateTime?
+  updatedAt      DateTime  @updatedAt
   // ─── end E04 ────────────────────────────────────────────────
-  createdAt DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   batches Batch[]
@@ -227,20 +232,20 @@ model Product {
 }
 
 model Oem {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  country   String?
+  id           String    @id @default(cuid())
+  tenantId     String
+  name         String
+  country      String?
   // ─── E04 ────────────────────────────────────────────────────
-  status        OemStatus @default(active)
-  contactName   String?
-  contactEmail  String?
-  contactPhone  String?
-  address       String?
-  notes         String?
-  updatedAt     DateTime  @updatedAt
+  status       OemStatus @default(active)
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  address      String?
+  notes        String?
+  updatedAt    DateTime  @updatedAt
   // ─── end E04 ────────────────────────────────────────────────
-  createdAt DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   batches Batch[]
@@ -250,30 +255,34 @@ model Oem {
 }
 
 model Batch {
-  id        String   @id @default(cuid())
-  tenantId  String
-  productId String
-  oemId     String?
-  count     Int
+  id                String          @id @default(cuid())
+  tenantId          String
+  productId         String
+  oemId             String?
+  count             Int
   // ─── E04 ────────────────────────────────────────────────────
-  status          BatchStatus @default(minting)
-  idempotencyKey  String
-  requestedBy     String
-  note            String?
-  watermark       String
-  kid             String
-  mintedCount     Int       @default(0)
-  lastChunk       Int       @default(0)
-  jobId           String?
-  failedReason    String?
+  status            BatchStatus     @default(minting)
+  idempotencyKey    String
+  requestedBy       String
+  note              String?
+  watermark         String
+  kid               String
+  mintedCount       Int             @default(0)
+  lastChunk         Int             @default(0)
+  jobId             String?
+  failedReason      String?
   manifestObjectKey String?
-  manifestSha256  String?
-  exportsReadyAt  DateTime?
-  mintedAt        DateTime?
-  updatedAt       DateTime  @updatedAt
-  artefacts       BatchArtefact[]
+  manifestSha256    String?
+  exportsReadyAt    DateTime?
+  mintedAt          DateTime?
+  updatedAt         DateTime        @updatedAt
+  artefacts         BatchArtefact[]
+  // expectedShipDate: cross-epic field requested by E05 (writes it at delivery
+  // time) and E07 (reads it for the pre_reveal anomaly rule). Added by E07
+  // per the CROSS-EPIC-REQUESTS.md entry — see issues #5/#6.
+  expectedShipDate  DateTime?
   // ─── end E04 ────────────────────────────────────────────────
-  createdAt DateTime @default(now())
+  createdAt         DateTime        @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   product Product @relation(fields: [productId], references: [id])
@@ -293,8 +302,8 @@ model Unit {
   tier2Hash String    @unique
   state     UnitState @default(active)
   // ─── E04 ────────────────────────────────────────────────────
-  serial      Int
-  productId   String
+  serial    Int
+  productId String
   // ─── end E04 ────────────────────────────────────────────────
   createdAt DateTime  @default(now())
 
@@ -321,24 +330,24 @@ enum ScanSource {
 }
 
 model ScanEvent {
-  id         String     @id @default(cuid())
-  tenantId   String
-  unitId     String?
-  tier       ScanTier
-  verdict    String
-  batchId    String?
-  productId  String?
-  source     ScanSource  @default(qr)
+  id           String     @id @default(cuid())
+  tenantId     String
+  unitId       String?
+  tier         ScanTier
+  verdict      String
+  batchId      String?
+  productId    String?
+  source       ScanSource @default(qr)
   codeRedacted String
-  ipHash     String?
-  ipPrefix   String?
-  geoCountry String?    @db.Char(2)
-  geoRegion  String?
-  geoCity    String?
-  deviceClass String?
-  userAgent  String?
-  latencyMs  Int?
-  createdAt  DateTime   @default(now())
+  ipHash       String?
+  ipPrefix     String?
+  geoCountry   String?    @db.Char(2)
+  geoRegion    String?
+  geoCity      String?
+  deviceClass  String?
+  userAgent    String?
+  latencyMs    Int?
+  createdAt    DateTime   @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   unit   Unit?  @relation(fields: [unitId], references: [id])
@@ -368,17 +377,17 @@ model Membership {
 model Session {
   id               String    @id @default(cuid())
   userId           String
-  tenantId         String?            // active tenant at issue time
+  tenantId         String? // active tenant at issue time
   refreshTokenHash String    @unique // hashForStorage(rawToken); rotated on every /auth/refresh
-  familyId         String            // stable across rotations; reuse of superseded hash revokes the family
+  familyId         String // stable across rotations; reuse of superseded hash revokes the family
   userAgent        String?
-  ipPrefix         String?           // /24 or /48 truncated per E19
+  ipPrefix         String? // /24 or /48 truncated per E19
   createdAt        DateTime  @default(now())
   lastSeenAt       DateTime  @default(now())
   expiresAt        DateTime
   revokedAt        DateTime?
   revokedReason    String?
-  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@index([familyId])
@@ -388,7 +397,7 @@ model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
   tokenHash String    @unique
-  expiresAt DateTime                     // 30 min
+  expiresAt DateTime // 30 min
   usedAt    DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -398,10 +407,10 @@ model PasswordResetToken {
 
 model ApiClient {
   id         String    @id @default(cuid())
-  tenantId   String?                     // null = platform-level (jobs, fakes)
+  tenantId   String? // null = platform-level (jobs, fakes)
   name       String
-  keyHash    String    @unique          // hashForStorage(rawKey); rawKey shown once
-  keyPrefix  String                      // first 8 chars for display
+  keyHash    String    @unique // hashForStorage(rawKey); rawKey shown once
+  keyPrefix  String // first 8 chars for display
   scopes     String[]
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
@@ -422,12 +431,12 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   // E13 — AuditLog extensions
-  seq          BigInt          @unique @default(autoincrement())
-  actorType    AuditActorType  @default(user)
-  actorIp      String?
-  requestId    String?
-  targetType   String          @default("")
-  targetId     String          @default("")
+  seq        BigInt         @unique @default(autoincrement())
+  actorType  AuditActorType @default(user)
+  actorIp    String?
+  requestId  String?
+  targetType String         @default("")
+  targetId   String         @default("")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
@@ -514,7 +523,7 @@ enum SenderVerification {
 }
 
 model NotificationOutbox {
-  id                String              @id @default(cuid())
+  id                String                      @id @default(cuid())
   tenantId          String?
   templateId        String
   channel           NotificationChannel
@@ -522,15 +531,15 @@ model NotificationOutbox {
   recipientUserId   String?
   data              Json
   renderedSubject   String?
-  idempotencyKey    String              @unique
-  status            OutboxStatus        @default(queued)
-  attempts          Int                 @default(0)
+  idempotencyKey    String                      @unique
+  status            OutboxStatus                @default(queued)
+  attempts          Int                         @default(0)
   lastError         String?
   providerMessageId String?
-  scheduledAt       DateTime            @default(now())
+  scheduledAt       DateTime                    @default(now())
   sentAt            DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
   events            NotificationDeliveryEvent[]
 
   @@index([tenantId, createdAt])
@@ -539,11 +548,11 @@ model NotificationOutbox {
 }
 
 model NotificationDeliveryEvent {
-  id              String             @id @default(cuid())
+  id              String            @id @default(cuid())
   outboxId        String
   type            DeliveryEventType
   providerPayload Json?
-  createdAt       DateTime           @default(now())
+  createdAt       DateTime          @default(now())
 
   outbox NotificationOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
 
@@ -566,29 +575,29 @@ model NotificationRoutingRule {
 }
 
 model NotificationSuppression {
-  id        String             @id @default(cuid())
+  id        String              @id @default(cuid())
   tenantId  String?
   channel   NotificationChannel
   recipient String
   reason    SuppressionReason
   source    String
-  createdAt DateTime           @default(now())
+  createdAt DateTime            @default(now())
 
   @@unique([channel, recipient])
 }
 
 model TenantSenderIdentity {
-  id                 String             @id @default(cuid())
+  id                 String              @id @default(cuid())
   tenantId           String
   channel            NotificationChannel
   fromName           String
   fromAddress        String
   replyTo            String?
   domain             String?
-  verificationStatus SenderVerification @default(pending)
+  verificationStatus SenderVerification  @default(pending)
   dnsRecords         Json?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@unique([tenantId, channel])
 }
@@ -620,19 +629,20 @@ model StatusDaily {
 
 // ── E04 Catalog & Minting ───────────────────────────────────────
 model BatchArtefact {
-  id          String   @id @default(cuid())
-  tenantId    String
-  batchId     String
-  kind        String
-  objectKey   String
-  sizeBytes   Int
-  sha256      String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  tenantId  String
+  batchId   String
+  kind      String
+  objectKey String
+  sizeBytes Int
+  sha256    String
+  createdAt DateTime @default(now())
 
   batch Batch @relation(fields: [batchId], references: [id])
 
   @@unique([batchId, kind])
 }
+
 // ── end E04 models ────────────────────────────────────────────
 
 // ─── E06 ───────────────────────────────────────────────────────────────
@@ -641,10 +651,77 @@ model IpBlock {
   id           String   @id @default(cuid())
   ipHash       String
   tenantSlug   String?
-  reason       String   // enumeration
+  reason       String // enumeration
   invalidCount Int
   expiresAt    DateTime
   createdAt    DateTime @default(now())
 
   @@index([ipHash, expiresAt])
 }
+
+// ── E07 Anomaly Detection & Unit Lifecycle ──────────────────────
+enum AnomalyStatus {
+  open
+  acknowledged
+  resolved
+  dismissed
+}
+
+model Anomaly {
+  id           String        @id @default(cuid())
+  tenantId     String
+  rule         String
+  unitId       String?
+  batchId      String?
+  score        Int
+  // { scans: [{ scanEventId, at, city, country }], thresholds, computed: {...} }
+  // Never raw IPs or coordinates.
+  evidence     Json
+  status       AnomalyStatus @default(open)
+  dedupeKey    String        @unique
+  assignedToId String?
+  note         String?
+  firstSeenAt  DateTime      @default(now())
+  lastSeenAt   DateTime      @default(now())
+  lastAlertAt  DateTime?
+  resolvedAt   DateTime?
+  resolvedById String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([tenantId, status, score])
+  @@index([tenantId, rule, createdAt])
+  @@index([unitId])
+  @@index([batchId])
+}
+
+model AnomalyRuleConfig {
+  id         String   @id @default(cuid())
+  tenantId   String
+  rule       String
+  enabled    Boolean  @default(true)
+  thresholds Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, rule])
+}
+
+model UnitStateTransition {
+  id          String   @id @default(cuid())
+  tenantId    String
+  unitId      String
+  fromState   String
+  toState     String
+  reason      String
+  actorType   String
+  actorId     String?
+  anomalyId   String?
+  recallJobId String?
+  createdAt   DateTime @default(now())
+
+  @@index([unitId, createdAt])
+  @@index([tenantId, createdAt])
+}
+
+// ── end E07 models ────────────────────────────────────────────

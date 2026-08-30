@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -208,7 +209,15 @@ export default function BatchDetailPage() {
           </div>
 
           <div className="space-y-3">
-            <h2 className="text-sm font-medium">Units</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium">Units</h2>
+              <Link
+                href={`/units/batch/${batchId}`}
+                className="text-brand text-sm hover:underline"
+              >
+                Units &amp; recall (E07) →
+              </Link>
+            </div>
             <DataTable
               columns={columns}
               data={unitsQuery.data ?? []}

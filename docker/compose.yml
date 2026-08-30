@@ -158,7 +158,14 @@ services:
       MANIFEST_ENC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       VERIFY_BASE_URL: http://localhost:3000
       WORKER: 'false'
-      WORKER_INLINE: 'true'
+      # false: the dedicated api-worker service below consumes queues instead.
+      # Both containers running BullMQ workers on the same queues races two
+      # workers over the same jobs (visible as "could not renew lock" /
+      # "Lock mismatch" errors) and — since @nestjs/event-emitter is
+      # in-process only — silently drops any domain event a job emits when
+      # api-worker (not api) happens to grab that job, e.g. anomaly.detected
+      # never reaching E14's EventRouter (which only runs in api's AppModule).
+      WORKER_INLINE: 'false'
       OFFBOARDING_GRACE_DAYS: ${OFFBOARDING_GRACE_DAYS:-30}
       CORS_ORIGINS_ADMIN: http://localhost:${WEB_ADMIN_PORT:-3001}
       CORS_ORIGINS_VERIFY: http://localhost:${WEB_VERIFY_PORT:-3000}

@@ -1,0 +1,37 @@
+{
+  "geo_dispersion": {
+    "trigger": "both",
+    "defaults": { "distinctCities": 3, "windowDays": 7 },
+    "score": 60,
+    "autoFlagAt": 60,
+    "description": "A single unit's tier-2 code was scanned from too many distinct cities within the window — the physical item can't be in all of them, so counterfeit copies are likely circulating."
+  },
+  "velocity": {
+    "trigger": "event",
+    "defaults": { "distinctUnits": 25, "windowMinutes": 10 },
+    "score": 40,
+    "autoFlagAt": 80,
+    "description": "One source IP verified an unusually high number of distinct units in a short window — consistent with a scraper or bulk-verification script. Never auto-flags a unit (there is no single unit to flag); a human reviews and, if warranted, recalls the batch."
+  },
+  "dead_code": {
+    "trigger": "both",
+    "defaults": {},
+    "score": 70,
+    "autoFlagAt": 70,
+    "description": "A tier-2 code was verified while its batch is not yet shipped (status outside shipped/closed) — the code shouldn't be reachable by a consumer yet."
+  },
+  "pre_reveal": {
+    "trigger": "event",
+    "defaults": { "graceDays": 0 },
+    "score": 50,
+    "autoFlagAt": 100,
+    "description": "A tier-2 code was verified before the batch's expected ship date — alert-only, since legitimate early handling (photography, QA) is common and a unit shouldn't be auto-flagged for it."
+  },
+  "duplicate_first": {
+    "trigger": "event",
+    "defaults": { "windowMinutes": 30, "minDistanceKm": 200 },
+    "score": 80,
+    "autoFlagAt": 80,
+    "description": "The same unit's tier-2 code was verified twice within a short window from cities too far apart to be the same physical scan — a strong counterfeit signal."
+  }
+}
