@@ -19,6 +19,7 @@ export class BatchesController {
   ) {}
 
   @Get()
+  @Roles('viewer')
   list(
     @TenantId() tenantId: string,
     @Query('status') status?: string,
@@ -29,6 +30,7 @@ export class BatchesController {
   }
 
   @Post()
+  @Roles('owner')
   async create(
     @TenantId() tenantId: string,
     @Body() dto: CreateBatchDto,
@@ -51,11 +53,13 @@ export class BatchesController {
   }
 
   @Get(':batchId')
+  @Roles('viewer')
   get(@TenantId() tenantId: string, @Param('batchId') batchId: string) {
     return this.batchesService.get(tenantId, batchId);
   }
 
   @Get(':batchId/units')
+  @Roles('viewer')
   getUnits(
     @TenantId() tenantId: string,
     @Param('batchId') batchId: string,
