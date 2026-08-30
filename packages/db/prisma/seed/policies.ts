@@ -2,7 +2,9 @@ import type { PrismaClient } from '@prisma/client';
 
 export async function seedPolicies(prisma: PrismaClient): Promise<void> {
   await prisma.policyDocument.upsert({
-    where: { kind_version: { kind: 'aup', version: '2026-08-01' } },
+    where: {
+      kind_locale_version: { kind: 'aup', locale: 'en', version: '2026-08-01' },
+    },
     update: {},
     create: {
       kind: 'aup',
@@ -13,7 +15,9 @@ export async function seedPolicies(prisma: PrismaClient): Promise<void> {
     },
   });
   await prisma.policyDocument.upsert({
-    where: { kind_version: { kind: 'tos', version: '2026-08-01' } },
+    where: {
+      kind_locale_version: { kind: 'tos', locale: 'en', version: '2026-08-01' },
+    },
     update: {},
     create: {
       kind: 'tos',

@@ -1,10 +1,11 @@
 import {
   PrismaClient,
-  type TenantRole,
   type NotificationChannel,
+  type TenantRole,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { seedPolicies } from './seed/policies';
+import { seedLegalDocuments } from './seed/legal-documents';
 import { seedAnalyticsFixtures } from './seed/e12-analytics-fixtures';
 
 const prisma = new PrismaClient();
@@ -37,9 +38,16 @@ async function upsertMember(
 
 async function main() {
   await seedPolicies(prisma);
+  await seedLegalDocuments(prisma);
   if (process.argv.includes('--policies-bump')) {
     await prisma.policyDocument.upsert({
-      where: { kind_version: { kind: 'tos', version: '2026-09-01' } },
+      where: {
+        kind_locale_version: {
+          kind: 'tos',
+          locale: 'en',
+          version: '2026-09-01',
+        },
+      },
       update: {},
       create: {
         kind: 'tos',

@@ -44,10 +44,13 @@ import { WebhooksService } from './webhooks/webhooks.service';
       inject: [ConfigService],
     }),
     BullModule.registerQueue({ name: 'notifications' }),
-    // Not EventEmitterModule.forRoot() here — see the note in app.module.ts;
-    // it's called exactly once app-wide, in common/events.module.ts. This
-    // module's own EventRouter injects EventEmitter2 directly and was
-    // silently never receiving events while this called forRoot() again.
+    // No EventEmitterModule.forRoot() here: EventRouter must share the
+    // application's one global EventEmitter2 (registered by the host app —
+    // AppModule / WorkerModule) to see events other modules emit. This
+    // module previously registered its own private instance here, so
+    // EventRouter was listening on an EventEmitter2 nothing else could ever
+    // reach — no event routed through it (batch.minted, anomaly.detected,
+    // ...) ever actually delivered a notification.
   ],
   controllers: [NotificationsController, WebhooksController, DevController],
   providers: [
