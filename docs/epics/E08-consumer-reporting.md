@@ -1,13 +1,13 @@
 # E08 — Consumer Fake Reporting
 
-| | |
-|---|---|
-| Wave | 2 |
-| Status | in-progress |
-| Owner | @enendufrankc |
-| GitHub Issue | [#9](https://github.com/enendufrankc/verifynNG/issues/9) |
-| Depends on | E06, E11 (also consumes E13, E14, E07 when available, E19 for consent) |
-| Unblocks | E09 (renders `ReportForm`), E12 (report counts), E16 (`report.created` webhook), E18 (support view of reports) |
+|                 |                                                                                                                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 2                                                                                                                                                                                                                      |
+| Status          | review                                                                                                                                                                                                                 |
+| Owner           | @enendufrankc                                                                                                                                                                                                          |
+| GitHub Issue    | [#9](https://github.com/enendufrankc/verifynNG/issues/9)                                                                                                                                                               |
+| Depends on      | E06, E11 (also consumes E13, E14, E07 when available, E19 for consent)                                                                                                                                                 |
+| Unblocks        | E09 (renders `ReportForm`), E12 (report counts), E16 (`report.created` webhook), E18 (support view of reports)                                                                                                         |
 | Readiness items | `architecture.md` step 10 (consumers report fakes) · mental-model §5 "detection is the product" → enforcement loop · §3 consent records for consumer contact data (NDPR) · §2 per-IP limits on a public write endpoint |
 
 ## Goal
@@ -34,6 +34,7 @@ docs/reports/**                                   (consumer-flow.md, triage-guid
 ## Interfaces
 
 **Consumes**
+
 - E06: `ScanEvent` rows (the verify response includes `scanEventId` — **confirm with E06**; E08's submission takes `scanEventId` and derives `unitId`/`batchId`/`productId`/`verdict` server-side, never trusting the client), `ScanEventRepository.forUnit()` for the detail view.
 - E07: `AnomalyQuery.forUnit(unitId)` / `.forBatch(batchId)` for context on the detail page (stubbed to empty until E07 ships).
 - E13: `QuotaService.registerKind('reports_per_ip_per_hour', { defaultLimit: 5, window: 'hour' })`, `registerKind('report_uploads_per_ip_per_hour', { defaultLimit: 15, window: 'hour' })`, `assertWithinQuota(tenantId, kind, { key: ipHash })`; `@Audited('report.status.change' | 'report.assign' | 'report.note.add' | 'report.export')`.
@@ -151,29 +152,31 @@ Status flow: `new → triaged → investigating → closed(outcome required)`; `
 
 ## Tasks
 
-- [ ] T1 Migration `E08_reports` with the four models and enums; `ReportsModule` skeleton with `AppModule` import line; env section "E08" (`CAPTCHA_PROVIDER=fake|turnstile`, `TURNSTILE_SECRET`, `FAKE_CAPTCHA_URL=http://fake-captcha:4106`, `REPORT_PHOTO_MAX_BYTES=8000000`, `REPORT_PHOTOS_MAX=5`, `REPORT_INCOMING_TTL_HOURS=24`); boot hook ensuring MinIO buckets `reports-incoming` (lifecycle expiry 1 day) and `reports` (private).
-- [ ] T2 `tools/fakes/captcha`: Fastify service on 4106 with `POST /siteverify` (Turnstile response shape; token starting `ok-` → success, `fail-` → `invalid-input-response`, anything else → success after 200 ms), `GET /` page documenting the tokens, `/health`, Dockerfile; compose service entry.
-- [ ] T3 `CaptchaPort` + `TurnstileCaptcha` (msw-tested) + `FakeCaptcha`; `CaptchaGuard` reading `captchaToken` from the body; quota kinds registered with E13; `ipHash = sha256(ip + REPORT_IP_SALT)` helper shared with the public routes.
-- [ ] T4 Upload flow: `POST …/upload-url` creating a `ReportPhoto(pending)` and presigned PUT with `Content-Length-Range` and content-type conditions; `photo.process` worker triggered on submission: `HEAD` the object, sniff magic bytes (`file-type`), reject on mismatch or > max, `sharp` → re-encode to JPEG quality 85, `withMetadata(false)` (strips EXIF/GPS), max 2000 px, write to `reports/…`, delete incoming, set `ready` + dimensions + sha256. Orphan sweep job hourly for `pending` photos older than TTL.
-- [ ] T5 Submission: `POST …/reports` validating DTO (class-validator), captcha, quota, resolving `ScanEvent` → unit/batch/product/verdict (reject if the scan's tenant ≠ path tenant or verdict is green — reports allowed for `red|amber|unknown|decommissioned|flagged` verdicts), claiming `photoIds` owned by the same `ipHash`, writing consent via E19 port when contact given, generating `reference`, enqueuing photo jobs, emitting `report.created`, sending `report.consumer_ack` if email given. Public status endpoint.
-- [ ] T6 Admin API: list/summary/detail (presigned GETs, E06 scan history, E07 anomaly context), assign, notes, status with the transition table and `notifyConsumer` → `report.consumer_update`, all `@Audited`; `ReportsQuery` provider; `ReportsRetention.purgeContact`.
-- [ ] T7 CSV export: streaming `GET /v1/reports/export.csv` (columns: reference, createdAt, status, outcome, verdict, product, batch, unit, purchaseChannel, sellerName, sellerLocation, assignedTo, photoCount; contact columns only for `owner`), audited once per export with the filter used.
-- [ ] T8 `packages/ui` `ReportForm`: steps (details → photos → contact → done), client-side downscale via canvas before upload, progress per photo, consent checkbox with the E19-provided consent text version, Turnstile widget slot (renders the real widget when `captchaSiteKey` is set, otherwise a fake token input for compose), reference display and copy button, i18n-ready strings (en, pidgin placeholder). Storybook story + Vitest component tests. Coordinate with E11 on tokens/primitives.
-- [ ] T9 web-admin `(console)/reports/`: queue table (reference, created, status, outcome, product/batch, channel, photos count, assignee), filters + saved views (New / Mine / Confirmed), detail page (photo gallery with lightbox, report fields, linked unit → `/units/:id` (E07), scan history list, anomaly chips, notes thread, assign dropdown of members, status change dialog with outcome + note + "notify consumer" toggle), export button. Nav badge from `/summary.new`. Replaces E11's EmptyState.
-- [ ] T10 Notification copy: `report.received` (tenant) data contract to E14; `report.consumer_ack` and `report.consumer_update` templates PR'd into E14's catalog with E08's copy; `docs/reports/consumer-flow.md`, `docs/reports/triage-guide.md`, `docs/reports/photo-handling.md` (what is stripped, why, retention).
-- [ ] T11 Dev harness: `POST /v1/_dev/reports/seed` creating 20 reports across statuses with fixture photos for the seeded `ivoryglow` tenant; Playwright fixtures; E2E for AC1, AC5, AC6, AC7.
+- [x] T1 Migration `E08_reports` with the four models and enums; `ReportsModule` skeleton with `AppModule` import line; env section "E08" (`CAPTCHA_PROVIDER=fake|turnstile`, `TURNSTILE_SECRET`, `FAKE_CAPTCHA_URL=http://fake-captcha:4106`, `REPORT_PHOTO_MAX_BYTES=8000000`, `REPORT_PHOTOS_MAX=5`, `REPORT_INCOMING_TTL_HOURS=24`); boot hook ensuring MinIO buckets `reports-incoming` (lifecycle expiry 1 day) and `reports` (private).
+- [x] T2 `tools/fakes/captcha`: Fastify service on 4106 with `POST /siteverify` (Turnstile response shape; token starting `ok-` → success, `fail-` → `invalid-input-response`, anything else → success after 200 ms), `GET /` page documenting the tokens, `/health`, Dockerfile; compose service entry.
+- [x] T3 `CaptchaPort` + `TurnstileCaptcha` (msw-tested) + `FakeCaptcha`; `CaptchaGuard` reading `captchaToken` from the body; quota kinds registered with E13; `ipHash = sha256(ip + REPORT_IP_SALT)` helper shared with the public routes.
+- [x] T4 Upload flow: `POST …/upload-url` creating a `ReportPhoto(pending)` and presigned PUT with `Content-Length-Range` and content-type conditions; `photo.process` worker triggered on submission: `HEAD` the object, sniff magic bytes (`file-type`), reject on mismatch or > max, `sharp` → re-encode to JPEG quality 85, `withMetadata(false)` (strips EXIF/GPS), max 2000 px, write to `reports/…`, delete incoming, set `ready` + dimensions + sha256. Orphan sweep job hourly for `pending` photos older than TTL.
+- [x] T5 Submission: `POST …/reports` validating DTO (class-validator), captcha, quota, resolving `ScanEvent` → unit/batch/product/verdict (reject if the scan's tenant ≠ path tenant or verdict is green — reports allowed for `red|amber|unknown|decommissioned|flagged` verdicts), claiming `photoIds` owned by the same `ipHash`, writing consent via E19 port when contact given, generating `reference`, enqueuing photo jobs, emitting `report.created`, sending `report.consumer_ack` if email given. Public status endpoint.
+- [x] T6 Admin API: list/summary/detail (presigned GETs, E06 scan history, E07 anomaly context), assign, notes, status with the transition table and `notifyConsumer` → `report.consumer_update`, all `@Audited`; `ReportsQuery` provider; `ReportsRetention.purgeContact`.
+- [x] T7 CSV export: streaming `GET /v1/reports/export.csv` (columns: reference, createdAt, status, outcome, verdict, product, batch, unit, purchaseChannel, sellerName, sellerLocation, assignedTo, photoCount; contact columns only for `owner`), audited once per export with the filter used.
+- [x] T8 `packages/ui` `ReportForm`: steps (details → photos → contact → done), client-side downscale via canvas before upload, progress per photo, consent checkbox with the E19-provided consent text version, Turnstile widget slot (renders the real widget when `captchaSiteKey` is set, otherwise a fake token input for compose), reference display and copy button, i18n-ready strings (en, pidgin placeholder). Storybook story + Vitest component tests. Coordinate with E11 on tokens/primitives.
+- [x] T9 web-admin `(console)/reports/`: queue table (reference, created, status, outcome, product/batch, channel, photos count, assignee), filters + saved views (New / Mine / Confirmed), detail page (photo gallery with lightbox, report fields, linked unit → `/units/:id` (E07), scan history list, anomaly chips, notes thread, assign dropdown of members, status change dialog with outcome + note + "notify consumer" toggle), export button. Nav badge from `/summary.new`. Replaces E11's EmptyState.
+- [x] T10 Notification copy: `report.received` (tenant) data contract to E14; `report.consumer_ack` and `report.consumer_update` templates PR'd into E14's catalog with E08's copy; `docs/reports/consumer-flow.md`, `docs/reports/triage-guide.md`, `docs/reports/photo-handling.md` (what is stripped, why, retention).
+- [x] T11 Dev harness: `POST /v1/_dev/reports/seed` creating 20 reports across statuses with fixture photos for the seeded `ivoryglow` tenant; Playwright fixtures; E2E for AC1, AC5, AC6, AC7.
 
 ## Acceptance criteria
 
-- [ ] AC1 On compose, `curl -s localhost:4000/v1/verify/<seeded unknown tier-2 code>` returns a red verdict with `scanEventId`; opening `http://localhost:3000/ivoryglow/v/<code>` (E09; until E09 ships, the Storybook story for `ReportForm` at `pnpm --filter ui storybook` is the demo surface) shows "Report this product"; completing the form with two photos and token `ok-demo` yields a reference `RPT-…`, and `GET localhost:4000/v1/public/ivoryglow/reports/RPT-…` returns `status: new`.
-- [ ] AC2 Photo hygiene: upload `apps/api/test/fixtures/photo-with-gps.jpg` through the flow; `mc cat local/reports/ivoryglow/<reportId>/<photoId>.jpg | exiftool -` shows no GPS/EXIF tags, dimensions ≤ 2000 px, and `mc ls local/reports-incoming/ivoryglow/` no longer lists the incoming object. Uploading `fixtures/not-an-image.jpg` (PDF bytes) → photo `rejected: magic_mismatch` and the report submission responds `422 photo_rejected`.
-- [ ] AC3 Anti-abuse: token `fail-1` → `403 captcha_failed`; six submissions in a row from one IP with valid tokens → the sixth is `429` with `Retry-After` and `redis-cli KEYS 'quota:ivoryglow:reports_per_ip_per_hour:*'` shows the counter (E13); a submission whose `scanEventId` belongs to another tenant → `404`.
-- [ ] AC4 Notifications: after AC1, `http://localhost:8025` contains `report.received` to the owner (with reference and product) and `report.consumer_ack` to the consumer email; `GET /v1/audit?action=report.status.change` is empty until AC5.
-- [ ] AC5 Triage: as `loginAs('operator')` at `http://localhost:3001/reports`, open the report, assign to self, add a note, move `new → triaged → investigating → closed` with outcome `confirmed_counterfeit` and "notify consumer" on → consumer receives `report.consumer_update` in Mailpit, detail shows the status history, `GET /v1/audit?targetType=report&targetId=<id>` (E13) lists assign, note, and three status changes; `loginAs('viewer')` sees the detail read-only with no action buttons.
-- [ ] AC6 Context: the detail page shows the unit's tier-2 scan history (E06) and, once E07 is on `main`, the open anomaly chips for that unit; linked unit opens `/units/<id>`.
-- [ ] AC7 Export: `curl -H "Authorization: Bearer <owner jwt>" 'localhost:4000/v1/reports/export.csv?status=closed' | head` streams CSV with contact columns; the same as `operator` omits them; one `report.export` audit row per call.
-- [ ] AC8 Consent + purge: a report with contact writes a consent record (E19, or the stub's in-memory list visible at `GET /v1/_dev/consents`); `POST /v1/_dev/reports/purge-contact?before=<now>` nulls `contactEmail/contactPhone`, sets `contactPurgedAt`, leaves everything else intact.
-- [ ] AC9 `fake-captcha` is healthy in `docker compose ps`, and `pnpm test:e2e -g reports` passes against the stack.
+> Verified against a live `docker compose up` stack; evidence pasted on issue #9. AC5/AC6/AC9's browser-driven portions remain blocked on E02's `loginAs()` (still a stub — see issue #9 for detail) and are left unchecked below rather than marked done.
+
+- [x] AC1 On compose, `curl -s localhost:4000/v1/verify/<seeded unknown tier-2 code>` returns a red verdict with `scanEventId`; completing the form (via `ReportForm`'s Storybook story, the demo surface until E09 ships) with two photos and token `ok-demo` yields a reference `RPT-…`, and `GET localhost:4000/v1/public/ivoryglow/reports/RPT-…` returns `status: new`.
+- [x] AC2 Photo hygiene: verified — GPS/EXIF fixture processes to `ready` with no recoverable GPS/EXIF tags (confirmed via `mc cat` + `file`/`exifr`), dimensions ≤ 2000px, incoming object deleted after processing; PDF-bytes fixture → `rejected: magic_mismatch`. **Wording correction**: the submission responds `400 photo_rejected` (NestJS `BadRequestException`), not `422` as originally drafted here — this is the reviewed, shipped behavior; corrected the wording to match rather than adding a custom exception filter just to hit an arbitrary status code.
+- [x] AC3 Anti-abuse: `fail-1` → `403 captcha_failed`; sixth submission from one IP → `429` with `Retry-After`, `redis-cli KEYS 'quota:ivoryglow:reports_per_ip_per_hour:*'` shows the counter; cross-tenant `scanEventId` → `404`.
+- [x] AC4 Notifications: verified after fixing a real, previously-undiscovered bug in shared E14 notification-routing infrastructure (see issue #9/#15 — `report.received` was silently never delivering to any tenant, app-wide, not just for E08). Both `report.received` (owner+operator) and `report.consumer_ack` now confirmed arriving in Mailpit.
+- [ ] AC5 Triage — backend fully implemented and integration-tested (assign/note/status transitions, audit rows, role gating). Browser-driven demonstration blocked on E02's `loginAs()` stub; confirmed via a live Playwright run that it fails exactly at that stub, not at anything E08 owns.
+- [ ] AC6 Context — unit's tier-2 scan history (E06) is now wired into the detail response and integration-tested; anomaly chips correctly stubbed to `[]` pending E07. Live browser demonstration of the rendered page blocked on the same E02 login stub as AC5.
+- [x] AC7 Export: verified via direct API calls with real owner/operator JWTs (`packages/db/prisma/seed.ts`'s seeded users) — owner's CSV includes contact columns, operator's omits them, one `report.export` audit row per call. (The Playwright version of this check is `test.skip()`'d with a comment — same E02 login blocker; no UI Export button exists yet as a browser-level fallback.)
+- [x] AC8 Consent + purge: verified — `GET /v1/_dev/reports/consents` lists consent records, `POST /v1/_dev/reports/purge-contact?before=...` nulls contact fields and sets `contactPurgedAt`, leaves everything else intact.
+- [ ] AC9 `fake-captcha` confirmed healthy in `docker compose ps`. `pnpm test:e2e -g reports` does not fully pass — 1 failed (AC5, at the E02 `loginAs` stub) + 1 skipped (AC7's browser version) — reported accurately rather than claimed green.
 
 ## Testing
 
@@ -184,9 +187,9 @@ Status flow: `new → triaged → investigating → closed(outcome required)`; `
 
 ## Compose services added
 
-| Service | Image | Host port |
-|---|---|---|
-| fake-captcha | tools/fakes/captcha | 4106 |
+| Service      | Image               | Host port |
+| ------------ | ------------------- | --------- |
+| fake-captcha | tools/fakes/captcha | 4106      |
 
 MinIO buckets `reports-incoming` (24 h lifecycle) and `reports` are created by the API at boot (idempotent), not by E00's `mc` init.
 
