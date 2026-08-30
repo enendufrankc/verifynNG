@@ -65,7 +65,7 @@ export interface VerdictContext {
   tenant: {
     id: string;
     slug: string;
-    status: 'pending' | 'active' | 'suspended' | 'offboarded';
+    status: import('@prisma/client').TenantStatus;
     name: string;
     verifyRateLimitPerMin: number;
   } | null;

@@ -377,7 +377,7 @@ export class VerifyController {
         let tenant: {
           id: string;
           slug: string;
-          status: 'pending' | 'active' | 'suspended' | 'offboarded';
+          status: import('@prisma/client').TenantStatus;
           name: string;
           verifyRateLimitPerMin: number;
         } | null = null;

@@ -243,7 +243,7 @@ export class VerifySmsController {
         let tenant: {
           id: string;
           slug: string;
-          status: 'pending' | 'active' | 'suspended' | 'offboarded';
+          status: import('@prisma/client').TenantStatus;
           name: string;
           verifyRateLimitPerMin: number;
         } | null = null;

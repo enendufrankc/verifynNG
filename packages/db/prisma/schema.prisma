@@ -12,9 +12,32 @@ datasource db {
 
 enum TenantStatus {
   pending
+  in_review
+  rejected
   active
   suspended
+  restricted
   offboarded
+}
+
+enum VerificationDocumentKind {
+  cac_certificate
+  trademark_certificate
+  director_id
+  other
+}
+
+enum VerificationDocumentStatus {
+  awaiting_upload
+  uploaded
+  accepted
+  rejected
+}
+
+enum PolicyKind {
+  aup
+  tos
+  privacy
 }
 
 enum UnitState {
@@ -40,7 +63,18 @@ model Tenant {
   slug      String       @unique
   name      String
   legalName String?
+  trademarkNumber String?
+  country String? @db.Char(2)
   status    TenantStatus @default(pending)
+  statusReason String?
+  statusChangedAt DateTime?
+  verifiedAt DateTime?
+  suspendedAt DateTime?
+  offboardedAt DateTime?
+  scheduledDeletionAt DateTime?
+  branding Json?
+  supportEmail String?
+  websiteUrl String?
   verifyRateLimitPerMin Int @default(600)   // E06: per-tenant verify rate limit
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -52,6 +86,10 @@ model Tenant {
   units      Unit[]
   scanEvents ScanEvent[]
   auditLogs  AuditLog[]
+  verificationDocuments VerificationDocument[]
+  reviewNotes TenantReviewNote[]
+  policyAcceptances PolicyAcceptance[]
+  exports TenantExport[]
   memberships Membership[] // E02
 }
 
@@ -78,6 +116,73 @@ model User {
   sessions          Session[]
   passwordResetTokens PasswordResetToken[]
 
+  @@index([tenantId])
+}
+
+
+model VerificationDocument {
+  id String @id @default(cuid())
+  tenantId String
+  kind VerificationDocumentKind
+  status VerificationDocumentStatus @default(awaiting_upload)
+  objectKey String @unique
+  fileName String
+  contentType String
+  sizeBytes Int
+  uploadedBy String
+  reviewedBy String?
+  reviewNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId, kind])
+}
+
+model TenantReviewNote {
+  id String @id @default(cuid())
+  tenantId String
+  authorId String
+  visibleToTenant Boolean @default(true)
+  body String
+  createdAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@index([tenantId, createdAt])
+}
+
+model PolicyDocument {
+  id String @id @default(cuid())
+  kind PolicyKind
+  version String
+  markdown String
+  effectiveFrom DateTime
+  createdAt DateTime @default(now())
+  @@unique([kind, version])
+}
+
+model PolicyAcceptance {
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  kind PolicyKind
+  version String
+  ipPrefix String?
+  userAgent String?
+  acceptedAt DateTime @default(now())
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, kind, version])
+  @@index([tenantId])
+}
+
+model TenantExport {
+  id String @id @default(cuid())
+  tenantId String
+  status String
+  objectKey String?
+  sizeBytes Int?
+  error String?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   @@index([tenantId])
 }
 
