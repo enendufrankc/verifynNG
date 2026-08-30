@@ -29,6 +29,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { BatchesModule } from './modules/batches/batches.module';
 import { BullMQModule } from './jobs/bullmq.module';
 import { LegalModule } from './modules/legal/legal.module';
+import { ConsentModule } from './modules/consent/consent.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { LegalModule } from './modules/legal/legal.module';
     BullMQModule,
     BatchesModule,
     LegalModule,
+    ConsentModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },
