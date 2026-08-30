@@ -12,6 +12,7 @@ import { ScanRecordedListener } from './consumers/scan-recorded.listener';
 import { EnumerationDetectedListener } from './consumers/enumeration-detected.listener';
 import { AnomalyQueueProcessor } from './consumers/anomaly-queue.processor';
 import { SweepSchedulerService } from './consumers/sweep-scheduler.service';
+import { ManifestService } from '../batches/manifest.service';
 
 // See BatchesModule for why this is gated: the dedicated api-worker
 // container (WORKER_INLINE=false) consumes the 'anomaly' queue instead.
@@ -28,6 +29,9 @@ const devControllers =
     ScanRecordedListener,
     EnumerationDetectedListener,
     ...(workerInline ? [AnomalyQueueProcessor, SweepSchedulerService] : []),
+    // Only DevAnomalyController's manifest-reveal route needs this (E2E
+    // fixture setup); PrismaClient/S3Service are both @Global() already.
+    ...(process.env.NODE_ENV === 'production' ? [] : [ManifestService]),
   ],
   exports: [RulesService, AnomalyEngine],
 })
