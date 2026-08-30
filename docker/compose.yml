@@ -281,6 +281,8 @@ services:
       - '${WEB_VERIFY_PORT:-3000}:3000'
     environment:
       NEXT_PUBLIC_API_URL: http://api:4000
+      NEXT_PUBLIC_MINIO_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}
+      NEXT_PUBLIC_DEFAULT_TENANT: ivoryglow
       HOSTNAME: 0.0.0.0
     depends_on:
       api:

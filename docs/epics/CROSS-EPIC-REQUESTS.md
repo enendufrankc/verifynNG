@@ -75,6 +75,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 ## To E17 Observability
 
 - [ ] Publish the degraded-mode contract jointly with E06 (E21).
+- [ ] `GlobalExceptionFilter` (`apps/api/src/telemetry/error-tracker/global-exception-filter.ts`), registered as `@Catch()` for every exception, rewrites the response body of E06's rate-limited `HttpException` (`GET /v1/verify/:code` → 429) into a generic `{statusCode, timestamp, requestId, message}` envelope — discarding `verdict`/`severity`/`retryAfterSec`. Confirmed against a live `docker compose up` stack. Please pass through a response body that already carries a `verdict` field unmodified. E09 currently works around this client-side by reconstructing a minimal rate-limited verdict from the `Retry-After` header (`apps/web-verify/lib/api.ts`); that fallback can be removed once this is fixed (E09).
 
 ## To E19 Compliance
 

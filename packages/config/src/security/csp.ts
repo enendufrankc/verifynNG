@@ -14,14 +14,24 @@ export interface CspOptions {
   extraConnect?: string[];
   /** If true, emit Content-Security-Policy-Report-Only instead */
   reportOnly?: boolean;
+  /**
+   * Optional `default-src` origins (E09: consumer surface locks this down
+   * to 'self' explicitly rather than relying on the browser's no-default-src
+   * fallback). Omitted by existing callers to avoid changing their policy.
+   */
+  defaultSrc?: string[];
+  /** Optional extra `img-src` origins beyond 'self' (E09: MinIO-hosted logos/OG images). */
+  imgSrc?: string[];
 }
 
 /**
  * Build CSP header key-value pair.
  *
  * Directives:
+ * - default-src 'self'                 (only when `defaultSrc` is passed)
  * - script-src 'nonce-…' 'strict-dynamic'
  * - style-src 'self' 'unsafe-inline'   (Tailwind needs inline styles)
+ * - img-src 'self' data: [imgSrc…]     (only when `imgSrc` is passed)
  * - connect-src 'self' <apiOrigin> [extraConnect…]
  * - frame-ancestors 'none'
  * - object-src 'none'
@@ -36,8 +46,10 @@ export function buildCsp(opts: CspOptions): Record<string, string> {
   ].join(' ');
 
   const directives = [
+    ...(opts.defaultSrc ? [`default-src ${opts.defaultSrc.join(' ')}`] : []),
     `script-src 'nonce-${opts.nonce}' 'strict-dynamic'`,
     `style-src 'self' 'unsafe-inline'`,
+    ...(opts.imgSrc ? [`img-src 'self' data: ${opts.imgSrc.join(' ')}`] : []),
     `connect-src ${connectSrc}`,
     `frame-ancestors 'none'`,
     `object-src 'none'`,
