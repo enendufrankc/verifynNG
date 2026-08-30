@@ -1,0 +1,10 @@
+You are taking over epic E17 mid-flight from another agent that stopped. Read AGENTS.md
+(especially "Definition of done"), docs/epics/README.md, the docs/epics/EXX-*.md file, your
+section of docs/epics/CROSS-EPIC-REQUESTS.md, and the latest "Handoff snapshot" comment on
+GitHub issue #18 — it lists what already exists on this branch.
+Start by inspecting the work: git log origin/main..HEAD and git show --stat HEAD. The last
+commit may be a WIP snapshot that does not build. Run pnpm install, then make lint, typecheck,
+test and build green before anything else. Then reconcile the WIP against the epic checklist,
+tick what is truly done in the epic file, and continue the remaining tasks in order with
+small PRs into main. Rebase on main before each PR. Use this worktree's Docker ports (.env;
+scripts/epic ports EXX). Do not assume 3000/3001/4000/5432.
