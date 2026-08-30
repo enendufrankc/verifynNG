@@ -321,6 +321,10 @@ export default function SignupPage() {
   };
 
   useEffect(() => {
+    if (tenant?.id) localStorage.setItem('verifyng.tenantId', tenant.id);
+  }, [tenant?.id]);
+
+  useEffect(() => {
     const tenantId = tenant?.id;
     if (step !== 'pending' || !tenantId) return undefined;
     const poll = globalThis.setInterval(async () => {

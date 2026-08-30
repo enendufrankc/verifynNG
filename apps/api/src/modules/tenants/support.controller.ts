@@ -16,10 +16,14 @@ import {
   RequireTenantStatus,
 } from '../../common/tenant-status/decorators';
 import { TenantLifecycleService } from './tenant-lifecycle.service';
+import { TenantS3Service } from './s3.service';
 
 @Controller('support')
 export class SupportTenantsController {
-  constructor(private readonly lifecycle: TenantLifecycleService) {}
+  constructor(
+    private readonly lifecycle: TenantLifecycleService,
+    private readonly storage: TenantS3Service,
+  ) {}
   private ensureSupport(req: PrincipalRequest) {
     if (req.principal?.platformRole !== 'support')
       throw new ForbiddenException('support_role_required');
@@ -40,10 +44,16 @@ export class SupportTenantsController {
     @Req() req: PrincipalRequest,
   ): Promise<any> {
     this.ensureSupport(req);
-    return prisma.verificationDocument.findMany({
+    const documents = await prisma.verificationDocument.findMany({
       where: { tenantId: id },
       orderBy: { createdAt: 'asc' },
     });
+    return Promise.all(
+      documents.map(async (document) => ({
+        ...document,
+        viewUrl: await this.storage.presignGet(document.objectKey, 300),
+      })),
+    );
   }
   @Post('tenants/:tenantId/approve')
   @RequireTenantStatus('in_review')
