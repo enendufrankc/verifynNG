@@ -139,6 +139,29 @@ export class LegalDocumentService {
     }));
   }
 
+  /** Read-only view of E03's PolicyAcceptance rows for the "Your agreements" screen. */
+  async agreements(
+    tenantId: string,
+  ): Promise<
+    {
+      kind: LegalDocKind;
+      version: string;
+      acceptedAt: string;
+      userId: string;
+    }[]
+  > {
+    const rows = await prisma.policyAcceptance.findMany({
+      where: { tenantId },
+      orderBy: { acceptedAt: 'desc' },
+    });
+    return rows.map((row) => ({
+      kind: DB_TO_KIND[row.kind],
+      version: row.version,
+      acceptedAt: row.acceptedAt.toISOString(),
+      userId: row.userId,
+    }));
+  }
+
   private toDto(doc: PolicyDocument): LegalDocumentDto {
     return {
       kind: DB_TO_KIND[doc.kind],

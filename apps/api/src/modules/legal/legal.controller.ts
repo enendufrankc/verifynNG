@@ -54,7 +54,10 @@ export class LegalController {
     return this.legal.current('subprocessors', locale);
   }
 
-  @Roles('owner')
+  // Any tenant member may read this (not just `owner`) so operators/viewers
+  // can render the "your owner must accept" banner — only accepting is
+  // owner-only.
+  @Roles('owner', 'operator', 'viewer')
   @Get('acceptance-status')
   acceptanceStatus(
     @TenantId() tenantId: string,
@@ -63,8 +66,18 @@ export class LegalController {
     return this.legal.needsReacceptance(tenantId, principal.userId);
   }
 
+  @Roles('owner', 'operator', 'viewer')
+  @Get('agreements')
+  agreements(@TenantId() tenantId: string) {
+    return this.legal.agreements(tenantId);
+  }
+
+  // Path must end with "/policies/accept" — TenantStatusGuard (E03) hardcodes
+  // that suffix to bypass its own pending-acceptance block; any other path
+  // would deadlock a blocked owner (never able to reach the very endpoint
+  // that clears the block). See apps/api/src/common/tenant-status/tenant-status.guard.ts.
   @Roles('owner')
-  @Post('accept')
+  @Post('policies/accept')
   @Audited('legal.accepted')
   async accept(
     @TenantId() tenantId: string,

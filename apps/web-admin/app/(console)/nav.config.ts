@@ -13,6 +13,7 @@ import {
   CreditCard,
   Settings,
   LifeBuoy,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -136,6 +137,14 @@ export const NAV: NavEntry[] = [
     order: 40,
   },
   {
+    id: 'organization.legal',
+    label: 'Your agreements',
+    href: '/legal',
+    icon: FileText,
+    section: 'organization',
+    order: 50,
+  },
+  {
     id: 'platform.support',
     label: 'Support',
     href: '/support',
@@ -143,6 +152,15 @@ export const NAV: NavEntry[] = [
     section: 'platform',
     platformRole: 'support',
     order: 10,
+  },
+  {
+    id: 'platform.legalDocs',
+    label: 'Legal docs',
+    href: '/legal-docs',
+    icon: FileText,
+    section: 'platform',
+    platformRole: 'support',
+    order: 20,
   },
 ];
 
