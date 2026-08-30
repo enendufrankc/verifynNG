@@ -260,6 +260,31 @@ model AuditLog {
   @@index([tenantId])
 }
 
+// ─── E17 Observability ──────────────────────────────────────────────────────
+model ProbeResult {
+  id         String   @id @default(cuid())
+  target     String
+  ok         Boolean
+  statusCode Int?
+  latencyMs  Int
+  verdict    String?
+  region     String   @default("local")
+  at         DateTime
+
+  @@index([target, at])
+}
+
+model StatusDaily {
+  id       String   @id @default(cuid())
+  target   String
+  date     DateTime @db.Date
+  checks   Int
+  failures Int
+  p95Ms    Int
+
+  @@unique([target, date])
+}
+
 // ─── E06 ───────────────────────────────────────────────────────────────
 
 model IpBlock {
