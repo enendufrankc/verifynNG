@@ -130,12 +130,21 @@ const renderers: Record<
   'anomaly.alert': (
     data: TemplateData['anomaly.alert'],
     _branding: BrandingData,
-  ) => ({
-    subject: `Anomaly detected — ${data.anomalyType}`,
-    bodyHtml: `<p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected</strong></p><p style="margin:0 0 8px">Product: <strong>${esc(data.productName)}</strong> — Code: ${esc(data.tier1Code)}</p><p style="margin:0 0 8px">Type: ${esc(data.anomalyType)}</p><p style="margin:0 0 8px;color:#999;font-size:13px">Detected at ${esc(data.detectedAt)}</p><p style="margin:12px 0 0"><a href="${esc(data.dashboardUrl)}" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p>`,
-    text: `Anomaly detected — ${data.anomalyType}\nProduct: ${data.productName}\nCode: ${data.tier1Code}\nDetected: ${data.detectedAt}\nView: ${data.dashboardUrl}`,
-    sms: `ALERT: Anomaly ${data.anomalyType} on ${data.productName} (${data.tier1Code})`,
-  }),
+  ) => {
+    const ref = data.unitRef ?? data.batchRef;
+    const refLine = ref
+      ? `<p style="margin:0 0 8px">Ref: <strong>${esc(ref)}</strong></p>`
+      : '';
+    const citiesLine = data.cities.length
+      ? `<p style="margin:0 0 8px;color:#999;font-size:13px">Cities: ${esc(data.cities.join(', '))}</p>`
+      : '';
+    return {
+      subject: `Anomaly detected — ${data.rule} (${data.tenantName})`,
+      bodyHtml: `<p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected — score ${data.score}</strong></p><p style="margin:0 0 8px">${esc(data.summary)}</p>${refLine}${citiesLine}<p style="margin:12px 0 0"><a href="${esc(data.adminUrl)}" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p>`,
+      text: `Anomaly detected — ${data.rule} (score ${data.score})\n${data.summary}\n${ref ? `Ref: ${ref}\n` : ''}View: ${data.adminUrl}`,
+      sms: `ALERT: ${data.rule} anomaly (score ${data.score}) — ${data.tenantName}`,
+    };
+  },
 
   'report.received': (data: TemplateData['report.received'], branding) => ({
     subject: `Consumer report — ${data.reportReference}`,

@@ -26,13 +26,21 @@ export class EventRouter implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Subscribe to all known event names
+    // Subscribe to all known event names. Every domain event in this codebase
+    // (batch.minted, anomaly.detected, ...) is emitted as one flat object
+    // carrying `tenantId` alongside its own fields — not `{tenantId, data}` —
+    // so the whole payload IS the template data.
     for (const eventName of Object.keys(EVENT_TEMPLATE_MAP)) {
-      this.eventEmitter.on(eventName, (payload: { tenantId: string; data: object }) => {
-        this.handleEvent(eventName, payload.tenantId, payload.data).catch((err) => {
-          console.error(`EventRouter error handling ${eventName}:`, err);
-        });
-      });
+      this.eventEmitter.on(
+        eventName,
+        (payload: { tenantId: string } & Record<string, unknown>) => {
+          this.handleEvent(eventName, payload.tenantId, payload).catch(
+            (err) => {
+              console.error(`EventRouter error handling ${eventName}:`, err);
+            },
+          );
+        },
+      );
     }
   }
 
@@ -40,11 +48,7 @@ export class EventRouter implements OnModuleInit {
     await this.handleEvent(eventName, tenantId, data);
   }
 
-  private async handleEvent(
-    eventName: string,
-    tenantId: string,
-    data: object,
-  ) {
+  private async handleEvent(eventName: string, tenantId: string, data: object) {
     // Find enabled routing rules for this event and tenant
     const rules = await this.prisma.notificationRoutingRule.findMany({
       where: {
@@ -64,9 +68,7 @@ export class EventRouter implements OnModuleInit {
       for (const member of members) {
         for (const channel of rule.channels) {
           const recipient =
-            channel === NotificationChannel.email
-              ? member.email
-              : member.phone;
+            channel === NotificationChannel.email ? member.email : member.phone;
           if (!recipient) continue;
 
           await this.notificationService.send(
