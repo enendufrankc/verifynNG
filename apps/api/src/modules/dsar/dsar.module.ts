@@ -11,9 +11,10 @@ import {
 import { DsarQueue } from '../../jobs/dsar.queue';
 import { DsarProcessor } from '../../jobs/dsar.processor';
 import { TenantsModule } from '../tenants/tenants.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TenantsModule],
+  imports: [TenantsModule, NotificationsModule],
   controllers: [DsarController, LegalHoldController],
   providers: [
     DsarService,
