@@ -14,6 +14,7 @@
     "@verifynng/config": "workspace:*",
     "@verifynng/core": "workspace:*",
     "@verifyng/ui": "workspace:*",
+    "@zxing/browser": "^0.1.5",
     "lucide-react": "^0.511.0",
     "next": "15.5.24",
     "react": "19.1.0",
