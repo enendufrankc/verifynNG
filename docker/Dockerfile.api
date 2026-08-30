@@ -23,6 +23,7 @@ COPY tsconfig.base.json ./
 # Build packages that the API depends on
 RUN pnpm --filter @verifynng/core build
 RUN pnpm --filter @verifynng/db prisma:generate
+RUN pnpm --filter @verifynng/core build
 RUN pnpm --filter @verifynng/config build
 RUN pnpm --filter @verifynng/core build
 RUN pnpm --filter @verifynng/db build

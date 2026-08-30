@@ -80,9 +80,27 @@ const e06Schema = z.object({
   CORE_ACTIVE_KID: z.string().default('k1'),
 });
 
-// ── Sections for other epics will be added here ────────────────
-// E14 will add EMAIL_FROM, etc.
-
+// ── E13 Audit & Security ────────────────────────────────────────
+const e13Schema = z.object({
+  // Core keys for HMAC signing (JSON format preferred)
+  CORE_KEYS_JSON: z.string().default(
+    '{"active":"k1","keys":{"k1":"0000000000000000000000000000000000000000000000000000000000000000"}}',
+  ),
+  // CORE_KEYS / CORE_ACTIVE_KID (legacy E01 format) are defined in e06Schema.
+  // CORS
+  CORS_ORIGINS_ADMIN: z.string().default('http://localhost:3001'),
+  CORS_ORIGINS_VERIFY: z.string().default('http://localhost:3000'),
+  // CSP
+  CSP_REPORT_ONLY: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  // Secrets file
+  SECRETS_FILE: z.string().default('docker/secrets/local.env'),
+  // Real deployments set DEPLOYMENT_ENV=production; NODE_ENV=production alone is
+  // also what local Docker images run with, so it cannot be the trigger.
+  DEPLOYMENT_ENV: z.enum(['local', 'staging', 'production']).default('local'),
+});
 
 // ── E17 Observability ───────────────────────────────────────────
 const e17Schema = z.object({
@@ -125,9 +143,24 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+const ZERO_KEY = '0'.repeat(64);
+
 export const envSchema = e02Schema
   .merge(e06Schema)
   .merge(e17Schema)
-  .merge(e14Schema);
+  .merge(e14Schema)
+  .merge(e13Schema)
+  .superRefine((env, ctx) => {
+    if (env.DEPLOYMENT_ENV !== 'production') return;
+    // Fail fast in real deployments: dev defaults must never reach production.
+    if (env.JWT_KEYS.includes(ZERO_KEY))
+      ctx.addIssue({ code: 'custom', path: ['JWT_KEYS'], message: 'dev default key not allowed in production' });
+    if (env.MFA_ENC_KEY === ZERO_KEY)
+      ctx.addIssue({ code: 'custom', path: ['MFA_ENC_KEY'], message: 'dev default key not allowed in production' });
+    if (env.CORE_KEYS_JSON.includes(ZERO_KEY) || env.CORE_KEYS.includes(ZERO_KEY))
+      ctx.addIssue({ code: 'custom', path: ['CORE_KEYS_JSON'], message: 'dev default core key not allowed in production' });
+    if (env.CSP_REPORT_ONLY)
+      ctx.addIssue({ code: 'custom', path: ['CSP_REPORT_ONLY'], message: 'CSP must be enforced (CSP_REPORT_ONLY=false) in production' });
+  });
 
 export type Env = z.infer<typeof envSchema>;
