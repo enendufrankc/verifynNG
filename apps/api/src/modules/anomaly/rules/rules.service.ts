@@ -70,7 +70,11 @@ export class RulesService implements OnModuleInit {
       RuleId,
       { enabled?: boolean; thresholds?: Record<string, number> },
     ][]) {
-      if (!RULE_IDS.includes(ruleId)) continue;
+      // class-transformer instantiates the DTO with every declared field as
+      // an own property (TS class fields use [[Define]] semantics under
+      // target ES2022+), so Object.entries() includes rules the caller
+      // didn't mention with value === undefined.
+      if (!RULE_IDS.includes(ruleId) || !value) continue;
       const existing = await this.prisma.anomalyRuleConfig.findUnique({
         where: { tenantId_rule: { tenantId, rule: ruleId } },
       });

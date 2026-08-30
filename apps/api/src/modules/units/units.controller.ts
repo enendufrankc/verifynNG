@@ -6,6 +6,7 @@ import { Principal } from '../auth/decorators/principal.decorator';
 import { isApiClientPrincipal } from '../auth/types/principal';
 import type { Principal as PrincipalType } from '../auth/types/principal';
 import { Audited } from '../audit/audited.decorator.js';
+import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 import { UnitLifecycleService } from './unit-lifecycle.service';
 import { AnomalyQueryService } from '../anomaly/anomaly-query.service';
 import { FlagUnitDto } from './dto/flag-unit.dto';
@@ -15,6 +16,15 @@ function userIdOf(principal: PrincipalType | undefined): string | undefined {
     ? principal.userId
     : undefined;
 }
+
+// AuditInterceptor's default target resolver derives the type from the
+// controller class name ("UnitsController" -> "units", plural) — audit rows
+// for these routes must read `targetType=unit` (singular) to match the
+// system-actor audit calls UnitLifecycleService writes itself for auto-flag.
+const unitAuditTarget = (req: AuthenticatedRequest) => ({
+  type: 'unit',
+  id: (req.params?.id as string) ?? 'unknown',
+});
 
 @Controller('v1/units')
 export class UnitsController {
@@ -50,7 +60,7 @@ export class UnitsController {
 
   @Post(':id/flag')
   @Roles('operator')
-  @Audited('unit.flag')
+  @Audited('unit.flag', { target: unitAuditTarget })
   flag(
     @TenantId() tenantId: string,
     @Param('id') id: string,
@@ -65,7 +75,7 @@ export class UnitsController {
 
   @Post(':id/decommission')
   @Roles('owner')
-  @Audited('unit.decommission')
+  @Audited('unit.decommission', { target: unitAuditTarget })
   decommission(
     @TenantId() tenantId: string,
     @Param('id') id: string,
@@ -80,7 +90,7 @@ export class UnitsController {
 
   @Post(':id/restore')
   @Roles('owner')
-  @Audited('unit.restore')
+  @Audited('unit.restore', { target: unitAuditTarget })
   restore(
     @TenantId() tenantId: string,
     @Param('id') id: string,

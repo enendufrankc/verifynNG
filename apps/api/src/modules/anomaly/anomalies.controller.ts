@@ -16,8 +16,16 @@ import { Principal } from '../auth/decorators/principal.decorator';
 import { isApiClientPrincipal } from '../auth/types/principal';
 import type { Principal as PrincipalType } from '../auth/types/principal';
 import { Audited } from '../audit/audited.decorator.js';
+import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 import { AnomalyQueryService } from './anomaly-query.service';
 import { AnomalyNoteDto, AssignAnomalyDto } from './dto/anomaly-note.dto';
+
+// See units.controller.ts's unitAuditTarget: default target resolution
+// would derive "anomalies" (plural) from the controller class name.
+const anomalyAuditTarget = (req: AuthenticatedRequest) => ({
+  type: 'anomaly',
+  id: (req.params?.id as string) ?? 'unknown',
+});
 
 function userIdOf(principal: PrincipalType | undefined): string | undefined {
   return principal && !isApiClientPrincipal(principal)
@@ -110,7 +118,7 @@ export class AnomaliesController {
 
   @Post(':id/acknowledge')
   @Roles('operator')
-  @Audited('anomaly.acknowledge')
+  @Audited('anomaly.acknowledge', { target: anomalyAuditTarget })
   acknowledge(
     @TenantId() tenantId: string,
     @Param('id') id: string,
@@ -128,7 +136,7 @@ export class AnomaliesController {
 
   @Post(':id/resolve')
   @Roles('operator')
-  @Audited('anomaly.resolve')
+  @Audited('anomaly.resolve', { target: anomalyAuditTarget })
   resolve(
     @TenantId() tenantId: string,
     @Param('id') id: string,
@@ -146,7 +154,7 @@ export class AnomaliesController {
 
   @Post(':id/dismiss')
   @Roles('operator')
-  @Audited('anomaly.dismiss')
+  @Audited('anomaly.dismiss', { target: anomalyAuditTarget })
   dismiss(
     @TenantId() tenantId: string,
     @Param('id') id: string,
@@ -164,7 +172,7 @@ export class AnomaliesController {
 
   @Post(':id/assign')
   @Roles('operator')
-  @Audited('anomaly.assign')
+  @Audited('anomaly.assign', { target: anomalyAuditTarget })
   async assign(
     @TenantId() tenantId: string,
     @Param('id') id: string,
