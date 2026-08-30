@@ -147,6 +147,17 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      # ── E01 Code Engine — shared by E04 (mint) and E06 (verify); must be
+      # the same key ring for both, so this value is canonical, not per-epic.
+      CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
+      CORE_ACTIVE_KID: k1
+      # ── E04 Catalog & Minting ──
+      MINT_SYNC_MAX: '5000'
+      MINT_CHUNK: '1000'
+      MINT_MAX_COUNT: '1000000'
+      MANIFEST_ENC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      VERIFY_BASE_URL: http://localhost:3000
+      WORKER: 'false'
       WORKER_INLINE: 'true'
       OFFBOARDING_GRACE_DAYS: ${OFFBOARDING_GRACE_DAYS:-30}
       CORS_ORIGINS_ADMIN: http://localhost:${WEB_ADMIN_PORT:-3001}
@@ -185,7 +196,7 @@ services:
       FAKE_SMS_KEY: vk_e3ecb35c_e3ecb35c6a1bdd71e31eb3bc10e3eeb1163f0fd3f8411fa3404cd77ad4e0134e
       FAKE_PAY_KEY: vk_5c2211be_5c2211bec4d8076bc5049669861ce211faf0be91738aa2ebe6803e091400460a
       FAKE_GEO_KEY: vk_70b02ab6_70b02ab67319f58d15520e558280b06417d84a5211f18f464dfa6d5e7e844d88
-      APP_BASE_URL: http://localhost:3001
+      APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
       # ── E06 Verification & Scan Events ──
       RATE_LIMIT_IP_PER_MIN: '20'
       RATE_LIMIT_CODE_PER_MIN: '10'
@@ -198,8 +209,6 @@ services:
       GEOIP_URL: http://fake-geo:4103
       TRUST_PROXY: 'true'
       SMS_URL: http://fake-sms:4101
-      CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
-      CORE_ACTIVE_KID: k1
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
@@ -216,6 +225,49 @@ services:
     healthcheck:
       test:
         ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:4000/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    command: ['node', 'apps/api/dist/worker.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifynng?schema=public
+      REDIS_URL: redis://redis:6379
+      API_PORT: '4000'
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:${MINIO_PORT:-9000}
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: verifynng
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      SMTP_USER: ''
+      SMTP_PASS: ''
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
+      CORE_ACTIVE_KID: k1
+      MINT_SYNC_MAX: '5000'
+      MINT_CHUNK: '1000'
+      MINT_MAX_COUNT: '1000000'
+      MANIFEST_ENC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      VERIFY_BASE_URL: http://localhost:3000
+      WORKER: 'true'
+      WORKER_INLINE: 'false'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'pgrep -f worker.js || exit 1']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -244,9 +296,17 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web-admin
+      args:
+        # Baked into the client bundle — must be reachable from the host
+        # browser, unlike the runtime value below (container-internal only).
+        NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
     ports:
       - '${WEB_ADMIN_PORT:-3001}:3001'
     environment:
+      # Read at runtime by server-side Route Handlers only (never inlined,
+      # unlike NEXT_PUBLIC_API_URL) — container-internal address is correct
+      # here since this code runs inside the container, not the browser.
+      API_INTERNAL_URL: http://api:4000
       NEXT_PUBLIC_API_URL: http://api:4000
       HOSTNAME: 0.0.0.0
     depends_on:

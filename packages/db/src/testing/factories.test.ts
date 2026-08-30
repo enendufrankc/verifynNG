@@ -25,7 +25,7 @@ describe('factories', () => {
     prisma = result.prisma;
     schemaName = result.schemaName;
     resetFactoryCounter();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await dropTestSchema(schemaName, prisma);

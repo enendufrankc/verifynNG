@@ -62,6 +62,31 @@ const e02Schema = e00Schema.extend({
   APP_BASE_URL: z.string().default('http://localhost:3001'),
 });
 
+// ── E04 Catalog & Minting ────────────────────────────────────────
+// CORE_KEYS/CORE_ACTIVE_KID live here (not duplicated in E06 below): E01's
+// key ring is shared by whoever mints (E04) and whoever verifies (E06), so
+// there must be exactly one definition and one default value for both.
+const e04Schema = z.object({
+  CORE_KEYS: z
+    .string()
+    .default(
+      'k1:0000000000000000000000000000000000000000000000000000000000000000',
+    ),
+  CORE_ACTIVE_KID: z.string().default('k1'),
+  MINT_SYNC_MAX: z.coerce.number().default(5000),
+  MINT_CHUNK: z.coerce.number().default(1000),
+  MINT_MAX_COUNT: z.coerce.number().default(1000000),
+  MANIFEST_ENC_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/)
+    .default(
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    ),
+  VERIFY_BASE_URL: z.string().default('http://localhost:3000'),
+  WORKER: z.enum(['true', 'false']).default('false'),
+  WORKER_INLINE: z.enum(['true', 'false']).default('true'),
+});
+
 // ── E06 Verification & Scan Events ──────────────────────────────
 const e06Schema = z.object({
   RATE_LIMIT_IP_PER_MIN: z.coerce.number().default(20),
@@ -82,12 +107,6 @@ const e06Schema = z.object({
   SMS_URL: z.string().default('http://fake-sms:4101'),
   // FAKE_SMS_KEY is defined once, in e02Schema above — E02's InternalOnlyGuard
   // and E06's VerifySmsController both read that single value.
-  CORE_KEYS: z
-    .string()
-    .default(
-      'k1:0000000000000000000000000000000000000000000000000000000000000000',
-    ),
-  CORE_ACTIVE_KID: z.string().default('k1'),
 });
 
 // ── E13 Audit & Security ────────────────────────────────────────
@@ -160,6 +179,7 @@ export const envSchema = e02Schema
   .merge(e17Schema)
   .merge(e14Schema)
   .merge(e13Schema)
+  .merge(e04Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.

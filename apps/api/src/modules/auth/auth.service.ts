@@ -128,10 +128,9 @@ export class AuthService {
     });
 
     // Determine tenant context
-    const memberships = await this.prisma.membership.findMany({
-      where: { userId: user.id },
-    });
-    const activeMembership = memberships[0];
+    const { memberships, activeMembership } = await this.getMemberships(
+      user.id,
+    );
     const tenantId = activeMembership?.tenantId ?? '';
     const role = activeMembership?.role ?? 'viewer';
 
@@ -168,7 +167,26 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresIn: this.tokenService.getAccessTokenTtlSeconds(),
+      user: toSafeUser(user),
+      memberships,
+      activeTenantId: tenantId || null,
+      activeRole: role,
     };
+  }
+
+  /** Shared by completeLogin and refresh so both repopulate the same client state. */
+  private async getMemberships(userId: string) {
+    const rows = await this.prisma.membership.findMany({
+      where: { userId },
+      include: { tenant: true },
+    });
+    const memberships = rows.map((m) => ({
+      tenantId: m.tenantId,
+      tenantName: m.tenant.name,
+      tenantSlug: m.tenant.slug,
+      role: m.role,
+    }));
+    return { memberships, activeMembership: rows[0] };
   }
 
   private truncateIp(ip: string): string {
@@ -198,10 +216,28 @@ export class AuthService {
       at: new Date(),
     });
 
+    // AuthBootstrap calls this on every page load to survive a hard reload,
+    // so it needs the same user/membership context completeLogin returns —
+    // otherwise a reload silently drops activeTenantId/activeRole and every
+    // tenant-scoped page looks empty with no owner-only actions.
+    const session = await this.prisma.session.findUniqueOrThrow({
+      where: { id: result.session.id },
+    });
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: session.userId },
+    });
+    const { memberships, activeMembership } = await this.getMemberships(
+      user.id,
+    );
+
     return {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       expiresIn: this.tokenService.getAccessTokenTtlSeconds(),
+      user: toSafeUser(user),
+      memberships,
+      activeTenantId: activeMembership?.tenantId ?? null,
+      activeRole: activeMembership?.role ?? null,
     };
   }
 

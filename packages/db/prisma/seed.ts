@@ -53,6 +53,7 @@ async function main() {
     where: { slug: 'ivoryglow' },
     update: {},
     create: {
+      id: 'ivoryglow',
       slug: 'ivoryglow',
       name: 'IVORY GLOW',
       legalName: 'Tunnel Light Global Concept Ltd',
@@ -90,6 +91,19 @@ async function main() {
     });
   }
 
+  // Create the Guiba OEM (E04)
+  await prisma.oem.upsert({
+    where: {
+      tenantId_name: { tenantId: tenant.id, name: 'Guiba OEM (China)' },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      name: 'Guiba OEM (China)',
+      country: 'CN',
+      status: 'active',
+    },
+  });
   // ── E14: Seed default notification routing rules for ivoryglow ──
   const defaultRules = [
     {

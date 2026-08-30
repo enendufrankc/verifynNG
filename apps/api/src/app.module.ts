@@ -22,6 +22,12 @@ import { QuotaModule } from './modules/quota/quota.module.js';
 import { SecretsModule } from './modules/secrets/secrets.module.js';
 import { TenantStatusModule } from './common/tenant-status/tenant-status.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { PrismaModule } from './common/prisma.module';
+import { S3Module } from './common/s3.module';
+import { EventsModule } from './common/events.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { BatchesModule } from './modules/batches/batches.module';
+import { BullMQModule } from './jobs/bullmq.module';
 
 @Module({
   imports: [
@@ -46,6 +52,12 @@ import { TenantsModule } from './modules/tenants/tenants.module';
     SecretsModule,
     TenantStatusModule,
     TenantsModule,
+    PrismaModule,
+    S3Module,
+    EventsModule,
+    CatalogModule,
+    BullMQModule,
+    BatchesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

@@ -14,6 +14,14 @@ COPY packages/config/ packages/config/
 COPY packages/ui/ packages/ui/
 COPY tsconfig.base.json ./
 
+# NEXT_PUBLIC_* vars are inlined into the client bundle at build time, so the
+# browser-reachable URL must be supplied here as a build ARG — the
+# container-internal `http://api:4000` set at runtime below is only ever
+# seen by server-side code (Route Handlers), never by code already compiled
+# into the client JS.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN pnpm --filter @verifynng/config build && pnpm --filter @verifyng/ui build && pnpm --filter @verifynng/web-admin build
 
 # ── Production stage ───────────────────────────────────────────

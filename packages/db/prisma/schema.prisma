@@ -46,6 +46,23 @@ enum UnitState {
   decommissioned
 }
 
+// ── E04 Catalog & Minting ───────────────────────────────────────
+enum BatchStatus {
+  minting
+  minted
+  delivered
+  printed
+  shipped
+  closed
+  failed
+}
+
+enum OemStatus {
+  active
+  suspended
+}
+// ── end E04 enums ─────────────────────────────────────────────
+
 // ─── E02 Identity & Access ────────────────────────────────────────
 
 enum TenantRole {
@@ -192,12 +209,20 @@ model Product {
   sku       String
   name      String
   gtin      String?
+  // ─── E04 ────────────────────────────────────────────────────
+  description   String?
+  category      String?
+  imageObjectKey String?
+  archivedAt    DateTime?
+  updatedAt    DateTime  @updatedAt
+  // ─── end E04 ────────────────────────────────────────────────
   createdAt DateTime @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   batches Batch[]
 
   @@unique([tenantId, sku])
+  @@unique([tenantId, gtin])
   @@index([tenantId])
 }
 
@@ -206,11 +231,21 @@ model Oem {
   tenantId  String
   name      String
   country   String?
+  // ─── E04 ────────────────────────────────────────────────────
+  status        OemStatus @default(active)
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  address       String?
+  notes         String?
+  updatedAt     DateTime  @updatedAt
+  // ─── end E04 ────────────────────────────────────────────────
   createdAt DateTime @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   batches Batch[]
 
+  @@unique([tenantId, name])
   @@index([tenantId])
 }
 
@@ -220,7 +255,24 @@ model Batch {
   productId String
   oemId     String?
   count     Int
-  status    String
+  // ─── E04 ────────────────────────────────────────────────────
+  status          BatchStatus @default(minting)
+  idempotencyKey  String
+  requestedBy     String
+  note            String?
+  watermark       String
+  kid             String
+  mintedCount     Int       @default(0)
+  lastChunk       Int       @default(0)
+  jobId           String?
+  failedReason    String?
+  manifestObjectKey String?
+  manifestSha256  String?
+  exportsReadyAt  DateTime?
+  mintedAt        DateTime?
+  updatedAt       DateTime  @updatedAt
+  artefacts       BatchArtefact[]
+  // ─── end E04 ────────────────────────────────────────────────
   createdAt DateTime @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
@@ -228,6 +280,8 @@ model Batch {
   oem     Oem?    @relation(fields: [oemId], references: [id])
   units   Unit[]
 
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, status, createdAt])
   @@index([tenantId])
 }
 
@@ -238,12 +292,19 @@ model Unit {
   tier1Code String    @unique
   tier2Hash String    @unique
   state     UnitState @default(active)
+  // ─── E04 ────────────────────────────────────────────────────
+  serial      Int
+  productId   String
+  // ─── end E04 ────────────────────────────────────────────────
   createdAt DateTime  @default(now())
 
   tenant     Tenant      @relation(fields: [tenantId], references: [id])
   batch      Batch       @relation(fields: [batchId], references: [id])
   scanEvents ScanEvent[]
 
+  @@unique([batchId, serial])
+  @@index([tenantId, batchId])
+  @@index([productId])
   @@index([tenantId])
 }
 
@@ -556,6 +617,23 @@ model StatusDaily {
 
   @@unique([target, date])
 }
+
+// ── E04 Catalog & Minting ───────────────────────────────────────
+model BatchArtefact {
+  id          String   @id @default(cuid())
+  tenantId    String
+  batchId     String
+  kind        String
+  objectKey   String
+  sizeBytes   Int
+  sha256      String
+  createdAt   DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [id])
+
+  @@unique([batchId, kind])
+}
+// ── end E04 models ────────────────────────────────────────────
 
 // ─── E06 ───────────────────────────────────────────────────────────────
 

@@ -98,7 +98,7 @@ function validateBase32(s: string): boolean {
  * Generate a new code in the 5-segment format.
  *
  * @param ring - Key ring providing the signing key
- * @param options - tenant slug, tier, and optional payload length (default 20)
+ * @param options - tenant slug, tier, optional batch watermark and payload length (default 20)
  * @returns The generated code string and the kid used
  */
 export function generateCode(
@@ -106,12 +106,29 @@ export function generateCode(
   {
     tenant,
     tier,
+    watermark,
     payloadLength = 20,
-  }: { tenant: string; tier: Tier; payloadLength?: number },
+  }: {
+    tenant: string;
+    tier: Tier;
+    watermark?: string;
+    payloadLength?: number;
+  },
 ): { code: string; kid: string } {
   const { kid } = ring.active();
   const t = tenant.toLowerCase();
-  const payload = randomBase32(payloadLength);
+  if (
+    watermark !== undefined &&
+    (watermark.length !== 4 || !validateBase32(watermark))
+  ) {
+    throw new Error('watermark must be exactly 4 Crockford base32 characters');
+  }
+  if (watermark !== undefined && payloadLength < watermark.length) {
+    throw new Error('payloadLength must be at least the watermark length');
+  }
+  const payload = watermark
+    ? watermark + randomBase32(payloadLength - watermark.length)
+    : randomBase32(payloadLength);
   const checksum = computeChecksum(ring, t, tier, kid, payload);
   const code = `${t}.${tier}.${kid}.${payload}.${checksum}`;
   return { code, kid };

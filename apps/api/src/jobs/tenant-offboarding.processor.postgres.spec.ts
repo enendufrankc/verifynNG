@@ -37,12 +37,23 @@ describe('TenantOffboardingProcessor.runDelete with Postgres and MinIO', () => {
       data: { tenantId, sku: 'sku-1', name: 'Product One' },
     });
     const batch = await testDb.prisma.batch.create({
-      data: { tenantId, productId: product.id, count: 1, status: 'active' },
+      data: {
+        tenantId,
+        productId: product.id,
+        count: 1,
+        status: 'minted',
+        idempotencyKey: 'offboard-test',
+        requestedBy: 'test',
+        watermark: 'TEST',
+        kid: 'k1',
+      },
     });
     const unit = await testDb.prisma.unit.create({
       data: {
         tenantId,
         batchId: batch.id,
+        productId: product.id,
+        serial: 1,
         tier1Code: 'tier1-offboard-1',
         tier2Hash: 'tier2-offboard-1',
       },

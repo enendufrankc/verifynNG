@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { RequestMethod } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 
@@ -177,8 +178,15 @@ function discoverRoutes(
       const handler = (
         Object.getPrototypeOf(controller) as Record<string, NewableFunction>
       )[methodName];
-      const method: string = reflector.get(METHOD_METADATA, handler);
-      if (!method) continue;
+      // METHOD_METADATA stores the numeric RequestMethod enum (GET = 0), so
+      // a plain truthiness/falsiness check on the raw value would silently
+      // drop every GET route; map it to its string name explicitly instead.
+      const methodEnum: RequestMethod | undefined = reflector.get(
+        METHOD_METADATA,
+        handler,
+      );
+      if (methodEnum === undefined) continue;
+      const method: string = RequestMethod[methodEnum];
 
       const handlerPath: string = reflector.get(PATH_METADATA, handler) ?? '';
       const fullPath = normalizePath(`${controllerPath}/${handlerPath}`);
