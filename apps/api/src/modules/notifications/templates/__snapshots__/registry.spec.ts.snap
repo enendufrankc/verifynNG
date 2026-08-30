@@ -59,6 +59,90 @@ View: https://example.test/batches/GLOW-001",
 }
 `;
 
+exports[`TemplateRegistry > renders dsar.erased 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Your data has been erased</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">The data linked to your report has been erased, as requested on 2026-08-29T00:00:00.000Z.</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Your data has been erased as requested.",
+  "subject": "Your data has been erased",
+  "text": "Your data has been erased, as requested on 2026-08-29T00:00:00.000Z.",
+}
+`;
+
+exports[`TemplateRegistry > renders dsar.ready 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Your data export is ready — IVORY GLOW</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Your requested data export is ready to download. This link expires in 24 hours.</p><p style="margin:0"><a href="https://example.test/dsar/download/token" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">Download</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Your data export is ready: https://example.test/dsar/download/token (expires 24 hours)",
+  "subject": "Your data export is ready — IVORY GLOW",
+  "text": "Your data export is ready
+
+https://example.test/dsar/download/token
+Expires in 24 hours",
+}
+`;
+
+exports[`TemplateRegistry > renders dsar.verify 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Confirm your data request — IVORY GLOW</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">We received a request to access or delete data linked to a report you submitted. Confirm it's you within 30 minutes.</p><p style="margin:0"><a href="https://example.test/dsar/verify/token" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">Confirm request</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Confirm your data request: https://example.test/dsar/verify/token (expires 30 minutes)",
+  "subject": "Confirm your data request — IVORY GLOW",
+  "text": "Confirm your data request
+
+https://example.test/dsar/verify/token
+Expires in 30 minutes",
+}
+`;
+
 exports[`TemplateRegistry > renders invoice.failed 1`] = `
 {
   "html": "<!DOCTYPE html>
@@ -142,6 +226,34 @@ exports[`TemplateRegistry > renders invoice.paid 1`] = `
   "text": "Invoice INV-001 paid
 Amount: ₦10,000
 Paid at: 2026-08-29T00:00:00.000Z",
+}
+`;
+
+exports[`TemplateRegistry > renders legal.reaccept 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Action needed: updated Terms of Service</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">We've published a new version (2026-09-01) of our <strong>Terms of Service</strong>. Your account owner must accept it to keep using the console.</p><p style="margin:0"><a href="https://example.test/legal" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">Review and accept</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Action needed: review and accept the updated Terms of Service at https://example.test/legal",
+  "subject": "Action needed: updated Terms of Service",
+  "text": "We've published a new version (2026-09-01) of our Terms of Service.
+
+Review and accept: https://example.test/legal",
 }
 `;
 

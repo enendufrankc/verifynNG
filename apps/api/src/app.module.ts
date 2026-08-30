@@ -30,6 +30,7 @@ import { BatchesModule } from './modules/batches/batches.module';
 import { BullMQModule } from './jobs/bullmq.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { ConsentModule } from './modules/consent/consent.module';
+import { DsarModule } from './modules/dsar/dsar.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ConsentModule } from './modules/consent/consent.module';
     BatchesModule,
     LegalModule,
     ConsentModule,
+    DsarModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

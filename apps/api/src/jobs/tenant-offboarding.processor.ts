@@ -170,19 +170,27 @@ export class TenantOffboardingProcessor {
     const cutoff = new Date(
       Date.now() - this.retention.scanEventsDays * 86400000,
     );
-    // ScanEvent is append-only (E06 trigger). Offboarding/retention is the documented
-    // exception (docs/verification.md): lift the trigger only for this anonymise+purge step.
+    // ScanEvent is append-only (E06 trigger + the scanEventAppendOnlyExtension
+    // Prisma extension, which blocks .update/.updateMany/.delete/.deleteMany
+    // unconditionally at the app level — raw SQL is the only way through).
+    // Offboarding/retention is the documented exception: lift the trigger
+    // only for this anonymise+purge step, using $executeRawUnsafe (not
+    // .updateMany()/.deleteMany(), which the extension rejects regardless of
+    // trigger state).
     await prisma.$executeRawUnsafe(
       'ALTER TABLE "ScanEvent" DISABLE TRIGGER "scan_event_no_update"',
     );
     try {
-      await prisma.scanEvent.updateMany({
-        where: { tenantId, createdAt: { gte: cutoff } },
-        data: { unitId: null, ipHash: null, ipPrefix: null, userAgent: null, geoCity: null },
-      });
-      await prisma.scanEvent.deleteMany({
-        where: { tenantId, createdAt: { lt: cutoff } },
-      });
+      await prisma.$executeRawUnsafe(
+        'UPDATE "ScanEvent" SET "unitId" = NULL, "ipHash" = NULL, "ipPrefix" = NULL, "userAgent" = NULL, "geoCity" = NULL WHERE "tenantId" = $1 AND "createdAt" >= $2',
+        tenantId,
+        cutoff,
+      );
+      await prisma.$executeRawUnsafe(
+        'DELETE FROM "ScanEvent" WHERE "tenantId" = $1 AND "createdAt" < $2',
+        tenantId,
+        cutoff,
+      );
     } finally {
       await prisma.$executeRawUnsafe(
         'ALTER TABLE "ScanEvent" ENABLE TRIGGER "scan_event_no_update"',

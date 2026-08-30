@@ -184,6 +184,38 @@ const renderers: Record<
     text: `MFA recovery — ${branding.tenantName}\n\nRecover your account: ${data.recoveryUrl}\nExpires in ${data.expiresIn}`,
     sms: `MFA recovery for ${branding.tenantName}: ${data.recoveryUrl} (expires ${data.expiresIn})`,
   }),
+
+  // ── E19 Compliance & Data Governance ──────────────────────────
+  'dsar.verify': (data: TemplateData['dsar.verify'], branding) => ({
+    subject: `Confirm your data request — ${branding.tenantName}`,
+    bodyHtml: `<p style="margin:0 0 12px">We received a request to access or delete data linked to a report you submitted. Confirm it's you within ${esc(data.expiresIn)}.</p><p style="margin:0"><a href="${esc(data.verifyUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Confirm request</a></p>`,
+    text: `Confirm your data request\n\n${data.verifyUrl}\nExpires in ${data.expiresIn}`,
+    sms: `Confirm your data request: ${data.verifyUrl} (expires ${data.expiresIn})`,
+  }),
+
+  'dsar.ready': (data: TemplateData['dsar.ready'], branding) => ({
+    subject: `Your data export is ready — ${branding.tenantName}`,
+    bodyHtml: `<p style="margin:0 0 12px">Your requested data export is ready to download. This link expires in ${esc(data.expiresIn)}.</p><p style="margin:0"><a href="${esc(data.downloadUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Download</a></p>`,
+    text: `Your data export is ready\n\n${data.downloadUrl}\nExpires in ${data.expiresIn}`,
+    sms: `Your data export is ready: ${data.downloadUrl} (expires ${data.expiresIn})`,
+  }),
+
+  'dsar.erased': (
+    data: TemplateData['dsar.erased'],
+    _branding: BrandingData,
+  ) => ({
+    subject: `Your data has been erased`,
+    bodyHtml: `<p style="margin:0 0 12px">The data linked to your report has been erased, as requested on ${esc(data.requestedAt)}.</p>`,
+    text: `Your data has been erased, as requested on ${data.requestedAt}.`,
+    sms: `Your data has been erased as requested.`,
+  }),
+
+  'legal.reaccept': (data: TemplateData['legal.reaccept'], branding) => ({
+    subject: `Action needed: updated ${data.documentTitle}`,
+    bodyHtml: `<p style="margin:0 0 12px">We've published a new version (${esc(data.version)}) of our <strong>${esc(data.documentTitle)}</strong>. Your account owner must accept it to keep using the console.</p><p style="margin:0"><a href="${esc(data.reacceptUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Review and accept</a></p>`,
+    text: `We've published a new version (${data.version}) of our ${data.documentTitle}.\n\nReview and accept: ${data.reacceptUrl}`,
+    sms: `Action needed: review and accept the updated ${data.documentTitle} at ${data.reacceptUrl}`,
+  }),
 };
 
 @Injectable()
