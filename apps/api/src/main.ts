@@ -70,10 +70,30 @@ async function bootstrap() {
 
   // Default quota kinds (E13); other epics register theirs via QuotaService.registerKind().
   const quotaService = app.get(QuotaService, { strict: false });
-  quotaService.registerKind('mints_per_day', { defaultLimit: 50000, window: 'day' });
-  quotaService.registerKind('scans_per_min', { defaultLimit: 600, window: 'minute' });
-  quotaService.registerKind('api_calls_per_min', { defaultLimit: 300, window: 'minute' });
-  quotaService.registerKind('demo_per_min', { defaultLimit: 10, window: 'minute' });
+  quotaService.registerKind('mints_per_day', {
+    defaultLimit: 50000,
+    window: 'day',
+  });
+  quotaService.registerKind('scans_per_min', {
+    defaultLimit: 600,
+    window: 'minute',
+  });
+  quotaService.registerKind('api_calls_per_min', {
+    defaultLimit: 300,
+    window: 'minute',
+  });
+  quotaService.registerKind('demo_per_min', {
+    defaultLimit: 10,
+    window: 'minute',
+  });
+  quotaService.registerKind('reports_per_ip_per_hour', {
+    defaultLimit: 5,
+    window: 'hour',
+  });
+  quotaService.registerKind('report_uploads_per_ip_per_hour', {
+    defaultLimit: 15,
+    window: 'hour',
+  });
 
   await app.listen(env.API_PORT);
   console.log(`API running on http://localhost:${env.API_PORT}`);
