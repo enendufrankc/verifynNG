@@ -182,7 +182,7 @@ describe('MintService integration (real Postgres + MinIO)', () => {
     const ring = new StaticKeyRing(env.CORE_KEYS, env.CORE_ACTIVE_KID);
     expect(
       deriveBatchWatermark(ring, {
-        tenant: tenantId,
+        tenant: 'mint-integration-tenant',
         batchId: result.batch.id,
       }),
     ).toBe(result.batch.watermark);
