@@ -16,6 +16,14 @@ COPY packages/core/ packages/core/
 COPY packages/ui/ packages/ui/
 COPY tsconfig.base.json ./
 
+# NEXT_PUBLIC_* vars are inlined into the client bundle at build time (used
+# by lib/beacon.ts) — the browser-reachable URL must be supplied here, not
+# read at runtime. The container-internal `http://api:4000` set on the
+# runner stage below (as API_INTERNAL_URL) is what lib/api.ts's server-only
+# fetches use instead.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 RUN pnpm --filter @verifynng/config build && pnpm --filter @verifynng/core build && pnpm --filter @verifyng/ui build && pnpm --filter @verifynng/web-verify build
 
 # ── Production stage ───────────────────────────────────────────

@@ -9,6 +9,7 @@ import { VerdictView } from '@/components/verdict/VerdictView';
 import { ErrorVerdict } from '@/components/verdict/ErrorVerdict';
 import { ShareSafeUrl } from '@/components/tenant/ShareSafeUrl';
 import { TenantThemeProvider } from '@/components/tenant/ThemeProvider';
+import { PageBeacon } from '@/components/analytics/PageBeacon';
 
 // One server call per landing, at request time — never cached, never a
 // stale verdict (T3).
@@ -95,6 +96,7 @@ export default async function VerifyCodePage({
   if (!result.ok) {
     return (
       <TenantThemeProvider profile={profile}>
+        <PageBeacon tenantSlug={tenantSlug} />
         <ErrorVerdict retryHref={`/v/${encodeURIComponent(normalized)}`} />
       </TenantThemeProvider>
     );
@@ -103,6 +105,11 @@ export default async function VerifyCodePage({
   return (
     <TenantThemeProvider profile={profile}>
       <ShareSafeUrl redactedCode={redacted} />
+      <PageBeacon
+        tenantSlug={tenantSlug}
+        verdict={result.data.verdict}
+        tier={result.data.tier}
+      />
       <VerdictView
         data={result.data}
         redactedCode={redacted}

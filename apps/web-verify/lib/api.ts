@@ -4,6 +4,17 @@ import { loadEnv } from '@verifynng/config';
 import { VERDICTS, SEVERITIES } from './verdict';
 import { redactCode } from './redact';
 
+/**
+ * Server-to-server calls use the container-internal API address
+ * (`API_INTERNAL_URL`, e.g. `http://api:4000`), never the browser-facing
+ * `NEXT_PUBLIC_API_URL` — that one gets inlined into the client bundle at
+ * build time (for lib/beacon.ts) and would be wrong for same-network
+ * container calls. Same split as apps/web-admin's Route Handlers.
+ */
+function apiInternalUrl(): string {
+  return process.env.API_INTERNAL_URL || loadEnv().NEXT_PUBLIC_API_URL;
+}
+
 // ---------------------------------------------------------------------------
 // GET /v1/verify/:code — E06
 // ---------------------------------------------------------------------------
@@ -98,7 +109,7 @@ export async function verifyCode(
   const env = loadEnv();
   const url = new URL(
     `/v1/verify/${encodeURIComponent(code)}`,
-    env.NEXT_PUBLIC_API_URL,
+    apiInternalUrl(),
   );
   if (opts.src) url.searchParams.set('src', opts.src);
 
@@ -229,7 +240,7 @@ export async function getTenantPublicProfile(
   const env = loadEnv();
   const url = new URL(
     `/v1/tenants/${encodeURIComponent(slug)}/public-profile`,
-    env.NEXT_PUBLIC_API_URL,
+    apiInternalUrl(),
   );
   try {
     const res = await fetchWithTimeout(

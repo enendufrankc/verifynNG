@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { normalizeCode } from '@verifynng/core';
+import { loadEnv } from '@verifynng/config';
 import { ManualEntryForm } from '@/components/verify/ManualEntryForm';
+import { PageBeacon } from '@/components/analytics/PageBeacon';
 
 interface PageProps {
   searchParams: Promise<{ code?: string }>;
@@ -20,6 +22,7 @@ export default async function VerifyPage({ searchParams }: PageProps) {
 
   return (
     <section className="border-border bg-surface p-s8 w-full max-w-md rounded-lg border shadow-lg">
+      <PageBeacon tenantSlug={loadEnv().NEXT_PUBLIC_DEFAULT_TENANT} />
       <h1 className="text-fg text-center font-sans text-2xl font-semibold">
         Enter your code
       </h1>
