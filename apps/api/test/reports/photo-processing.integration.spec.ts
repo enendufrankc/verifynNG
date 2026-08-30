@@ -139,7 +139,8 @@ describe('photo processing (integration)', () => {
 
   it('actually strips GPS/EXIF data — verify with exifr against the processed object', async () => {
     // Additional assertion beyond the base plan: read the processed object back from
-    // MinIO and confirm exifr finds no GPS tags, proving withMetadata(false) worked.
+    // MinIO and confirm exifr finds no GPS tags, proving metadata is stripped by
+    // sharp's default behavior (withMetadata() is never called — see photo.processor.ts).
     const tenant = await makeTenant(prisma);
     const buf = readFileSync(
       resolve(__dirname, '../fixtures/photo-with-gps.jpg'),
