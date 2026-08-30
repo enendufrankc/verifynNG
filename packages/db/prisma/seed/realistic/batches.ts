@@ -64,7 +64,20 @@ export async function seedBatches(
       const id = `seed_${key}`;
       const created = await prisma.batch.upsert({
         where: { id },
-        create: { id, tenantId, productId, oemId, count, status, createdAt },
+        // E04 made these columns required on Batch (no defaults).
+        create: {
+          id,
+          tenantId,
+          productId,
+          oemId,
+          count,
+          status,
+          createdAt,
+          idempotencyKey: id,
+          requestedBy: 'seed:realistic',
+          watermark: 'SEED',
+          kid: 'k1',
+        },
         update: { tenantId, productId, oemId, count, status, createdAt },
       });
 

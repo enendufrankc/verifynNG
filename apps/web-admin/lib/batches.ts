@@ -26,6 +26,7 @@ export interface Batch {
   failedReason: string | null;
   exportsReadyAt: string | null;
   mintedAt: string | null;
+  manifestObjectKey: string | null;
   createdAt: string;
 }
 
