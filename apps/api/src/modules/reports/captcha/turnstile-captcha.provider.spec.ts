@@ -37,4 +37,48 @@ describe('TurnstileCaptcha', () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toBe('invalid-input-response');
   });
+
+  it('resolves a captcha_service_error on a network error', async () => {
+    server.use(
+      http.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        () => HttpResponse.error(),
+      ),
+    );
+    const result = await captcha.verify('ok-test', '1.2.3.4');
+    expect(result).toEqual({ ok: false, reason: 'captcha_service_error' });
+  });
+
+  it('resolves a captcha_service_error on a non-200 response', async () => {
+    server.use(
+      http.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    const result = await captcha.verify('ok-test', '1.2.3.4');
+    expect(result).toEqual({ ok: false, reason: 'captcha_service_error' });
+  });
+
+  it('resolves a captcha_service_error on a malformed (non-JSON) body', async () => {
+    server.use(
+      http.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        () => new HttpResponse('not json', { status: 200 }),
+      ),
+    );
+    const result = await captcha.verify('ok-test', '1.2.3.4');
+    expect(result).toEqual({ ok: false, reason: 'captcha_service_error' });
+  });
+
+  it('resolves a captcha_service_error when the response shape is invalid', async () => {
+    server.use(
+      http.post(
+        'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        () => HttpResponse.json({ unexpected: 'shape' }),
+      ),
+    );
+    const result = await captcha.verify('ok-test', '1.2.3.4');
+    expect(result).toEqual({ ok: false, reason: 'captcha_service_error' });
+  });
 });
