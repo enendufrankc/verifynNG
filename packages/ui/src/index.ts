@@ -91,3 +91,7 @@ export { Breadcrumbs } from './components/ui/breadcrumbs';
 export { EmptyState } from './components/ui/empty-state';
 export { ProgressBar } from './components/ui/progress-bar';
 export { CodeBlock } from './components/ui/code-block';
+
+// Feature components
+export { ReportForm } from './components/ReportForm';
+export type { ReportFormProps } from './components/ReportForm';
