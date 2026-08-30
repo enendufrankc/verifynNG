@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -19,6 +20,10 @@ import { TenantLifecycleService } from './tenant-lifecycle.service';
 @Controller()
 export class TenantsController {
   constructor(private readonly lifecycle: TenantLifecycleService) {}
+  private ensureOwner(req: PrincipalRequest) {
+    if (req.principal?.role !== 'owner')
+      throw new ForbiddenException('owner_role_required');
+  }
   @Post('tenants') create(
     @Body()
     body: {
@@ -43,12 +48,18 @@ export class TenantsController {
   }
   @Patch('tenants/:tenantId/settings')
   @RequireTenantStatus('pending', 'in_review', 'rejected', 'active')
-  update(@Param('tenantId') id: string, @Body() body: Record<string, unknown>) {
+  update(
+    @Param('tenantId') id: string,
+    @Body() body: Record<string, unknown>,
+    @Req() req: PrincipalRequest,
+  ) {
+    this.ensureOwner(req);
     return this.lifecycle.updateSettings(id, body);
   }
   @Post('tenants/:tenantId/verification/submit')
   @RequireTenantStatus('pending', 'rejected')
-  submit(@Param('tenantId') id: string) {
+  submit(@Param('tenantId') id: string, @Req() req: PrincipalRequest) {
+    this.ensureOwner(req);
     return this.lifecycle.submitForReview(id);
   }
   @Get('tenants/:tenantId/verification') verification(
@@ -73,6 +84,7 @@ export class TenantsController {
     },
     @Req() req: PrincipalRequest,
   ): Promise<any> {
+    this.ensureOwner(req);
     return this.lifecycle.createDocument(id, {
       ...body,
       uploadedBy: req.principal?.userId ?? 'development-user',
@@ -83,7 +95,9 @@ export class TenantsController {
   complete(
     @Param('tenantId') id: string,
     @Param('documentId') documentId: string,
+    @Req() req: PrincipalRequest,
   ): Promise<any> {
+    this.ensureOwner(req);
     return this.lifecycle.completeDocument(id, documentId);
   }
   @Delete('tenants/:tenantId/verification/documents/:documentId')
@@ -91,7 +105,9 @@ export class TenantsController {
   remove(
     @Param('tenantId') id: string,
     @Param('documentId') documentId: string,
+    @Req() req: PrincipalRequest,
   ): Promise<any> {
+    this.ensureOwner(req);
     return this.lifecycle.deleteDocument(id, documentId);
   }
   @Post('tenants/:tenantId/policies/accept')
@@ -102,6 +118,7 @@ export class TenantsController {
     @Body() body: { kind: 'aup' | 'tos'; version: string },
     @Req() req: PrincipalRequest,
   ) {
+    this.ensureOwner(req);
     return this.lifecycle.acceptPolicy(
       req.principal?.userId ?? 'development-user',
       id,
@@ -114,6 +131,7 @@ export class TenantsController {
     @Body() body: { confirmSlug: string },
     @Req() req: PrincipalRequest,
   ) {
+    this.ensureOwner(req);
     return this.lifecycle.offboard(
       id,
       req.principal?.userId ?? 'development-user',
