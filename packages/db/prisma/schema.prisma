@@ -69,6 +69,8 @@ enum TenantRole {
   owner
   operator
   viewer
+  // ─── E05 ─── external OEM portal login, scoped further by OemUser.oemId
+  oem
 }
 
 enum PlatformRole {
@@ -108,6 +110,10 @@ model Tenant {
   policyAcceptances PolicyAcceptance[]
   exports TenantExport[]
   memberships Membership[] // E02
+  oemUsers OemUser[] // E05
+  manifestDeliveries ManifestDelivery[] // E05
+  printReceipts PrintReceipt[] // E05
+  shipments Shipment[] // E05
 }
 
 model User {
@@ -132,6 +138,9 @@ model User {
   memberships       Membership[]
   sessions          Session[]
   passwordResetTokens PasswordResetToken[]
+  // ─── E05 ────────────────────────────────────────────────────
+  oemUser           OemUser?
+  // ─── end E05 ────────────────────────────────────────────────
 
   @@index([tenantId])
 }
@@ -244,6 +253,10 @@ model Oem {
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   batches Batch[]
+  // ─── E05 ────────────────────────────────────────────────────
+  oemUsers   OemUser[]
+  deliveries ManifestDelivery[]
+  // ─── end E05 ────────────────────────────────────────────────
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -273,12 +286,18 @@ model Batch {
   updatedAt       DateTime  @updatedAt
   artefacts       BatchArtefact[]
   // ─── end E04 ────────────────────────────────────────────────
+  // ─── E05 ──────────────────────────────────────────────────── requested by E05, written at delivery time, read by E07
+  expectedShipDate DateTime?
+  // ─── end E05 ──────────────────────────────────────────────
   createdAt DateTime @default(now())
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
-  oem     Oem?    @relation(fields: [oemId], references: [id])
-  units   Unit[]
+  tenant    Tenant             @relation(fields: [tenantId], references: [id])
+  product   Product            @relation(fields: [productId], references: [id])
+  oem       Oem?               @relation(fields: [oemId], references: [id])
+  units     Unit[]
+  deliveries ManifestDelivery[]
+  receipts   PrintReceipt[]
+  shipment   Shipment?
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, status, createdAt])
@@ -648,3 +667,123 @@ model IpBlock {
 
   @@index([ipHash, expiresAt])
 }
+
+// ─── E05 OEM Manifest Delivery ──────────────────────────────────────────
+
+model OemUser {
+  id          String   @id @default(cuid())
+  tenantId    String
+  oemId       String
+  userId      String   @unique
+  invitedById String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  oem    Oem    @relation(fields: [oemId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  downloads ManifestDownload[]
+  receipts  PrintReceipt[]
+  shipments Shipment[]
+
+  @@index([tenantId, oemId])
+}
+
+enum DeliveryStatus {
+  delivered
+  downloaded
+  receipted
+  revoked
+  expired
+}
+
+model ManifestDelivery {
+  id               String         @id @default(cuid())
+  tenantId         String
+  batchId          String
+  oemId            String
+  objectKey        String
+  signatureKid     String
+  signature        String
+  tokenHash        String
+  tokenVersion     Int            @default(1)
+  expiresAt        DateTime
+  maxDownloads     Int            @default(5)
+  downloadCount    Int            @default(0)
+  expectedShipDate DateTime?
+  status           DeliveryStatus @default(delivered)
+  deliveredById    String
+  deliveredAt      DateTime       @default(now())
+  revokedAt        DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  batch  Batch  @relation(fields: [batchId], references: [id])
+  oem    Oem    @relation(fields: [oemId], references: [id])
+
+  downloads ManifestDownload[]
+  receipts  PrintReceipt[]
+
+  @@index([tenantId, batchId])
+  @@index([oemId, status])
+}
+
+model ManifestDownload {
+  id         String   @id @default(cuid())
+  deliveryId String
+  oemUserId  String?
+  ip         String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  delivery ManifestDelivery @relation(fields: [deliveryId], references: [id])
+  oemUser  OemUser?         @relation(fields: [oemUserId], references: [id])
+
+  @@index([deliveryId, createdAt])
+}
+
+model PrintReceipt {
+  id                String    @id @default(cuid())
+  tenantId          String
+  batchId           String
+  deliveryId        String
+  oemUserId         String
+  receiptHash       String
+  expectedHash      String
+  codeCount         Int
+  expectedCount     Int
+  watermarks        String[]
+  expectedWatermark String
+  matched           Boolean
+  mismatchReason    String?
+  mismatchDetail    Json?
+  createdAt         DateTime  @default(now())
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  batch    Batch            @relation(fields: [batchId], references: [id])
+  delivery ManifestDelivery @relation(fields: [deliveryId], references: [id])
+  oemUser  OemUser          @relation(fields: [oemUserId], references: [id])
+
+  @@index([tenantId, batchId])
+}
+
+model Shipment {
+  id                String    @id @default(cuid())
+  tenantId          String
+  batchId           String    @unique
+  oemId             String
+  oemUserId         String
+  carrier           String?
+  trackingRef       String?
+  shippedAt         DateTime
+  expectedArrivalAt DateTime?
+  meta              Json?
+  createdAt         DateTime  @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  batch   Batch   @relation(fields: [batchId], references: [id])
+  oemUser OemUser @relation(fields: [oemUserId], references: [id])
+
+  @@index([tenantId, shippedAt])
+}
+
+// ─── end E05 models ──────────────────────────────────────────────────────
