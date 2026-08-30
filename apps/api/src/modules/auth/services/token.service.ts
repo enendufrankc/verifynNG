@@ -254,10 +254,22 @@ export class TokenService {
     const tenantId = membershipAny?.tenantId ?? session.tenantId ?? '';
     const role = (membershipAny?.role as string) ?? 'viewer';
 
+    // login()'s issueAccessToken() call includes platformRole (auth.service.ts)
+    // — this one didn't, so every refresh silently dropped a support user's
+    // platform access until they logged in again. Found via E19's own
+    // browser E2E: a hard page reload (which AuthBootstrap turns into a
+    // refresh call) downgraded a support session to plain 'viewer' with no
+    // prole claim, 403ing every @PlatformRole('support') route.
+    const refreshedUser = await this.prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { platformRole: true },
+    });
+
     const accessToken = await this.issueAccessToken({
       userId: session.userId,
       tenantId,
       role,
+      platformRole: refreshedUser?.platformRole ?? undefined,
       sessionId: newSession.id,
     });
 

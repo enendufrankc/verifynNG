@@ -22,9 +22,13 @@ import type { Plugin } from 'esbuild';
 // isolates it into its own chunk. The plugin below then re-attaches
 // 'use client' to exactly the output chunks that contain a source file which
 // declared it, leaving every other chunk untouched.
-const componentEntries = globSync('src/components/**/*.{ts,tsx}', {
-  cwd: process.cwd(),
-}).filter((file) => !/\.(stories|test)\.tsx?$/.test(file));
+// E12's charts need the same per-file treatment — StackedBars/TimeSeries are
+// 'use client' (recharts); without their own entries the directive lands on
+// shared chunks and drags presentational exports (EmptyState…) client-side.
+const componentEntries = [
+  ...globSync('src/components/**/*.{ts,tsx}', { cwd: process.cwd() }),
+  ...globSync('src/charts/**/*.{ts,tsx}', { cwd: process.cwd() }),
+].filter((file) => !/\.(stories|test)\.tsx?$/.test(file));
 
 function preserveUseClientPlugin(): Plugin {
   return {

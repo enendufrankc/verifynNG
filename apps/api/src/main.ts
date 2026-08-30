@@ -94,6 +94,7 @@ async function bootstrap() {
     defaultLimit: 15,
     window: 'hour',
   });
+  // manifest_downloads_per_hour is registered by OemManifestModule.onModuleInit()
 
   await app.listen(env.API_PORT);
   console.log(`API running on http://localhost:${env.API_PORT}`);

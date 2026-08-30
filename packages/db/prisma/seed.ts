@@ -1,6 +1,13 @@
-import { PrismaClient, type TenantRole } from '@prisma/client';
+import {
+  PrismaClient,
+  type NotificationChannel,
+  type TenantRole,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 import { seedPolicies } from './seed/policies';
+import { seedLegalDocuments } from './seed/legal-documents';
+import { seedAnalyticsFixtures } from './seed/e12-analytics-fixtures';
+import { seedOemDelivery } from './seed/e05-oem';
 
 const prisma = new PrismaClient();
 
@@ -32,9 +39,16 @@ async function upsertMember(
 
 async function main() {
   await seedPolicies(prisma);
+  await seedLegalDocuments(prisma);
   if (process.argv.includes('--policies-bump')) {
     await prisma.policyDocument.upsert({
-      where: { kind_version: { kind: 'tos', version: '2026-09-01' } },
+      where: {
+        kind_locale_version: {
+          kind: 'tos',
+          locale: 'en',
+          version: '2026-09-01',
+        },
+      },
       update: {},
       create: {
         kind: 'tos',
@@ -79,8 +93,9 @@ async function main() {
     },
   ];
 
+  const productIds: string[] = [];
   for (const p of products) {
-    await prisma.product.upsert({
+    const product = await prisma.product.upsert({
       where: { tenantId_sku: { tenantId: tenant.id, sku: p.sku } },
       update: {},
       create: {
@@ -89,10 +104,11 @@ async function main() {
         name: p.name,
       },
     });
+    productIds.push(product.id);
   }
 
   // Create the Guiba OEM (E04)
-  await prisma.oem.upsert({
+  const oem = await prisma.oem.upsert({
     where: {
       tenantId_name: { tenantId: tenant.id, name: 'Guiba OEM (China)' },
     },
@@ -152,7 +168,7 @@ async function main() {
         tenantId: tenant.id,
         eventName: rule.eventName,
         templateId: rule.templateId,
-        channels: rule.channels as any,
+        channels: rule.channels as NotificationChannel[],
         roles: rule.roles,
         enabled: true,
       },
@@ -162,13 +178,34 @@ async function main() {
   // ── E02 Identity & Access — dev users ────────────────────────
   const passwordHash = await hashDevPassword();
 
-  await upsertMember(
+  const owner = await upsertMember(
     'owner@ivoryglow.local',
     'Ivory Glow Owner',
     tenant.id,
     'owner',
     passwordHash,
   );
+  // TenantStatusGuard blocks every non-GET route for an owner with pending
+  // AUP/ToS acceptance; record it for the seeded owner so the seed is usable
+  // through the real UI immediately, the same way signup's accept step would.
+  for (const doc of await prisma.policyDocument.findMany()) {
+    await prisma.policyAcceptance.upsert({
+      where: {
+        tenantId_kind_version: {
+          tenantId: tenant.id,
+          kind: doc.kind,
+          version: doc.version,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        userId: owner.id,
+        kind: doc.kind,
+        version: doc.version,
+      },
+    });
+  }
   await upsertMember(
     'operator@ivoryglow.local',
     'Ivory Glow Operator',
@@ -195,9 +232,15 @@ async function main() {
     },
   });
 
+  // ── E12: analytics/metering AC1 fixture (30 days of synthetic ScanEvents) ──
+  await seedAnalyticsFixtures(prisma, tenant.id, productIds, oem.id);
+
   console.log(
     `Seeded tenant ${tenant.name} with ${products.length} products, 3 ivoryglow members, 1 support user, and ${defaultRules.length} notification rules`,
   );
+
+  // ── E05: OEM Manifest Delivery — dev fixtures ────────────────
+  await seedOemDelivery(prisma);
 }
 
 main()

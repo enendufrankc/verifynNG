@@ -11,7 +11,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E02 Identity & Access
 
-- [ ] Add role `oem` + `oemId` JWT claim (E05).
+- [ ] Add role `oem` + `oemId` JWT claim (E05). **Partially done by E05 directly:** `oem` added to `TenantRole` (additive migration on `main`) — `RolesGuard`'s hierarchy map already falls back to treating an unrecognised role as its own singleton allowed-set, so no other E02 file changed. The `oemId` JWT claim was **not** added; E05's `OemScopeGuard` resolves `OemUser` from the DB per request instead (the spec's own documented fallback). Leaving this unchecked since the claim itself is still outstanding if a future epic wants it.
 - [ ] `UsersService.listMembers(tenantId, { roles })` (E14 routing).
 - [ ] `SessionService.issue/revoke` for impersonation sessions; never grants `owner`, max `operator` in write mode (E18).
 - [ ] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20).
@@ -28,7 +28,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E04 Catalog & Minting
 
-- [ ] `Batch.expectedShipDate DateTime?`; expose `ManifestStore.read/write`, `ArtworkService.presignZip`, unvalidated `BatchService.setStatus` — E05 enforces the state machine (E05).
+- [x] `Batch.expectedShipDate DateTime?` — added by E05 directly (additive migration on `main`), since E04 had already landed and closed. The rest of this line described an interface E04 never actually shipped under those names — E05 instead consumes E04's real `ManifestService.open()` / `ExportsService.getSignedUrl()` and writes `Batch.status` directly via the shared Prisma client (no `BatchService.setStatus` exists); `BatchLifecycleService` is the sole enforcer of the post-mint state machine (E05).
 - [ ] `Batch.isTest` so `vk_test_` keys mint unbilled; E12 skips `isTest` (E16).
 - [ ] `MintService.mintBulk({ skipExports })` for the 50k-unit seed (E21).
 - [ ] `product.updated` event (E10).
@@ -59,7 +59,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 ## To E13 Audit & Security
 
 - [ ] `AuditLog.impersonatedBy` + `impersonationSessionId`; accept them in `AuditContext` (E18).
-- [ ] Quota kinds registered by others via `QuotaService.registerKind()`: `manifest_downloads_per_hour` (E05), `reports_per_ip_per_hour`, `report_uploads_per_ip_per_hour` (E08), `pages.storageBytes` (E10).
+- [ ] Quota kinds registered by others via `QuotaService.registerKind()`: `manifest_downloads_per_hour` (E05 — **done**, registered in `OemManifestModule.onModuleInit()` so it's present under `Test.createTestingModule` too, not only `main.ts`'s bootstrap), `reports_per_ip_per_hour`, `report_uploads_per_ip_per_hour` (E08), `pages.storageBytes` (E10).
 
 ## To E14 Notifications
 
@@ -75,6 +75,8 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 ## To E17 Observability
 
 - [ ] Publish the degraded-mode contract jointly with E06 (E21).
+- [ ] FYI, not a request: E09's root `layout.tsx` now calls `headers()` (Accept-Language locale detection, T11), which forces every route under it — including `/status` — out of static prerendering (`○` → `ƒ` in the build output). If `/status` needs to stay statically optimized, it may need its own route group outside this layout rather than nesting under `apps/web-verify/app/layout.tsx`.
+- [ ] `GlobalExceptionFilter` (`apps/api/src/telemetry/error-tracker/global-exception-filter.ts`), registered as `@Catch()` for every exception, rewrites the response body of E06's rate-limited `HttpException` (`GET /v1/verify/:code` → 429) into a generic `{statusCode, timestamp, requestId, message}` envelope — discarding `verdict`/`severity`/`retryAfterSec`. Confirmed against a live `docker compose up` stack. Please pass through a response body that already carries a `verdict` field unmodified. E09 currently works around this client-side by reconstructing a minimal rate-limited verdict from the `Retry-After` header (`apps/web-verify/lib/api.ts`); that fallback can be removed once this is fixed (E09).
 
 ## To E19 Compliance
 

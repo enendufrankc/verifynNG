@@ -26,12 +26,15 @@ export class EventRouter implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Subscribe to all known event names
+    // Subscribe to all known event names. Every domain event in this codebase
+    // (batch.minted, anomaly.detected, ...) is emitted as one flat object
+    // carrying `tenantId` alongside its own fields — not `{tenantId, data}` —
+    // so the whole payload IS the template data.
     for (const eventName of Object.keys(EVENT_TEMPLATE_MAP)) {
       this.eventEmitter.on(
         eventName,
-        (payload: { tenantId: string; data: object }) => {
-          this.handleEvent(eventName, payload.tenantId, payload.data).catch(
+        (payload: { tenantId: string } & Record<string, unknown>) => {
+          this.handleEvent(eventName, payload.tenantId, payload).catch(
             (err) => {
               console.error(`EventRouter error handling ${eventName}:`, err);
             },
@@ -82,12 +85,14 @@ export class EventRouter implements OnModuleInit {
   }
 
   /**
-   * Resolves tenant members by role via the Membership join table. Tenant
-   * membership lives in Membership (userId, tenantId, role), not on User
-   * directly — User.tenantId is a separate, unrelated denormalized field that
-   * is left null for normal members (only set on some legacy/test fixtures),
-   * so querying User.tenantId here silently resolved zero recipients for
-   * every real tenant. See E08 issue re: report.received never firing.
+   * Resolves members by role for a tenant. Tenant membership lives on
+   * `Membership` (users can belong to multiple tenants), not `User.tenantId`
+   * — that field is unset for every user created via the normal signup/seed
+   * path, so a `User.findMany({where:{tenantId}})` stub here previously
+   * matched zero rows for every real tenant, meaning no routed event has
+   * ever actually reached a recipient (see the CROSS-EPIC-REQUESTS.md ask
+   * for `UsersService.listMembers` — this was the interim stub for that,
+   * written against a User-based model E02 didn't ship).
    */
   private async resolveMembers(
     tenantId: string,
@@ -96,7 +101,7 @@ export class EventRouter implements OnModuleInit {
     const memberships = await this.prisma.membership.findMany({
       where: {
         tenantId,
-        ...(roles.length > 0 ? { role: { in: roles as TenantRole[] } } : {}),
+        ...(roles.length ? { role: { in: roles as TenantRole[] } } : {}),
       },
       include: { user: true },
     });

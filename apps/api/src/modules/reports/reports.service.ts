@@ -174,11 +174,11 @@ export class ReportsService {
       data: { reportId: report.id, status: 'uploaded' },
     });
 
+    // Flat payload: EventRouter (post-E07 fix) passes the whole event object
+    // to templates, so fields live at the top level next to tenantId.
     this.eventEmitter.emit('report.created', {
       tenantId: tenant.id,
-      data: {
-        reportId: report.id,
-        tenantId: tenant.id,
+      reportId: report.id,
         reference: report.reference,
         unitId: report.unitId,
         batchId: report.batchId,
@@ -194,8 +194,7 @@ export class ReportsService {
         tier1Code: scanEvent.codeRedacted,
         reportType: report.verdictAtReport,
         reportedAt: report.createdAt.toISOString(),
-        dashboardUrl: `${loadEnv().APP_BASE_URL}/reports/${report.id}`,
-      },
+      dashboardUrl: `${loadEnv().APP_BASE_URL}/reports/${report.id}`,
     });
 
     const statusUrl = `/v1/public/${tenantSlug}/reports/${report.reference}`;

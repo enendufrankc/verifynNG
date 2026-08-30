@@ -15,6 +15,10 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
     fileParallelism: false,
+    // Same reasoning as packages/db/vitest.config.ts: createTestDatabase()'s
+    // `prisma migrate deploy` subprocess in beforeAll can exceed vitest's 10s
+    // default hookTimeout under load, well before anything is actually wrong.
+    hookTimeout: 30_000,
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts', 'test/**/*.spec.ts'],
     exclude: ['**/dist/**'],
   },

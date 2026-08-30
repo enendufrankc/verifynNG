@@ -16,7 +16,6 @@ import { DatabaseModule } from './modules/database/database.module';
 import { VerifyModule } from './modules/verify/verify.module';
 import { VerifySmsModule } from './modules/verify-sms/verify-sms.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { QuotaModule } from './modules/quota/quota.module.js';
 import { SecretsModule } from './modules/secrets/secrets.module.js';
@@ -29,6 +28,15 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { BatchesModule } from './modules/batches/batches.module';
 import { BullMQModule } from './jobs/bullmq.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { OemManifestModule } from './modules/oem-manifest/oem-manifest.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { LegalModule } from './modules/legal/legal.module';
+import { ConsentModule } from './modules/consent/consent.module';
+import { DsarModule } from './modules/dsar/dsar.module';
+import { RetentionModule } from './modules/retention/retention.module';
+import { IncidentsModule } from './modules/incidents/incidents.module';
+import { UnitsModule } from './modules/units/units.module';
+import { AnomalyModule } from './modules/anomaly/anomaly.module';
 
 @Module({
   imports: [
@@ -47,7 +55,15 @@ import { ReportsModule } from './modules/reports/reports.module';
     VerifyModule,
     VerifySmsModule,
     NotificationsModule,
-    EventEmitterModule.forRoot(),
+    // Not `EventEmitterModule.forRoot()` here too — EventsModule (below)
+    // already calls it once. A second forRoot() call gives NestJS's DI two
+    // separate EventEmitter2 provider registrations: consumers that inject
+    // EventEmitter2 directly (verify.controller.ts, this file's own
+    // subscribers) ended up on a different instance than emitters going
+    // through EventsService.emit() (mint.service.ts, notifications), so an
+    // event emitted through EventsService was silently never seen by a
+    // directly-injected listener — found while wiring E12's `batch.minted`
+    // metering subscriber, which is exactly that combination.
     AuditModule,
     QuotaModule,
     SecretsModule,
@@ -60,6 +76,15 @@ import { ReportsModule } from './modules/reports/reports.module';
     BullMQModule,
     BatchesModule,
     ReportsModule,
+    OemManifestModule,
+    AnalyticsModule,
+    LegalModule,
+    ConsentModule,
+    DsarModule,
+    RetentionModule,
+    IncidentsModule,
+    UnitsModule,
+    AnomalyModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

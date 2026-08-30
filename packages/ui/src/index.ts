@@ -95,3 +95,22 @@ export { CodeBlock } from './components/ui/code-block';
 // Feature components
 export { ReportForm } from './components/ReportForm';
 export type { ReportFormProps } from './components/ReportForm';
+// E12 — Analytics charts
+export {
+  KpiTile,
+  StackedBars,
+  TimeSeries,
+  RankedTable,
+  GeoTable,
+  CHART_PALETTE,
+  verdictColor,
+  type KpiTileProps,
+  type StackedBarsProps,
+  type VerdictSeriesPoint,
+  type TimeSeriesProps,
+  type TimeSeriesPoint,
+  type RankedTableProps,
+  type RankedTableColumn,
+  type GeoTableProps,
+  type GeoTableRow,
+} from './charts';

@@ -32,6 +32,32 @@ export const queryKeys = {
     detail: (tenantId: string, id: string) =>
       ['reports', 'detail', tenantId, id] as const,
   },
+  deliveries: {
+    list: (tenantId: string) => ['deliveries', 'list', tenantId] as const,
+    forBatch: (tenantId: string, batchId: string) =>
+      ['deliveries', 'for-batch', tenantId, batchId] as const,
+    detail: (tenantId: string, deliveryId: string) =>
+      ['deliveries', 'detail', tenantId, deliveryId] as const,
+    receiptsForBatch: (tenantId: string, batchId: string) =>
+      ['deliveries', 'receipts', tenantId, batchId] as const,
+  },
+  oemPortal: {
+    list: () => ['oem-portal', 'list'] as const,
+    detail: (deliveryId: string) =>
+      ['oem-portal', 'detail', deliveryId] as const,
+  },
+  analytics: {
+    overview: (tenantId: string, range: string) =>
+      ['analytics', 'overview', tenantId, range] as const,
+    verdicts: (tenantId: string, range: string) =>
+      ['analytics', 'verdicts', tenantId, range] as const,
+    batches: (tenantId: string, range: string) =>
+      ['analytics', 'batches', tenantId, range] as const,
+    products: (tenantId: string, range: string) =>
+      ['analytics', 'products', tenantId, range] as const,
+    geo: (tenantId: string, range: string, groupBy: string) =>
+      ['analytics', 'geo', tenantId, range, groupBy] as const,
+  },
 };
 
 export function usePagedQuery<TItem>(

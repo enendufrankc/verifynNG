@@ -27,6 +27,14 @@ import { loadEnv } from '@verifynng/config';
         name: 'reports',
         defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
       },
+      {
+        name: 'anomaly',
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
+      },
+      {
+        name: 'units',
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
+      },
     ),
   ],
   exports: [BullModule],

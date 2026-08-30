@@ -45,11 +45,14 @@ const samples: { [T in TemplateId]: TemplateData[T] } = {
     dashboardUrl: 'https://example.test/manifests/GLOW-001',
   },
   'anomaly.alert': {
-    tier1Code: 'ivoryglow.2.k1.demo',
-    productName: 'Glow Serum',
-    anomalyType: 'repeat_scan',
-    detectedAt: '2026-08-29T00:00:00.000Z',
-    dashboardUrl: 'https://example.test/anomalies/1',
+    tenantName: 'Ivory Glow',
+    rule: 'duplicate_first',
+    score: 80,
+    unitRef: 'ivoryglow.1.k1.demo',
+    batchRef: 'IVORYGLOW-20260830-A',
+    summary: 'Same unit scanned twice 850km apart within the window',
+    cities: ['Lagos', 'Kano'],
+    adminUrl: 'https://example.test/anomalies/1',
   },
   'report.received': {
     reportReference: 'RPT-001',
@@ -98,6 +101,22 @@ const samples: { [T in TemplateId]: TemplateData[T] } = {
   'notification.test': {
     message: 'Template smoke test',
     timestamp: '2026-08-29T00:00:00.000Z',
+  },
+  'dsar.verify': {
+    verifyUrl: 'https://example.test/dsar/verify/token',
+    expiresIn: '30 minutes',
+  },
+  'dsar.ready': {
+    downloadUrl: 'https://example.test/dsar/download/token',
+    expiresIn: '24 hours',
+  },
+  'dsar.erased': {
+    requestedAt: '2026-08-29T00:00:00.000Z',
+  },
+  'legal.reaccept': {
+    documentTitle: 'Terms of Service',
+    version: '2026-09-01',
+    reacceptUrl: 'https://example.test/legal',
   },
 };
 

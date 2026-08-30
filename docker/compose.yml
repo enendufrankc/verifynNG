@@ -54,6 +54,8 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 minioadmin minioadmin;
       mc mb local/verifynng || true;
+      mc mb local/dsar-exports || true;
+      mc ilm rule add --expire-days 7 local/dsar-exports || true;
       "
 
   mailpit:
@@ -170,7 +172,14 @@ services:
       MANIFEST_ENC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       VERIFY_BASE_URL: http://localhost:3000
       WORKER: 'false'
-      WORKER_INLINE: 'true'
+      # false: the dedicated api-worker service below consumes queues instead.
+      # Both containers running BullMQ workers on the same queues races two
+      # workers over the same jobs (visible as "could not renew lock" /
+      # "Lock mismatch" errors) and — since @nestjs/event-emitter is
+      # in-process only — silently drops any domain event a job emits when
+      # api-worker (not api) happens to grab that job, e.g. anomaly.detected
+      # never reaching E14's EventRouter (which only runs in api's AppModule).
+      WORKER_INLINE: 'false'
       OFFBOARDING_GRACE_DAYS: ${OFFBOARDING_GRACE_DAYS:-30}
       CORS_ORIGINS_ADMIN: http://localhost:${WEB_ADMIN_PORT:-3001}
       CORS_ORIGINS_VERIFY: http://localhost:${WEB_VERIFY_PORT:-3000}
@@ -298,10 +307,20 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web-verify
+      args:
+        # Baked into the client bundle for lib/beacon.ts — must be
+        # reachable from the host browser, unlike API_INTERNAL_URL below.
+        NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
     ports:
       - '${WEB_VERIFY_PORT:-3000}:3000'
     environment:
+      # Read at runtime by lib/api.ts's server-only fetches — container-
+      # internal address is correct here since that code runs inside the
+      # container, not the browser.
+      API_INTERNAL_URL: http://api:4000
       NEXT_PUBLIC_API_URL: http://api:4000
+      NEXT_PUBLIC_MINIO_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}
+      NEXT_PUBLIC_DEFAULT_TENANT: ivoryglow
       HOSTNAME: 0.0.0.0
     depends_on:
       api:

@@ -185,6 +185,47 @@ const e08Schema = z.object({
   REPORT_MAX_INPUT_PIXELS: z.coerce.number().default(40_000_000),
 });
 
+// ─── E05 OEM Manifest Delivery ──────────────────────────────────
+const e05Schema = z.object({
+  OEM_PORTAL_BASE_URL: z.string().default('http://localhost:3001'),
+  DELIVERY_DEFAULT_EXPIRY_HOURS: z.coerce.number().default(72),
+  DELIVERY_DEFAULT_MAX_DOWNLOADS: z.coerce.number().default(5),
+});
+
+// ── E09 Consumer Verify Web ─────────────────────────────────────
+const e09Schema = z.object({
+  NEXT_PUBLIC_MINIO_PUBLIC_URL: z.string().default('http://localhost:9000'),
+  NEXT_PUBLIC_DEFAULT_TENANT: z.string().default('ivoryglow'),
+  VERIFY_API_TIMEOUT_MS: z.coerce.number().default(3000),
+});
+
+// ── E12 Analytics & Metering ────────────────────────────────────
+const e12Schema = z.object({
+  // Incremental scan rollup job — every 10 min per the epic's lag budget.
+  ANALYTICS_ROLLUP_CRON: z.string().default('*/10 * * * *'),
+  // Nightly reconcile of the last 3 days (drift/late-event correction).
+  ANALYTICS_RECONCILE_CRON: z.string().default('30 2 * * *'),
+  // Monthly UsageSummary finalise — day 1, 02:00 UTC, for the previous month.
+  METERING_MONTH_CLOSE_CRON: z.string().default('0 2 1 * *'),
+  // Hint for E19's retention policy, not enforced by E12 itself.
+  ANALYTICS_RETENTION_HINT_DAYS: z.coerce.number().default(730),
+});
+
+// ── E19 Compliance & Data Governance ─────────────────────────────
+const e19Schema = z.object({
+  CONSENT_SALT: z.string().default('dev-consent-salt'),
+  DSAR_EXPORT_TTL_HOURS: z.coerce.number().default(24),
+  RETENTION_CRON: z.string().default('0 2 * * *'),
+  RETENTION_DRY_RUN_DEFAULT: z.coerce.boolean().default(false),
+  DSAR_EXPORT_BUCKET: z.string().default('dsar-exports'),
+});
+
+// ── E07 Anomaly Detection & Unit Lifecycle ──────────────────────
+const e07Schema = z.object({
+  ANOMALY_SWEEP_CRON: z.string().default('*/15 * * * *'),
+  ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -194,6 +235,11 @@ export const envSchema = e02Schema
   .merge(e13Schema)
   .merge(e04Schema)
   .merge(e08Schema)
+  .merge(e05Schema)
+  .merge(e09Schema)
+  .merge(e12Schema)
+  .merge(e19Schema)
+  .merge(e07Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.

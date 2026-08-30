@@ -1,1 +1,9 @@
 @import '@verifyng/ui/tokens.css';
+
+/* @verifyng/ui is consumed through a pnpm workspace symlink under
+   node_modules, which Tailwind's automatic content detection ignores by
+   default (same rule as .gitignore) — without this, every class used only
+   inside a shared component (e.g. Dialog's `fixed top-[50%] ...`) never
+   makes it into the generated CSS, and the component silently renders
+   unstyled/mispositioned. */
+@source '../node_modules/@verifyng/ui';

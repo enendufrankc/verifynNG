@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaClient } from '@prisma/client';
 
 import { MAILER } from './ports/mailer.port';
@@ -45,7 +44,13 @@ import { WebhooksService } from './webhooks/webhooks.service';
       inject: [ConfigService],
     }),
     BullModule.registerQueue({ name: 'notifications' }),
-    EventEmitterModule.forRoot(),
+    // No EventEmitterModule.forRoot() here: EventRouter must share the
+    // application's one global EventEmitter2 (registered by the host app —
+    // AppModule / WorkerModule) to see events other modules emit. This
+    // module previously registered its own private instance here, so
+    // EventRouter was listening on an EventEmitter2 nothing else could ever
+    // reach — no event routed through it (batch.minted, anomaly.detected,
+    // ...) ever actually delivered a notification.
   ],
   controllers: [NotificationsController, WebhooksController, DevController],
   providers: [
@@ -98,16 +103,8 @@ import { WebhooksService } from './webhooks/webhooks.service';
     NotificationService,
     NotificationWorker,
   ],
-  // Re-exports this module's own EventEmitterModule.forRoot() registration so
-  // that consumers who import NotificationsModule (e.g. ReportsModule, for
-  // NotificationService) resolve the SAME EventEmitter2 instance EventRouter
-  // listens on here, instead of falling through to Nest's global-module
-  // binding and picking up an unrelated forRoot() instance registered
-  // elsewhere in the app (app.module.ts, auth/status/alerts modules, etc. —
-  // each independent EventEmitterModule.forRoot() call creates its own
-  // EventEmitter2 instance; without this re-export, ReportsService's emit()
-  // and EventRouter's listener were silently talking to two different
-  // buses). See E08 issue re: report.received never firing.
-  exports: [MAILER, SMS, WHATSAPP, NotificationService, EventEmitterModule],
+  // The one global EventEmitter2 comes from common/events.module.ts
+  // (single EventEmitterModule.forRoot() app-wide) — nothing to re-export here.
+  exports: [MAILER, SMS, WHATSAPP, NotificationService],
 })
 export class NotificationsModule {}

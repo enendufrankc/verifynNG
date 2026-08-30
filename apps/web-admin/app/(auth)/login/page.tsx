@@ -54,7 +54,10 @@ function LoginForm() {
         activeRole: data.activeRole,
       });
 
-      const next = searchParams.get('next') || '/';
+      // An OEM user has no tenant console to land on — the email link's own
+      // `next` (an /oem/... deep link) still takes priority when present.
+      const fallback = data.activeRole === 'oem' ? '/oem/deliveries' : '/';
+      const next = searchParams.get('next') || fallback;
       router.push(next);
     } catch {
       setError('An unexpected error occurred');
