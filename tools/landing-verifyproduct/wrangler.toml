@@ -1,0 +1,11 @@
+name = "verifyproduct-landing"
+compatibility_date = "2026-08-01"
+main = "src/worker.mjs"
+routes = [
+  { pattern = "verifyproduct.app/*", zone_name = "verifyproduct.app" },
+  { pattern = "www.verifyproduct.app/*", zone_name = "verifyproduct.app" }
+]
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
