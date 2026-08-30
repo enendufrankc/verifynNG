@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { sendPageBeacon, type ReferrerType } from '@/lib/beacon';
+import type { Locale } from '@/lib/i18n';
 
 function referrerTypeFor(pathname: string, src: string | null): ReferrerType {
   if (pathname.startsWith('/v/')) {
@@ -23,10 +24,13 @@ export function PageBeacon({
   tenantSlug,
   verdict,
   tier,
+  locale,
 }: {
   tenantSlug: string;
   verdict?: string;
   tier?: 1 | 2;
+  /** The locale actually resolved for this render (T11); falls back to the browser's own language if omitted. */
+  locale?: Locale;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -37,7 +41,7 @@ export function PageBeacon({
       route: pathname,
       verdict,
       tier,
-      locale: navigator.language?.split('-')[0] ?? 'en',
+      locale: locale ?? navigator.language?.split('-')[0] ?? 'en',
       referrerType: referrerTypeFor(pathname, searchParams.get('src')),
     });
     // Fires once per mount (one beacon per route view) — deps intentionally

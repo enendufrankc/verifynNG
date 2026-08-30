@@ -1,4 +1,5 @@
 import type { VerifyResponse } from '@/lib/api';
+import { t, type Locale } from '@/lib/i18n';
 
 /**
  * Never renders coordinates, IP, or individual later-scan timestamps —
@@ -6,11 +7,13 @@ import type { VerifyResponse } from '@/lib/api';
  */
 export function HistorySummary({
   history,
+  locale,
 }: {
   history: NonNullable<VerifyResponse['history']>;
+  locale: Locale;
 }) {
   const firstVerified = history.firstVerifiedAt
-    ? new Date(history.firstVerifiedAt).toLocaleDateString(undefined, {
+    ? new Date(history.firstVerifiedAt).toLocaleDateString(locale, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -21,14 +24,15 @@ export function HistorySummary({
     <div className="mt-s6 space-y-s3 border-border pt-s6 border-t text-sm">
       {firstVerified && (
         <p className="text-fg-muted">
-          First verified{' '}
+          {t(locale, 'history.firstVerified')}{' '}
           <span className="text-fg font-medium">{firstVerified}</span>
         </p>
       )}
       <p className="text-fg-muted">
-        Verified{' '}
-        <span className="text-fg font-medium">{history.scanCount}</span> time
-        {history.scanCount === 1 ? '' : 's'}
+        {t(locale, 'history.verifiedCount', {
+          count: history.scanCount,
+          plural: history.scanCount === 1 ? '' : 's',
+        })}
       </p>
       {history.distinctRegions.length > 0 && (
         <div className="gap-s2 flex flex-wrap">

@@ -35,6 +35,7 @@ describe('verdict components', () => {
           reportable: false,
         }),
         redactedCode: 'ivoryglow.2.k1.ABCD…',
+        locale: 'en',
       }),
     );
     expect(screen.getByText('Withdrawn')).toBeInTheDocument();
@@ -56,6 +57,7 @@ describe('verdict components', () => {
           },
         }),
         redactedCode: 'ivoryglow.2.k1.ABCD…',
+        locale: 'en',
       }),
     );
     expect(screen.getByText('Check this')).toBeInTheDocument();
@@ -69,6 +71,7 @@ describe('verdict components', () => {
       createElement(UnknownVerdict, {
         data: base({ verdict: 'unknown', severity: 'red', reportable: false }),
         redactedCode: '***',
+        locale: 'en',
       }),
     );
     expect(screen.getByText('Not recognised')).toBeInTheDocument();
@@ -85,6 +88,7 @@ describe('verdict components', () => {
           retryAfterSec: 42,
         }),
         redactedCode: '***',
+        locale: 'en',
       }),
     );
     expect(screen.getByText(/42 seconds/)).toBeInTheDocument();

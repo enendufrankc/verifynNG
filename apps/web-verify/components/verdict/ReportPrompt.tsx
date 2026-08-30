@@ -1,3 +1,5 @@
+import { t, type Locale } from '@/lib/i18n';
+
 /**
  * Placeholder for E08's `ReportForm` (packages/ui) + `POST /v1/reports`,
  * neither of which exists on `main` yet — see the E06 change request in
@@ -5,20 +7,26 @@
  * `<ReportForm tenantSlug redactedCode verdict scanEventId />` once E08
  * ships; mounted in the same place (verdicts where `reportable` is true).
  */
-export function ReportPrompt({ supportUrl }: { supportUrl?: string }) {
+export function ReportPrompt({
+  supportUrl,
+  locale,
+}: {
+  supportUrl?: string;
+  locale: Locale;
+}) {
   return (
-    <div className="mt-s6 border-border bg-surface-sunken p-s4 rounded-md border text-sm">
-      <p className="text-fg font-medium">Think this might be counterfeit?</p>
+    <div className="mt-s6 bg-surface-sunken border-border p-s4 rounded-md border text-sm">
+      <p className="text-fg font-medium">{t(locale, 'report.prompt.title')}</p>
       <p className="mt-s1 text-fg-muted">
         {supportUrl ? (
           <>
-            Report it to the brand —{' '}
+            {t(locale, 'report.prompt.withSupport', { supportUrl: '' })}
             <a className="underline" href={supportUrl}>
               {supportUrl}
             </a>
           </>
         ) : (
-          'Report it to the brand or your point of purchase.'
+          t(locale, 'report.prompt.withoutSupport')
         )}
       </p>
     </div>

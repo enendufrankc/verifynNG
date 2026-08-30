@@ -5,6 +5,7 @@ import { normalizeCode, parseCode } from '@verifynng/core';
 import { loadEnv } from '@verifynng/config';
 import { verifyCode, getTenantPublicProfile } from '@/lib/api';
 import { redactCode } from '@/lib/redact';
+import { resolveLocale, LocaleProvider } from '@/lib/i18n';
 import { VerdictView } from '@/components/verdict/VerdictView';
 import { ErrorVerdict } from '@/components/verdict/ErrorVerdict';
 import { ShareSafeUrl } from '@/components/tenant/ShareSafeUrl';
@@ -17,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ src?: string }>;
+  searchParams: Promise<{ src?: string; lang?: string }>;
 }
 
 type Src = 'qr' | 'manual' | 'sms';
@@ -48,8 +49,9 @@ async function resolveRequest(
   const h = await headers();
   const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
   const userAgent = h.get('user-agent');
+  const locale = resolveLocale(query.lang, h.get('accept-language'));
   const result = await loadVerify(normalized, ip, userAgent, toSrc(query.src));
-  return { normalized, result };
+  return { normalized, result, locale };
 }
 
 function resolveTenantSlug(
@@ -88,7 +90,10 @@ export default async function VerifyCodePage({
   params,
   searchParams,
 }: PageProps) {
-  const { normalized, result } = await resolveRequest(params, searchParams);
+  const { normalized, result, locale } = await resolveRequest(
+    params,
+    searchParams,
+  );
   const redacted = redactCode(normalized);
   const tenantSlug = resolveTenantSlug(normalized, result);
   const profile = await getTenantPublicProfile(tenantSlug);
@@ -96,26 +101,35 @@ export default async function VerifyCodePage({
   if (!result.ok) {
     return (
       <TenantThemeProvider profile={profile}>
-        <PageBeacon tenantSlug={tenantSlug} />
-        <ErrorVerdict retryHref={`/v/${encodeURIComponent(normalized)}`} />
+        <LocaleProvider locale={locale}>
+          <PageBeacon tenantSlug={tenantSlug} locale={locale} />
+          <ErrorVerdict
+            retryHref={`/v/${encodeURIComponent(normalized)}`}
+            locale={locale}
+          />
+        </LocaleProvider>
       </TenantThemeProvider>
     );
   }
 
   return (
     <TenantThemeProvider profile={profile}>
-      <ShareSafeUrl redactedCode={redacted} />
-      <PageBeacon
-        tenantSlug={tenantSlug}
-        verdict={result.data.verdict}
-        tier={result.data.tier}
-      />
-      <VerdictView
-        data={result.data}
-        redactedCode={redacted}
-        supportUrl={profile.supportUrl}
-        tenantSlug={tenantSlug}
-      />
+      <LocaleProvider locale={locale}>
+        <ShareSafeUrl redactedCode={redacted} />
+        <PageBeacon
+          tenantSlug={tenantSlug}
+          verdict={result.data.verdict}
+          tier={result.data.tier}
+          locale={locale}
+        />
+        <VerdictView
+          data={result.data}
+          redactedCode={redacted}
+          supportUrl={profile.supportUrl}
+          locale={locale}
+          tenantSlug={tenantSlug}
+        />
+      </LocaleProvider>
     </TenantThemeProvider>
   );
 }

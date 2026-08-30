@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { normalizeCodePreview, looksWellFormed } from '@/lib/normalize-preview';
+import { t, type Locale } from '@/lib/i18n';
 
 /**
  * Progressive enhancement: without JS this is a plain `<form method="GET"
@@ -11,7 +12,7 @@ import { normalizeCodePreview, looksWellFormed } from '@/lib/normalize-preview';
  * navigation straight to `/v/[normalized]`, and a live preview + a
  * non-blocking "doesn't look right" hint render as you type.
  */
-export function ManualEntryForm() {
+export function ManualEntryForm({ locale }: { locale: Locale }) {
   const [value, setValue] = useState('');
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -34,7 +35,7 @@ export function ManualEntryForm() {
     >
       <div>
         <label htmlFor="code" className="text-fg block text-sm font-medium">
-          Enter the code
+          {t(locale, 'verify.form.label')}
         </label>
         <input
           id="code"
@@ -45,18 +46,18 @@ export function ManualEntryForm() {
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}
-          placeholder="ivoryglow-2-k1-abcd…"
+          placeholder={t(locale, 'verify.form.placeholder')}
           className="mt-s2 border-border bg-surface px-s4 py-s3 text-fg focus:border-brand w-full rounded-md border text-sm outline-none"
         />
         {normalized && (
           <p className="mt-s2 text-fg-muted text-xs">
-            We read this as{' '}
+            {t(locale, 'verify.form.preview', { code: '' })}
             <span className="text-fg font-mono">{normalized}</span>
           </p>
         )}
         {showHint && (
           <p className="mt-s1 text-warning text-xs">
-            That doesn&rsquo;t look like a complete code — check for typos.
+            {t(locale, 'verify.form.hint')}
           </p>
         )}
       </div>
@@ -65,7 +66,7 @@ export function ManualEntryForm() {
         disabled={isPending}
         className="bg-brand py-s3 text-brand-ink w-full rounded-md text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
       >
-        Verify
+        {t(locale, 'verify.form.submit')}
       </button>
     </form>
   );

@@ -18,6 +18,7 @@ export function VerdictView({
   data,
   redactedCode,
   supportUrl,
+  locale,
   tenantSlug,
 }: VerdictComponentProps & { tenantSlug: string }) {
   switch (data.verdict) {
@@ -27,6 +28,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
           tenantSlug={tenantSlug}
         />
       );
@@ -36,6 +38,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'already-verified':
@@ -44,6 +47,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'suspicious':
@@ -52,6 +56,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'flagged':
@@ -60,6 +65,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'decommissioned':
@@ -68,6 +74,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'unknown':
@@ -76,6 +83,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'invalid':
@@ -84,6 +92,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     case 'rate-limited':
@@ -92,6 +101,7 @@ export function VerdictView({
           data={data}
           redactedCode={redactedCode}
           supportUrl={supportUrl}
+          locale={locale}
         />
       );
     default: {

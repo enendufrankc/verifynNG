@@ -1,12 +1,7 @@
 import Link from 'next/link';
 import { Tier1ProductSlot } from '@/components/verdict/Tier1ProductSlot';
+import { t, type Locale } from '@/lib/i18n';
 import type { VerifyResponse } from '@/lib/api';
-
-const STEPS = [
-  'Look under the cap, or behind the scratch-off panel on the back label.',
-  'Scratch gently to reveal a second, longer code.',
-  'Enter that code below for full unit-level verification.',
-];
 
 /**
  * Tier-1 "find the hidden code" teaching panel — mounted only under the
@@ -16,10 +11,18 @@ const STEPS = [
 export function EducationPanel({
   data,
   tenantSlug,
+  locale,
 }: {
   data: VerifyResponse;
   tenantSlug: string;
+  locale: Locale;
 }) {
+  const steps = [
+    t(locale, 'education.step1'),
+    t(locale, 'education.step2'),
+    t(locale, 'education.step3'),
+  ];
+
   return (
     <div className="mt-s6 border-border pt-s6 border-t">
       <Tier1ProductSlot
@@ -29,12 +32,13 @@ export function EducationPanel({
         productName={data.product?.name}
         oemName={data.batch?.oem}
         commissionedAt={data.batch?.commissionedAt}
+        locale={locale}
       />
       <h2 className="mt-s6 text-fg text-sm font-semibold">
-        Find the hidden code for full authentication
+        {t(locale, 'education.heading')}
       </h2>
       <ol className="mt-s3 space-y-s2 pl-s5 text-fg-muted list-decimal text-sm">
-        {STEPS.map((step) => (
+        {steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ol>
@@ -42,7 +46,7 @@ export function EducationPanel({
         href="/verify?tier=2"
         className="mt-s5 bg-brand py-s3 text-brand-ink block w-full rounded-md text-center text-sm font-semibold transition hover:opacity-90"
       >
-        I found it — enter it
+        {t(locale, 'education.cta')}
       </Link>
     </div>
   );

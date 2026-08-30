@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { TONE_CLASSES, type VerdictTone } from '@/lib/verdict';
+import { t, type Locale } from '@/lib/i18n';
 
 export interface VerdictRow {
   label: string;
@@ -13,13 +14,9 @@ export interface VerdictFrameProps {
   message: string;
   tier?: 1 | 2;
   rows?: VerdictRow[];
+  locale: Locale;
   children?: ReactNode;
 }
-
-const TIER_LABEL: Record<1 | 2, string> = {
-  1: 'Public QR · Product line',
-  2: 'Hidden code · Unit verification',
-};
 
 /**
  * The shared card shell every verdict component renders through — badge,
@@ -35,6 +32,7 @@ export function VerdictFrame({
   message,
   tier,
   rows,
+  locale,
   children,
 }: VerdictFrameProps) {
   const cls = TONE_CLASSES[tone];
@@ -48,7 +46,10 @@ export function VerdictFrame({
       <div className="p-s8">
         {tier && (
           <span className="right-s4 top-s4 bg-surface-sunken px-s3 py-s1 text-fg-muted absolute rounded-full text-[10px] font-semibold tracking-widest uppercase">
-            {TIER_LABEL[tier]}
+            {t(
+              locale,
+              tier === 1 ? 'verdict.tier1.label' : 'verdict.tier2.label',
+            )}
           </span>
         )}
         <div

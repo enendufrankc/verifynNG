@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { Locale } from '@/lib/i18n';
 
 export interface Tier1ProductSlotProps {
   tenantSlug: string;
@@ -7,6 +8,7 @@ export interface Tier1ProductSlotProps {
   productName?: string;
   oemName?: string;
   commissionedAt?: string;
+  locale: Locale;
 }
 
 let renderer: ComponentType<Tier1ProductSlotProps> | null = null;
