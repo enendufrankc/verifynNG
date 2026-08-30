@@ -1,13 +1,13 @@
 # E03 — Tenant Lifecycle
 
-| | |
-|---|---|
-| Wave | 1 |
-| Status | in-progress |
-| Owner | enendufrankc |
-| GitHub Issue | [#4](https://github.com/enendufrankc/verifynNG/issues/4) |
-| Depends on | E02 (interfaces: `MembershipService.addOwner`, `@Roles`, `@PlatformRole('support')`, `TenantContextGuard`), E00 |
-| Unblocks | E15 (plan/suspension hooks), E18 (support review UI extends this queue), E19 (offboarding deletion honours retention), E09/E10 (branding settings) |
+|                 |                                                                                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Wave            | 1                                                                                                                                                                                                                  |
+| Status          | review                                                                                                                                                                                                             |
+| Owner           | enendufrankc                                                                                                                                                                                                       |
+| GitHub Issue    | [#4](https://github.com/enendufrankc/verifynNG/issues/4)                                                                                                                                                           |
+| Depends on      | E02 (interfaces: `MembershipService.addOwner`, `@Roles`, `@PlatformRole('support')`, `TenantContextGuard`), E00                                                                                                    |
+| Unblocks        | E15 (plan/suspension hooks), E18 (support review UI extends this queue), E19 (offboarding deletion honours retention), E09/E10 (branding settings)                                                                 |
 | Readiness items | `production-readiness.md` §8 all rows (onboarding, identity verification, suspension/reactivation, offboarding) · §3 "Acceptable Use Policy", "Privacy policy + ToS" acceptance records · `architecture.md` step 6 |
 
 ## Goal
@@ -38,6 +38,7 @@ docs/tenant-lifecycle.md
 ## Interfaces
 
 **Consumes**
+
 - E02: `MembershipService.addOwner(userId, tenantId)`, `@Roles('owner')`, `@PlatformRole('support')`, `@TenantId()`, `@Principal()`, `TenantContextGuard` (already resolves `tid` from the JWT; E03 makes `POST /auth/switch-tenant` meaningful for a fresh tenant by creating the membership before returning).
 - E00: `Tenant` base model (`status` enum already exists), `prisma`, compose `minio` (S3 at `minio:9000`, bucket `verifyng`), `redis` for BullMQ.
 - E14 (interface only): `MAILER` token for `tenant-verified`, `tenant-rejected`, `tenant-suspended`, `tenant-offboarding-scheduled` mails.
@@ -47,6 +48,7 @@ docs/tenant-lifecycle.md
 **Exposes**
 
 Nest providers (exported from `TenantsModule`):
+
 ```ts
 TenantLifecycleService
   create({ ownerUserId, name, legalName, country }): Tenant                   // status pending, adds owner membership, emits tenant.created
@@ -71,6 +73,7 @@ TenantStatusGuard (global APP_GUARD, after E02's guards)
 ```
 
 HTTP routes:
+
 ```
 POST   /tenants                                  { name, legalName, country, acceptPolicies: { aup: version, tos: version } }   authenticated user, no tenant context → 201 { tenant, accessToken, refreshToken } (tokens re-issued with tid)
 GET    /tenants/:tenantId                                                              @Roles('viewer')   → tenant + status + verification summary
@@ -95,6 +98,7 @@ GET    /policies/:kind/current                                                  
 ```
 
 Domain events:
+
 ```ts
 'tenant.created'      { tenantId, slug, ownerUserId, country, at }
 'tenant.submitted'    { tenantId, documentKinds: string[], at }
@@ -201,30 +205,30 @@ model TenantExport {
 
 ## Tasks
 
-- [ ] T1 Schema + migration `E03_tenant_lifecycle`: enum extension (Postgres `ALTER TYPE … ADD VALUE`), Tenant fields, new models; env section (`S3_ENDPOINT=http://minio:9000`, `S3_BUCKET=verifyng`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`, `OFFBOARDING_GRACE_DAYS=30`); `S3Client` provider (`@aws-sdk/client-s3` + presigner) exported for E04/E05/E19 to reuse under token `S3`.
-- [ ] T2 Seed `PolicyDocument` AUP v`2026-08-01` and ToS v`2026-08-01` from `prisma/seed/policies.ts` (short real text: no authenticating goods you do not own the mark for; platform may suspend on evidence of counterfeiting); `GET /policies/:kind/current`.
-- [ ] T3 `TenantLifecycleService.create` + `POST /tenants`: slug generation, owner membership via E02, policy acceptance rows, tokens re-issued with `tid`; `tenant.created` event; `pnpm db:seed` moves `ivoryglow` to `active` with `trademarkNumber=NG/TM/O/2020/11950`, `legalName=Tunnel Light Global Concept Ltd`, `country=NG`.
-- [ ] T4 `TenantStatusGuard` + decorators, registered as global guard; table-driven unit tests for every (status × method × decorator) cell; `docs/tenant-lifecycle.md` explains what other epics get for free.
-- [ ] T5 Verification documents: presigned PUT flow, `complete` verifies the object exists (`HeadObject`) and size ≤ 10 MB and content-type ∈ {pdf, png, jpeg}; required set = `cac_certificate` + `director_id` (+ `trademark_certificate` optional but shown as "strongly recommended"); `submit` → `in_review`.
-- [ ] T6 Support queue API: list/approve/reject/suspend/reactivate with `TenantReviewNote`; `tenant.verified|rejected|suspended|reactivated` events; mails via `MAILER`.
-- [ ] T7 Settings + branding: `PATCH /tenants/:id/settings` with zod-validated `branding` (hex colours, https URLs, logo must be an object key under `tenants/{tenantId}/branding/` uploaded via the same presigned flow); slug immutable after verification.
-- [ ] T8 Offboarding: `POST /tenants/:id/offboard` → status `offboarded`, enqueue `export` then `delete` (delayed); export processor streams Products/Oems/Batches/Units (hashes only, never raw tier-2)/ScanEvents/Members/AuditLog rows as NDJSON into a ZIP in MinIO; `GET /tenants/:id/export` with signed URL; deletion processor deletes tenant-owned rows in FK order and MinIO prefix `tenants/{tenantId}/`, respecting `RetentionPolicy` (scan events older than policy are dropped, newer are kept anonymised — E19 may tighten); `tenant.exported`, `tenant.deleted` events.
-- [ ] T9 Policy version bump: when `PolicyDocument` gets a newer version, `pendingAcceptances()` is non-empty; `TenantStatusGuard` returns 403 `{ error: 'policy_acceptance_required', pending: [...] }` for owner writes until accepted (viewers/operators unaffected).
-- [ ] T10 web-admin `(onboarding)` wizard: create account (E02 routes) → business details → document uploads (direct-to-MinIO presigned PUT with progress) → AUP/ToS checkboxes → "pending review" screen that polls `GET /tenants/:id`; rejected state shows reason and lets the owner replace documents and resubmit.
-- [ ] T11 web-admin `(console)/support/tenant-review`: queue table (E11 `DataTable`), detail drawer with document viewer (signed GET URLs), approve/reject/suspend/reactivate actions with reason dialog; registers nav entry `support.tenantReview` for `platformRole=support` only.
-- [ ] T12 web-admin `(console)/settings/organization`: settings + branding form (react-hook-form + zod from E11), suspended banner (read-only), offboard danger zone with slug confirmation and export download.
-- [ ] T13 Isolation spec `apps/api/test/isolation/E03.isolation.spec.ts` using E02's harness for every `/tenants/:tenantId/*` route; E2E flows below.
+- [x] T1 Schema + migration `E03_tenant_lifecycle`: enum extension (Postgres `ALTER TYPE … ADD VALUE`), Tenant fields, new models; env section (`S3_ENDPOINT=http://minio:9000`, `S3_BUCKET=verifyng`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_FORCE_PATH_STYLE=true`, `OFFBOARDING_GRACE_DAYS=30`); `S3Client` provider (`@aws-sdk/client-s3` + presigner) exported for E04/E05/E19 to reuse under token `S3`. (Bucket is actually named `verifynng`, matching the compose Postgres DB name; also added `S3_PUBLIC_ENDPOINT` and `WORKER_INLINE`, both required for the app to work at all against a real browser/compose stack — see notes.)
+- [x] T2 Seed `PolicyDocument` AUP v`2026-08-01` and ToS v`2026-08-01` from `prisma/seed/policies.ts`; `GET /policies/:kind/current`.
+- [x] T3 `TenantLifecycleService.create` + `POST /tenants`: slug generation, owner membership, policy acceptance rows, tokens re-issued with `tid`; `tenant.created` event; `pnpm db:seed` moves `ivoryglow` to `active` with trademark/legal name/country set.
+- [x] T4 `TenantStatusGuard` + decorators, registered as global guard; table-driven unit tests for every (status × method × decorator) cell; `docs/tenant-lifecycle.md` explains what other epics get for free.
+- [x] T5 Verification documents: presigned PUT flow, `complete` verifies the object exists (`HeadObject`) and size ≤ 10 MB and content-type ∈ {pdf, png, jpeg}; required set = `cac_certificate` + `director_id`; `submit` → `in_review`.
+- [x] T6 Support queue API: list/approve/reject/suspend/reactivate with `TenantReviewNote`; `tenant.verified|rejected|suspended|reactivated` events. Mails via `MAILER` are **not** wired — E14 hasn't shipped the `MAILER` token yet; nothing to consume.
+- [x] T7 Settings + branding: `PATCH /tenants/:id/settings` with zod-validated `branding`; slug isn't in the updatable field set at all, so it's immutable unconditionally (simpler than "immutable after verification", not weaker).
+- [x] T8 Offboarding: `POST /tenants/:id/offboard` → status `offboarded`, enqueues `export` (immediate) then `delete` (delayed `OFFBOARDING_GRACE_DAYS`) via a real BullMQ queue/worker; export streams Products/Oems/Batches/Units/ScanEvents/Members/AuditLog as NDJSON into a ZIP in MinIO; deletion purges Unit/Batch/Product/Oem, anonymises in-retention scan events and drops the rest, wipes the tenant's MinIO prefix; `tenant.exported`/`tenant.deleted` events. Verified live end to end, including the `OFFBOARDING_GRACE_DAYS=0` path.
+- [x] T9 Policy version bump: `pendingAcceptances()` gate on `TenantStatusGuard`, scoped to owner writes and never to platform-support actions (a real bug — see notes).
+- [x] T10 web-admin `(onboarding)` wizard: account → business → documents (presigned PUT with progress) → AUP/ToS → pending (polling); rejected state shows reason and lets the owner replace documents and resubmit. Verified live.
+- [x] T11 web-admin `(console)/support/tenant-review`: queue table, detail panel with document viewer (signed GET URLs), approve/reject/suspend actions with a reason dialog. **Not done:** nav entry registration and `E11 DataTable` — `packages/ui`, the admin shell, and `nav.config.ts` don't exist yet (E11 has only claimed its epic). Plain Tailwind for now; reactivate has no dedicated UI action yet (only suspend/approve/reject).
+- [x] T12 web-admin `(console)/settings/organization`: settings + branding form, suspended/restricted banner (read-only), offboard danger zone with name confirmation, export status/download once ready. Same E11 caveat as T11 — no `react-hook-form`/design tokens to consume yet.
+- [x] T13 Isolation spec `apps/api/test/isolation/E03.isolation.spec.ts`: boots the real app and drives HTTP requests through the full guard chain (not just the guard in isolation) for cross-tenant 404s, non-support 403s, and the support approve→suspend→reactivate transition. E02 hasn't shipped a real auth/isolation test harness yet, so this is a self-contained equivalent rather than "using E02's harness".
 
 ## Acceptance criteria
 
-- [ ] AC1 Self-serve signup end-to-end: `http://localhost:3001/signup` → account → business "Test Brand Ltd" (NG) → upload a PDF as CAC and a PNG as director ID → accept AUP + ToS → "Pending review". `docker compose exec postgres psql -U verifyng -c "select slug,status from \"Tenant\" where slug='test-brand-ltd'"` → `in_review`. `mc ls local/verifyng/tenants/<id>/verification/` lists two objects.
-- [ ] AC2 Pending tenant cannot mint: as the new owner, `curl -X POST localhost:4000/tenants/<id>/batches -H "Authorization: Bearer $AT"` (E04's route, or any non-onboarding POST) → 403 `tenant_not_active`; `GET /tenants/<id>` → 200.
-- [ ] AC3 Support approval: login as `support@verifyng.local` at `http://localhost:3001/support/tenant-review`, open "Test Brand Ltd", view both documents inline, click Approve → tenant `active`; Mailpit (`http://localhost:8025`) shows "Your business is verified" to the owner; `docker compose logs api | grep tenant.verified` shows the event.
-- [ ] AC4 Rejection with resubmit: reject another pending tenant with reason "CAC certificate illegible", `canResubmit=true` → owner's wizard shows the reason, allows replacing the document and resubmitting → back to `in_review`.
-- [ ] AC5 Suspension semantics: `POST localhost:4000/support/tenants/<ivoryglow>/suspend {"reason":"manual","note":"test"}` → owner `GET /tenants/<id>/batches` → 200, `POST /tenants/<id>/batches` → 403 `tenant_suspended`, and `curl localhost:4000/v1/verify/<any ivoryglow tier-1 code>` (E06) → 200 with a verdict. `POST …/reactivate` → minting POST works again.
-- [ ] AC6 Policy bump: insert `PolicyDocument(kind=tos, version='2026-09-01')` via `pnpm db:seed --policies-bump` (seed flag) → owner's next PATCH → 403 `policy_acceptance_required`; console shows the acceptance modal; accept → PATCH succeeds; `PolicyAcceptance` row has `version='2026-09-01'`.
-- [ ] AC7 Offboarding: `POST /tenants/<test-brand>/offboard {"confirmSlug":"test-brand-ltd"}` → 202; within 30 s `GET /tenants/<id>/export` → `downloadUrl`; `curl -o export.zip "$URL" && unzip -l export.zip` lists `products.ndjson units.ndjson scan_events.ndjson members.ndjson …`; `scheduledDeletionAt` ≈ now + 30 d; with `OFFBOARDING_GRACE_DAYS=0` in the compose override the `delete` job runs and `select count(*) from "Unit" where tenant_id='<id>'` → 0 and `mc ls local/verifyng/tenants/<id>/` is empty; `tenant.deleted` logged.
-- [ ] AC8 Isolation: `pnpm --filter @verifyng/api test test/isolation/E03` passes — tenant A's owner gets 404 on every `/tenants/<B>/…` route including verification document URLs, and support routes return 403 to non-support users.
+- [x] AC1 Self-serve signup end-to-end. Verified live against this worktree's `docker compose up` stack: full wizard flow via curl (account → business → 2 documents → policies → submit), `select slug,status from "Tenant"` → `in_review`, both objects present under `tenants/<id>/verification/` in MinIO.
+- [x] AC2 Pending tenant cannot perform a non-onboarding write: verified via `POST /tenants/<id>/offboard` (E04's `/batches` doesn't exist yet, so this is the closest real analog) on a `pending` tenant → 403 `tenant_not_active`; `GET /tenants/<id>` → 200.
+- [x] AC3 Support approval: verified live — list queue, view both documents via signed URL, approve → tenant `active`, `tenant.verified`-equivalent event logged. Mailpit email **not** verified (blocked on E14's `MAILER`, same as T6).
+- [x] AC4 Rejection with resubmit: verified live — reject with reason + `canResubmit`, owner sees the reason on `GET /tenants/:id`, replaces the CAC document, resubmits → back to `in_review`.
+- [x] AC5 Suspension semantics: verified live for the E03-owned half — suspend blocks owner POST (`tenant_suspended`) but not GET, reactivate restores POST access. The E06 verify-endpoint half (`curl .../v1/verify/<code>` still 200 while suspended) can't be tested yet — E06 doesn't exist.
+- [x] AC6 Policy bump: covered by two dedicated Postgres integration tests (`policy-acceptance.postgres.spec.ts`, `tenant-status.guard.policy.spec.ts`) that insert a newer `PolicyDocument` and assert the 403/pending/clear-after-accept sequence; also added the `pnpm db:seed --policies-bump` flag the AC names, but did not additionally re-verify it by hand through the (nonexistent) console modal.
+- [x] AC7 Offboarding: verified live, both scenarios — default grace period: export downloads and `unzip -l` lists the expected `*.ndjson` files; separately with `OFFBOARDING_GRACE_DAYS=0`: delete job ran automatically, `Unit` count 0, MinIO prefix empty, `tenant.deleted` logged.
+- [x] AC8 Isolation: `test/isolation/E03.isolation.spec.ts` passes (4/4) — tenant A gets 404 on tenant B's routes for both a read and a write, and support routes 403 a non-support principal. Caught two real guard bugs, both fixed (see notes).
 
 ## Testing
 
@@ -244,3 +248,56 @@ None. Uses `minio` (9000/9001), `mailpit`, `redis` from E00 and the `api-worker`
 - Suspended = read-only console, live verification. This is deliberate: a brand's payment failure must never make a consumer see "counterfeit".
 - Export never contains raw tier-2 codes (only hashes) — the tenant already received them via E04/E05 manifests; re-exporting them at offboarding would create a second leak surface.
 - The `S3` provider lives here because E03 is the first wave-1 epic that needs object storage; E04 and E05 import it rather than re-creating a client.
+
+### 2026-08-30 reconciliation and hardening pass
+
+Picked this epic up mid-flight: the branch was 13 commits ahead of a stale
+merge-base (30 commits behind `main`, never rebased) and every task/AC
+checkbox was still unticked despite substantial code existing. Rebased
+clean onto `main` first (no conflicts — the "files deleted" diff in the
+prior handoff snapshot was staleness, not damage to other epics' work).
+
+Then found and fixed, in order, via a mix of code reading and actually
+running `docker compose up` end to end:
+
+- No route enforced `@Roles('owner')` at all — any role could write.
+  Added `ensureOwner` checks as a stub for E02's not-yet-shipped decorator.
+- Support's approve/reject/suspend/reactivate had no `@RequireTenantStatus`/
+  `@AllowWhenSuspended`, so `TenantStatusGuard`'s default "not active → 403"
+  rule blocked every one of them in practice.
+- The owner policy-acceptance gate fired for platform-support principals
+  too (the stub defaults `role` to `'owner'` when unset), so a support
+  agent's approve/suspend call could 403 behind the _tenant's own_
+  AUP/ToS acceptance.
+- T8's deletion job didn't exist at all, and the export half's
+  `WORKER_INLINE` gate was never set anywhere in env/compose, so
+  offboarding silently did nothing in the real stack. Added a real
+  BullMQ queue/worker, `runDelete`, `RETENTION_POLICY`, and the missing
+  env wiring.
+- `TenantLifecycleService.create()` created the owner `User` with a
+  fresh generated id that the client never learns, while policy
+  acceptances were recorded against that id — so the very first
+  post-signup write always 403'd with `policy_acceptance_required`
+  in a real browser session. Now upserts the owner by the caller's own
+  principal id.
+- Presigned URLs were signed against `S3_ENDPOINT` (`minio:9000`,
+  compose-internal only) — unusable by an actual browser. Added
+  `S3_PUBLIC_ENDPOINT` and a second client for anything handed to a
+  browser.
+- `support.controller`'s document-viewer endpoint returned bare object
+  keys with no signed URL, making "view documents inline" (AC3)
+  impossible. Now returns a 5-minute signed GET per document.
+
+T11/T12 web-admin pages were placeholder stubs (no interactivity at all);
+built them out functionally. Both are plain Tailwind, matching the
+existing signup page — `packages/ui`, the admin shell, and
+`nav.config.ts` are E11's, and E11 has only claimed its epic so far
+(no code). Revisit styling and nav registration once E11 ships.
+
+Remaining, all blocked on other epics rather than E03 scope: `MAILER`
+emails (E14), the E06 half of AC5 (verify endpoint), full `@Roles`/
+`@PlatformRole`/`TenantContextGuard` from E02 (current enforcement is a
+same-shape stub keyed off `x-*` headers, documented in
+`docs/tenant-lifecycle.md`), and E11's design system/nav for T11/T12.
+
+PR #37 has the full commit history and verification output.
