@@ -18,6 +18,7 @@
     "db:reset": "pnpm --filter @verifynng/db db:reset",
     "db:seed": "pnpm --filter @verifynng/db db:seed",
     "db:seed:realistic": "pnpm --filter @verifynng/db db:seed:realistic",
+    "secrets:rotate-core-key": "node tools/scripts/secrets/rotate-core-key.mjs",
     "test:smoke": "pnpm test:e2e --grep @smoke",
     "test:contract": "echo 'TODO(E16): contract tests pending E16 public API'",
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
