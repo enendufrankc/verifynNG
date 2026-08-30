@@ -38,6 +38,8 @@ enum PolicyKind {
   aup
   tos
   privacy
+  cookie        // ─ E19 addition
+  subprocessors // ─ E19 addition
 }
 
 enum UnitState {
@@ -173,7 +175,13 @@ model PolicyDocument {
   markdown String
   effectiveFrom DateTime
   createdAt DateTime @default(now())
-  @@unique([kind, version])
+  // ─── E19 additions: locale support + authoring metadata ───
+  locale String @default("en")
+  changeSummary String?
+  requiresReacceptance Boolean @default(false)
+  publishedById String?
+  @@unique([kind, locale, version])
+  @@index([kind, locale, effectiveFrom])
 }
 
 model PolicyAcceptance {
@@ -647,4 +655,152 @@ model IpBlock {
   createdAt    DateTime @default(now())
 
   @@index([ipHash, expiresAt])
+}
+
+// ─── E19 Compliance & Data Governance ────────────────────────────────────────
+// LegalDocument versioning reuses PolicyDocument/PolicyAcceptance above (see
+// docs/superpowers/plans/2026-08-30-e19-legal-documents-milestone1.md "Key
+// decisions") — the models below are net-new and unused by any other epic.
+
+enum ConsentSubjectType {
+  consumer
+  user
+}
+
+enum ConsentPurpose {
+  contact_followup
+  marketing
+  analytics_optional
+  terms_acceptance
+}
+
+enum ConsentSource {
+  report_form
+  signup
+  admin_preferences
+  legal_reaccept
+  import
+}
+
+model ConsentRecord {
+  id              String             @id @default(cuid())
+  tenantId        String?
+  subjectType     ConsentSubjectType
+  subjectRef      String
+  purpose         ConsentPurpose
+  granted         Boolean
+  source          ConsentSource
+  documentKind    PolicyKind?
+  documentVersion String?
+  evidence        Json?
+  at              DateTime           @default(now())
+  @@index([tenantId, subjectType, subjectRef, purpose, at])
+  @@index([subjectType, subjectRef, purpose, at])
+}
+
+model RetentionRun {
+  id          String    @id @default(cuid())
+  policy      String
+  dryRun      Boolean
+  cutoff      DateTime
+  matched     Int
+  affected    Int
+  startedAt   DateTime
+  finishedAt  DateTime?
+  error       String?
+  triggeredBy String
+  @@index([policy, startedAt])
+}
+
+enum LegalHoldScope {
+  tenant
+  unit
+  report
+  consumer
+}
+
+model LegalHold {
+  id          String         @id @default(cuid())
+  tenantId    String?
+  scope       LegalHoldScope
+  ref         String
+  reason      String
+  createdById String
+  createdAt   DateTime       @default(now())
+  releasedAt  DateTime?
+  @@index([scope, ref, releasedAt])
+}
+
+enum DsarSubjectType {
+  consumer
+  tenant
+}
+
+enum DsarAction {
+  export
+  erase
+}
+
+enum DsarStatus {
+  pending_verification
+  verified
+  processing
+  completed
+  rejected
+  expired
+}
+
+model DsarRequest {
+  id              String          @id @default(cuid())
+  tenantId        String?
+  subjectType     DsarSubjectType
+  action          DsarAction
+  subjectRef      String
+  lookupRef       String?
+  status          DsarStatus      @default(pending_verification)
+  verifyTokenHash String?
+  verifyExpiresAt DateTime?
+  exportObjectKey String?
+  exportExpiresAt DateTime?
+  outcomeNote     String?
+  requestedAt     DateTime        @default(now())
+  completedAt     DateTime?
+  @@index([subjectType, subjectRef, requestedAt])
+  @@index([status, requestedAt])
+}
+
+enum IncidentSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum IncidentStatus {
+  open
+  assessing
+  contained
+  notified
+  closed
+}
+
+model Incident {
+  id                 String           @id @default(cuid())
+  title              String
+  severity           IncidentSeverity
+  status             IncidentStatus   @default(open)
+  detectedAt         DateTime
+  occurredAt         DateTime?
+  dataCategories     String[]
+  affectedTenantIds  String[]
+  estimatedSubjects  Int?
+  ndpcNotifyRequired Boolean?
+  ndpcNotifyDeadline DateTime?
+  ndpcNotifiedAt     DateTime?
+  icoNotifyRequired  Boolean?
+  timeline           Json
+  postmortemUrl      String?
+  openedById         String
+  closedAt           DateTime?
+  @@index([status, detectedAt])
 }
