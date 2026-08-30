@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { StatusController } from './status.controller';
 import { StatusService } from './status.service';
 
 @Module({
-  imports: [EventEmitterModule.forRoot()],
+  // Not EventEmitterModule.forRoot() here — see the note in app.module.ts;
+  // it's called exactly once app-wide, in common/events.module.ts.
+  imports: [],
   controllers: [StatusController],
   providers: [StatusService],
   exports: [StatusService],

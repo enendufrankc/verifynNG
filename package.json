@@ -15,13 +15,14 @@
     "test:e2e": "playwright test",
     "test:isolation": "vitest run --config tests/vitest.config.ts",
     "load:verify": "docker compose -f docker/compose.yml --profile load run --rm k6 /scripts/verify.js",
+    "load:anomaly": "docker compose -f docker/compose.yml --profile load run --rm k6 /scripts/anomaly.js",
     "db:migrate": "pnpm --filter @verifynng/db db:migrate",
     "db:reset": "pnpm --filter @verifynng/db db:reset",
     "db:seed": "pnpm --filter @verifynng/db db:seed",
     "db:seed:realistic": "pnpm --filter @verifynng/db db:seed:realistic",
     "secrets:rotate-core-key": "node tools/scripts/secrets/rotate-core-key.mjs",
     "test:smoke": "pnpm test:e2e --grep @smoke",
-    "test:contract": "echo 'TODO(E16): contract tests pending E16 public API'",
+    "test:contract": "vitest run --config tests/vitest.config.ts contracts/",
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
     "notifications:preview": "pnpm --filter @verifynng/api notifications:preview",
     "prepare": "husky"
@@ -50,6 +51,7 @@
     "typescript": "5.9.2",
     "typescript-eslint": "^8.68.0",
     "@nestjs/testing": "11.2.3",
+    "@verifynng/db": "workspace:*",
     "vitest": "4.1.11"
   }
 }

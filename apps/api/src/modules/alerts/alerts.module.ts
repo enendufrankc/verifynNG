@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AlertsController } from './alerts.controller';
 import { AlertsService } from './alerts.service';
 
 @Module({
-  imports: [EventEmitterModule.forRoot()],
+  // Not EventEmitterModule.forRoot() here — see the note in app.module.ts;
+  // it's called exactly once app-wide, in common/events.module.ts.
+  imports: [],
   controllers: [AlertsController],
   providers: [AlertsService],
   exports: [AlertsService],

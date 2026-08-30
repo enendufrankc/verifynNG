@@ -13,8 +13,13 @@ import {
   CreditCard,
   Settings,
   LifeBuoy,
+  FileText,
+  Siren,
+  Trash2,
+  Download,
   type LucideIcon,
 } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
 
 export type NavEntry = {
   id: string;
@@ -76,6 +81,16 @@ export const NAV: NavEntry[] = [
     icon: ShieldAlert,
     section: 'monitoring',
     order: 20,
+    badge: async () => {
+      try {
+        const summary = await apiClient.get<{ open: number }>(
+          '/v1/anomalies/summary',
+        );
+        return summary.open > 0 ? summary.open : null;
+      } catch {
+        return null;
+      }
+    },
   },
   {
     id: 'monitoring.reports',
@@ -136,6 +151,39 @@ export const NAV: NavEntry[] = [
     order: 40,
   },
   {
+    id: 'organization.legal',
+    label: 'Your agreements',
+    href: '/legal',
+    icon: FileText,
+    section: 'organization',
+    order: 50,
+  },
+  {
+    id: 'organization.complianceDsar',
+    label: 'Data export',
+    href: '/compliance/dsar',
+    icon: Download,
+    section: 'organization',
+    minRole: 'owner',
+    order: 60,
+  },
+  {
+    id: 'organization.complianceIncidents',
+    label: 'Incidents',
+    href: '/compliance/incidents',
+    icon: Siren,
+    section: 'organization',
+    order: 70,
+  },
+  {
+    id: 'organization.retentionSchedule',
+    label: 'Retention schedule',
+    href: '/compliance/retention',
+    icon: Trash2,
+    section: 'organization',
+    order: 80,
+  },
+  {
     id: 'platform.support',
     label: 'Support',
     href: '/support',
@@ -143,6 +191,33 @@ export const NAV: NavEntry[] = [
     section: 'platform',
     platformRole: 'support',
     order: 10,
+  },
+  {
+    id: 'platform.legalDocs',
+    label: 'Legal docs',
+    href: '/legal-docs',
+    icon: FileText,
+    section: 'platform',
+    platformRole: 'support',
+    order: 20,
+  },
+  {
+    id: 'platform.incidents',
+    label: 'Incidents',
+    href: '/incidents',
+    icon: Siren,
+    section: 'platform',
+    platformRole: 'support',
+    order: 30,
+  },
+  {
+    id: 'platform.retention',
+    label: 'Retention',
+    href: '/compliance/retention',
+    icon: Trash2,
+    section: 'platform',
+    platformRole: 'support',
+    order: 40,
   },
 ];
 
