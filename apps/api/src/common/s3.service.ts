@@ -11,17 +11,28 @@ import { Readable } from 'stream';
 @Injectable()
 export class S3Service {
   private client: S3Client;
+  // A second client pointed at S3_PUBLIC_ENDPOINT, used only to presign
+  // download URLs — the caller resolving that URL is never inside the
+  // Docker network the way this service's own put/get calls are.
+  private presignClient: S3Client;
   private bucket: string;
 
   constructor() {
     const env = loadEnv();
+    const credentials = {
+      accessKeyId: env.S3_ACCESS_KEY,
+      secretAccessKey: env.S3_SECRET_KEY,
+    };
     this.client = new S3Client({
       endpoint: env.S3_ENDPOINT,
       region: 'us-east-1',
-      credentials: {
-        accessKeyId: env.S3_ACCESS_KEY,
-        secretAccessKey: env.S3_SECRET_KEY,
-      },
+      credentials,
+      forcePathStyle: true,
+    });
+    this.presignClient = new S3Client({
+      endpoint: env.S3_PUBLIC_ENDPOINT,
+      region: 'us-east-1',
+      credentials,
       forcePathStyle: true,
     });
     this.bucket = env.S3_BUCKET;
@@ -52,7 +63,7 @@ export class S3Service {
 
   async getSignedUrl(key: string, expiresIn = 900): Promise<string> {
     return getSignedUrl(
-      this.client,
+      this.presignClient,
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
       { expiresIn },
     );
