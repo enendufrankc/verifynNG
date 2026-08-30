@@ -1,13 +1,13 @@
 # E07 — Anomaly Detection & Unit Lifecycle
 
-| | |
-|---|---|
-| Wave | 2 |
-| Status | todo |
-| Owner | — |
-| GitHub Issue | [#8](https://github.com/enendufrankc/verifynNG/issues/8) |
-| Depends on | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11) |
-| Unblocks | E08 (anomaly context on report detail), E16 (`unit.flagged`, `anomaly.detected` webhooks), E12 (anomaly counts) |
+|                 |                                                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 2                                                                                                                                                                                  |
+| Status          | in-progress                                                                                                                                                                        |
+| Owner           | @enendufrankc                                                                                                                                                                      |
+| GitHub Issue    | [#8](https://github.com/enendufrankc/verifynNG/issues/8)                                                                                                                           |
+| Depends on      | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11)                                                                                                                |
+| Unblocks        | E08 (anomaly context on report detail), E16 (`unit.flagged`, `anomaly.detected` webhooks), E12 (anomaly counts)                                                                    |
 | Readiness items | `architecture.md` step 9 (rules first, no ML) · mental-model §4 anomaly signals table · §4 "verdicts are anomaly scores, not booleans" · §1 owner-only kill (RBAC on decommission) |
 
 ## Goal
@@ -34,6 +34,7 @@ docs/anomaly/**                                   (rules.md, unit-lifecycle.md)
 ## Interfaces
 
 **Consumes**
+
 - E06: append-only `ScanEvent` (`tenantId, unitId?, tier, verdict, ip?, ipHash, geoCountry?, geoCity?, userAgent?, createdAt`), events `scan.recorded {tenantId, unitId, tier, verdict, geo}` and `scan.enumeration_detected {tenantId, ipHash, attempts, window}`, `ScanEventRepository.forUnit(unitId, {tier?, limit})` and `.byIpHash(tenantId, ipHash, since)`. E06 reads `Unit.state` for the `flagged`/`decommissioned` verdicts — E07 is the only writer.
 - E04: `Batch.status`, `Batch.expectedShipDate` (added by E05's change request), `Unit.batchId`.
 - E05: `BatchLifecycleService.expectedShipDate(batchId)`, status semantics (`shipped` = codes legitimately in the wild).
@@ -128,6 +129,7 @@ active ──flag(operator|system)──► flagged ──restore(owner)──�
   │                                  │
   └──decommission(owner|recall)──────┴──decommission(owner|recall)──► decommissioned ──restore(owner, reason required)──► active
 ```
+
 Consumer effect (E06): `flagged` → amber verdict with caution copy; `decommissioned` → red "withdrawn by the brand".
 
 ## Tasks
@@ -149,7 +151,7 @@ Consumer effect (E06): `flagged` → amber verdict with caution copy; `decommiss
 
 - [ ] AC1 Geo dispersion: with fake-geo (E06) configured to return Lagos, Accra, Nairobi for three source IPs (`docker compose exec fake-geo …` or its `/admin/map` endpoint), verify the same seeded tier-2 code three times with `curl -H 'X-Forwarded-For: <ip>' localhost:4000/v1/verify/<code>` → `GET localhost:4000/v1/anomalies?rule=geo_dispersion` shows one open anomaly with score 60, evidence listing the three cities, and `GET /v1/units/<id>` shows `state: flagged` with a `system` transition; `http://localhost:8025` has the `anomaly.alert` email to the owner.
 - [ ] AC2 Velocity: `for c in $(head -30 packages/core/test/fixtures/tier2-codes.txt); do curl -s -H 'X-Forwarded-For: 41.58.1.1' localhost:4000/v1/verify/$c; done` → one `velocity` anomaly scoped to the batch, no unit flagged (score 40 < 80), and a second burst escalates it (`anomaly.escalated`, score 80, still no auto-flag because it is unit-less — documented).
-- [ ] AC3 Dead code: verify a tier-2 code from the seeded batch still in status `delivered` → `dead_code` anomaly, unit auto-flagged, verdict on the next verify returns E06's flagged copy. After E05 moves the batch to `shipped`, verifying a *different* unit from that batch produces no anomaly.
+- [ ] AC3 Dead code: verify a tier-2 code from the seeded batch still in status `delivered` → `dead_code` anomaly, unit auto-flagged, verdict on the next verify returns E06's flagged copy. After E05 moves the batch to `shipped`, verifying a _different_ unit from that batch produces no anomaly.
 - [ ] AC4 Pre-reveal: set the batch `expectedShipDate` to +7 d via E05, verify a tier-2 code → `pre_reveal` anomaly with score 50, unit **not** flagged (alert-only rule), email sent.
 - [ ] AC5 Duplicate-first: two verifies of one unit within 2 min from IPs mapping to Lagos and Kano → `duplicate_first` anomaly, score 80, auto-flag; `http://localhost:3001/anomalies/<id>` renders the two-entry timeline without any coordinates in the DOM (Playwright asserts no `lat`/`lng` text).
 - [ ] AC6 Lifecycle: as `loginAs('operator')` flag a unit from `http://localhost:3001/units/<id>` with reason "test"; as operator the Decommission button is disabled; as `loginAs('owner')` decommission then restore with a reason → three rows in the transitions timeline and three rows in `GET /v1/audit?targetType=unit&targetId=<id>` (E13).
