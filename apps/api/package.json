@@ -15,6 +15,8 @@
     "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code -- openapi/verify.v1.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.879.0",
+    "@aws-sdk/s3-request-presigner": "3.879.0",
     "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "11.2.3",
     "@nestjs/config": "4.0.4",
@@ -38,6 +40,7 @@
     "@verifynng/config": "workspace:*",
     "@verifynng/core": "workspace:*",
     "@verifynng/db": "workspace:*",
+    "archiver": "7.0.1",
     "bullmq": "^6.3.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -54,22 +57,24 @@
     "qrcode": "^1.5.4",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
-    "ua-parser-js": "^2.0.3",
-    "uuid": "11.1.0"
+    "uuid": "11.1.0",
+    "zod": "3.25.76",
+    "ua-parser-js": "^2.0.3"
   },
   "devDependencies": {
     "@nestjs/cli": "11.0.24",
     "@nestjs/schematics": "11.0.2",
     "@nestjs/testing": "11.2.3",
+    "@types/archiver": "6.0.2",
     "@types/express": "5.0.3",
+    "@types/supertest": "^6.0.3",
+    "@types/uuid": "10.0.0",
+    "supertest": "^7.1.4",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.9",
     "@types/qrcode": "^1.5.6",
-    "@types/supertest": "^6.0.3",
-    "@types/uuid": "10.0.0",
     "dotenv": "17.4.2",
-    "supertest": "^7.1.4",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
   }

@@ -20,6 +20,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { QuotaModule } from './modules/quota/quota.module.js';
 import { SecretsModule } from './modules/secrets/secrets.module.js';
+import { TenantStatusModule } from './common/tenant-status/tenant-status.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { SecretsModule } from './modules/secrets/secrets.module.js';
     AuditModule,
     QuotaModule,
     SecretsModule,
+    TenantStatusModule,
+    TenantsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

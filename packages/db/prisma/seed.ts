@@ -1,5 +1,6 @@
 import { PrismaClient, type TenantRole } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { seedPolicies } from './seed/policies';
 
 const prisma = new PrismaClient();
 
@@ -30,6 +31,23 @@ async function upsertMember(
 }
 
 async function main() {
+  await seedPolicies(prisma);
+  if (process.argv.includes('--policies-bump')) {
+    await prisma.policyDocument.upsert({
+      where: { kind_version: { kind: 'tos', version: '2026-09-01' } },
+      update: {},
+      create: {
+        kind: 'tos',
+        version: '2026-09-01',
+        effectiveFrom: new Date('2026-09-01T00:00:00Z'),
+        markdown:
+          'Updated terms: the platform may suspend service on evidence of counterfeiting, abuse, or unlawful use, and may share verification outcomes with law enforcement where required.',
+      },
+    });
+    console.log(
+      'Seeded a newer ToS version (2026-09-01) to test the policy-acceptance gate.',
+    );
+  }
   // Create the ivoryglow tenant
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'ivoryglow' },
@@ -38,6 +56,8 @@ async function main() {
       slug: 'ivoryglow',
       name: 'IVORY GLOW',
       legalName: 'Tunnel Light Global Concept Ltd',
+      trademarkNumber: 'NG/TM/O/2020/11950',
+      country: 'NG',
       status: 'active',
     },
   });
