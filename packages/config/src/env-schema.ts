@@ -78,6 +78,7 @@ const e06Schema = z.object({
       'k1:0000000000000000000000000000000000000000000000000000000000000000',
     ),
   CORE_ACTIVE_KID: z.string().default('k1'),
+});
 
 // ── E13 Audit & Security ────────────────────────────────────────
 const e13Schema = z.object({
@@ -85,9 +86,7 @@ const e13Schema = z.object({
   CORE_KEYS_JSON: z.string().default(
     '{"active":"k1","keys":{"k1":"0000000000000000000000000000000000000000000000000000000000000000"}}',
   ),
-  // Legacy format fallback (E01 style)
-  CORE_KEYS: z.string().optional(),
-  CORE_ACTIVE_KID: z.string().optional(),
+  // CORE_KEYS / CORE_ACTIVE_KID (legacy E01 format) are defined in e06Schema.
   // CORS
   CORS_ORIGINS_ADMIN: z.string().default('http://localhost:3001'),
   CORS_ORIGINS_VERIFY: z.string().default('http://localhost:3000'),
@@ -99,10 +98,6 @@ const e13Schema = z.object({
   // Secrets file
   SECRETS_FILE: z.string().default('docker/secrets/local.env'),
 });
-
-// ── Sections for other epics will be added here ────────────────
-// E14 will add EMAIL_FROM, etc.
-
 
 // ── E17 Observability ───────────────────────────────────────────
 const e17Schema = z.object({
@@ -159,7 +154,7 @@ export const envSchema = e02Schema
       ctx.addIssue({ code: 'custom', path: ['JWT_KEYS'], message: 'dev default key not allowed in production' });
     if (env.MFA_ENC_KEY === ZERO_KEY)
       ctx.addIssue({ code: 'custom', path: ['MFA_ENC_KEY'], message: 'dev default key not allowed in production' });
-    if (env.CORE_KEYS_JSON.includes(ZERO_KEY) || (env.CORE_KEYS ?? '').includes(ZERO_KEY))
+    if (env.CORE_KEYS_JSON.includes(ZERO_KEY) || env.CORE_KEYS.includes(ZERO_KEY))
       ctx.addIssue({ code: 'custom', path: ['CORE_KEYS_JSON'], message: 'dev default core key not allowed in production' });
     if (env.CSP_REPORT_ONLY)
       ctx.addIssue({ code: 'custom', path: ['CSP_REPORT_ONLY'], message: 'CSP must be enforced (CSP_REPORT_ONLY=false) in production' });
