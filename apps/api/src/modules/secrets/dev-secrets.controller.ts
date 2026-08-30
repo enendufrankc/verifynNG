@@ -4,10 +4,12 @@
  */
 
 import { Controller, Get, Query } from '@nestjs/common';
+import { Public } from '../../common/tenant';
 import { verifyChecksum } from '@verifynng/core';
 import { SecretsKeyRing } from './secrets-key-ring.js';
 
 @Controller('v1/_dev/keyring')
+@Public()
 export class DevSecretsController {
   constructor(private readonly keyRing: SecretsKeyRing) {}
 

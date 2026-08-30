@@ -13,7 +13,6 @@ import {
 } from './audit.controller.js';
 import { DevAuditController } from './dev-audit.controller.js';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { PrismaClient } from '@prisma/client';
 
 const devControllers =
   process.env.NODE_ENV === 'production' ? [] : [DevAuditController];
@@ -27,10 +26,6 @@ const devControllers =
     ...devControllers,
   ],
   providers: [
-    {
-      provide: PrismaClient,
-      useValue: new PrismaClient(),
-    },
     AuditService,
     AuditChainService,
     {
@@ -38,6 +33,6 @@ const devControllers =
       useClass: AuditInterceptor,
     },
   ],
-  exports: [AuditService, AuditChainService, PrismaClient],
+  exports: [AuditService, AuditChainService],
 })
 export class AuditModule {}

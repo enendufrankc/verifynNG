@@ -3,6 +3,7 @@
  */
 
 import { Controller, Get, Post, Put, Body, Param, Req } from '@nestjs/common';
+import { PlatformRole, Public, TenantId } from '../../common/tenant';
 import { QuotaService } from './quota.service.js';
 import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
 
@@ -11,13 +12,13 @@ export class QuotaController {
   constructor(private readonly quotaService: QuotaService) {}
 
   @Get()
-  async getAll(@Req() req: AuthenticatedRequest) {
-    const tenantId = req?.user?.tenantId ?? 'ivoryglow';
+  async getAll(@TenantId() tenantId: string) {
     return this.quotaService.getAllKinds(tenantId);
   }
 }
 
 @Controller('v1/support/quotas')
+@PlatformRole('support')
 export class SupportQuotaController {
   constructor(private readonly quotaService: QuotaService) {}
 
@@ -43,6 +44,7 @@ export class SupportQuotaController {
  * Used by AC5 to test assertWithinQuota.
  */
 @Controller('v1/_dev/quota-demo')
+@Public()
 export class DevQuotaController {
   constructor(private readonly quotaService: QuotaService) {}
 
@@ -64,11 +66,11 @@ export class DevQuotaController {
 
   @Post()
   async check(@Req() req: AuthenticatedRequest) {
-    // Use x-tenant header or default to ivoryglow
+    // Dev-only: tenant comes from the x-tenant header (no auth on this route).
     const tenantHeader = req.headers['x-tenant'];
     const tenantId = String(
       (Array.isArray(tenantHeader) ? tenantHeader[0] : tenantHeader) ??
-        'ivoryglow',
+        'dev-tenant',
     );
     await this.quotaService.assertWithinQuota(tenantId, 'demo_per_min');
     return { ok: true };

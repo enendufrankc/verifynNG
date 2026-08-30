@@ -3,6 +3,7 @@
  */
 
 import { Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { PlatformRole, Roles, TenantId } from '../../common/tenant';
 import { AuditService } from './audit.service.js';
 import { AuditChainService } from './audit-chain.service.js';
 import type { AuthenticatedRequest } from '../../common/authenticated-request.js';
@@ -13,7 +14,7 @@ export class AuditController {
 
   @Get()
   async query(
-    @Query('tenantId') tenantId?: string,
+    @TenantId() tenantId: string,
     @Query('actorId') actorId?: string,
     @Query('action') action?: string,
     @Query('targetType') targetType?: string,
@@ -22,14 +23,9 @@ export class AuditController {
     @Query('to') to?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
-    @Req() req?: AuthenticatedRequest,
   ) {
-    // E13 stub: tenantId from @TenantId() when E02 ships. No forced default —
-    // pre-auth there is no tenant context, so an unscoped query returns everything.
-    const resolvedTenantId = tenantId ?? req?.user?.tenantId;
-
     return this.auditService.query({
-      tenantId: resolvedTenantId,
+      tenantId,
       actorId,
       action,
       targetType,
@@ -43,6 +39,7 @@ export class AuditController {
 }
 
 @Controller('v1/audit/chain')
+@Roles('owner')
 export class AuditChainController {
   constructor(private readonly chainService: AuditChainService) {}
 
@@ -54,13 +51,14 @@ export class AuditChainController {
   @Post('verify')
   async verifyChain(@Req() req?: AuthenticatedRequest) {
     const result = await this.chainService.verifyChain({
-      triggeredById: req?.user?.id,
+      triggeredById: req?.user?.userId ?? req?.user?.id,
     });
     return result;
   }
 }
 
 @Controller('v1/support/audit')
+@PlatformRole('support')
 export class SupportAuditController {
   constructor(private readonly auditService: AuditService) {}
 
@@ -76,7 +74,6 @@ export class SupportAuditController {
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
   ) {
-    // Support role can query across tenants — E02 will guard this
     return this.auditService.query({
       tenantId,
       actorId,

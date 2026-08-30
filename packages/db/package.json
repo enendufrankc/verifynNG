@@ -29,11 +29,16 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "@verifynng/config": "workspace:*",
+    "@verifynng/core": "workspace:*",
+    "argon2": "^0.45.1",
     "dotenv": "17.4.2"
   },
   "devDependencies": {
     "@types/node": "22",
+    "@types/supertest": "^6.0.3",
     "prisma": "6.19.3",
+    "supertest": "^7.1.4",
     "tsx": "4.20.4",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
