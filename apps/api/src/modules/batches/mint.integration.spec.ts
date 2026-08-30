@@ -208,6 +208,11 @@ describe('MintService integration (real Postgres + MinIO)', () => {
 
     expect(caught).toBeInstanceOf(HttpException);
     expect((caught as HttpException).getStatus()).toBe(402);
+    expect((caught as HttpException).getResponse()).toMatchObject({
+      error: 'entitlement',
+      reason: expect.any(String),
+      upgradeHint: expect.any(String),
+    });
 
     const batch = await prisma.batch.findUnique({
       where: { tenantId_idempotencyKey: { tenantId, idempotencyKey: key } },
