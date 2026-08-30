@@ -84,6 +84,7 @@ export class TenantStatusGuard implements CanActivate {
     const isPolicyAcceptanceRoute = req.path.endsWith('/policies/accept');
     if (
       req.principal?.role === 'owner' &&
+      !req.principal?.platformRole &&
       req.method !== 'GET' &&
       !isPolicyAcceptanceRoute
     ) {
