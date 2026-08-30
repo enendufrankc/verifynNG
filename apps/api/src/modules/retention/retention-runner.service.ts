@@ -56,6 +56,32 @@ export class RetentionRunnerService {
     });
   }
 
+  /**
+   * Retention runs are platform-wide, not tenant-scoped (a single run
+   * processes every tenant's Sessions/ScanEvents at once), so there is no
+   * real per-tenant "affected count" to show a tenant owner. This gives
+   * tenants the schedule plus the last wet-run timestamp per policy —
+   * timestamps only, no counts (those could leak platform-wide volume
+   * information a tenant has no business seeing).
+   */
+  async scheduleSummary(): Promise<
+    { name: string; legalHoldAware: boolean; lastRanAt: string | null }[]
+  > {
+    const lastRuns = await prisma.retentionRun.groupBy({
+      by: ['policy'],
+      where: { dryRun: false, error: null },
+      _max: { finishedAt: true },
+    });
+    const lastRanByPolicy = new Map(
+      lastRuns.map((r) => [r.policy, r._max.finishedAt]),
+    );
+    return this.policies.map((p) => ({
+      name: p.name,
+      legalHoldAware: p.legalHoldAware,
+      lastRanAt: lastRanByPolicy.get(p.name)?.toISOString() ?? null,
+    }));
+  }
+
   async run(opts: {
     dryRun: boolean;
     policyName?: string;

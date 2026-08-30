@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-store';
 
 interface Policy {
   name: string;
@@ -18,7 +19,78 @@ interface RetentionRun {
   error: string | null;
 }
 
+interface ScheduleEntry {
+  name: string;
+  legalHoldAware: boolean;
+  lastRanAt: string | null;
+}
+
 export default function RetentionPage() {
+  const { platformRole } = useAuth();
+  return platformRole === 'support' ? (
+    <SupportRetentionView />
+  ) : (
+    <TenantRetentionSchedule />
+  );
+}
+
+function TenantRetentionSchedule() {
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+
+  useEffect(() => {
+    apiClient
+      .get<ScheduleEntry[]>('/v1/retention/schedule')
+      .then(setSchedule)
+      .catch(() => setSchedule([]));
+  }, []);
+
+  return (
+    <main className="p-8">
+      <h1 className="text-3xl font-semibold">Retention schedule</h1>
+      <p className="mt-2 text-slate-600">
+        How long the platform keeps different kinds of data, and when each
+        policy last ran. Runs are platform-wide, so this shows timestamps only —
+        see{' '}
+        <a
+          className="underline"
+          href="https://github.com/enendufrankc/verifynNG/blob/main/docs/compliance/retention-schedule.md"
+        >
+          the full retention schedule
+        </a>{' '}
+        for exactly what each policy does.
+      </p>
+      <div className="mt-8 overflow-hidden rounded border">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="p-4">Policy</th>
+              <th className="p-4">Legal-hold aware</th>
+              <th className="p-4">Last ran</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedule.map((s) => (
+              <tr key={s.name} className="border-t">
+                <td className="p-4 font-mono">{s.name}</td>
+                <td className="p-4">{s.legalHoldAware ? 'Yes' : 'No'}</td>
+                <td className="p-4">
+                  {s.lastRanAt
+                    ? new Date(s.lastRanAt).toLocaleString('en-GB')
+                    : 'Never'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {schedule.length === 0 && (
+          <p className="p-6 text-slate-500">No retention policies found.</p>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function SupportRetentionView() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [runs, setRuns] = useState<RetentionRun[]>([]);
   const [selected, setSelected] = useState('');

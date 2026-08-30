@@ -79,6 +79,7 @@ describe('RetentionRunnerService with Postgres', () => {
         'deleteMany',
         'delete',
         'update',
+        'groupBy',
       ] as const) {
         if (typeof prismaAny[model][method] === 'function') {
           vi.spyOn(prismaAny[model], method).mockImplementation(
@@ -254,5 +255,39 @@ describe('RetentionRunnerService with Postgres', () => {
     expect(probeRun?.error).toBe('boom');
     expect(sessionRun?.error).toBeNull();
     probeCountSpy.mockRestore();
+  });
+
+  it('scheduleSummary() shows every policy with a timestamp-only last-run, not counts', async () => {
+    proxyPrisma();
+    await runner
+      .run({
+        dryRun: false,
+        policyName: 'probeResult.delete',
+        triggeredBy: 'test',
+      })
+      .catch(() => undefined);
+    await runner.run({
+      dryRun: true,
+      policyName: 'probeResult.delete',
+      triggeredBy: 'test',
+    });
+    await runner.run({
+      dryRun: false,
+      policyName: 'probeResult.delete',
+      triggeredBy: 'test',
+    });
+
+    const summary = await runner.scheduleSummary();
+    expect(summary).toHaveLength(8);
+    const probe = summary.find((s) => s.name === 'probeResult.delete');
+    expect(probe?.lastRanAt).not.toBeNull();
+    const neverRun = summary.find((s) => s.name === 'usageEvent.delete');
+    // usageEvent.delete may have been run wet by an earlier test in this
+    // file (dryRun:true with no policyName runs every policy) — only
+    // assert the shape, not a specific value, to avoid cross-test coupling.
+    expect(neverRun).toHaveProperty('lastRanAt');
+    expect(summary.every((s) => !('matched' in s) && !('affected' in s))).toBe(
+      true,
+    );
   });
 });

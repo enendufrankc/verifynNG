@@ -165,6 +165,14 @@ export const NAV: NavEntry[] = [
     order: 70,
   },
   {
+    id: 'organization.retentionSchedule',
+    label: 'Retention schedule',
+    href: '/compliance/retention',
+    icon: Trash2,
+    section: 'organization',
+    order: 80,
+  },
+  {
     id: 'platform.support',
     label: 'Support',
     href: '/support',

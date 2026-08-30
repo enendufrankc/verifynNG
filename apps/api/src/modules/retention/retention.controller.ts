@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { PlatformRole, Principal } from '../../common/tenant';
+import { PlatformRole, Principal, Roles } from '../../common/tenant';
 import type { UserPrincipal } from '../auth/types/principal';
 import { Audited } from '../audit/audited.decorator';
 import { RetentionRunnerService } from './retention-runner.service';
@@ -12,6 +12,14 @@ export class RetentionController {
   @Get('policies')
   policies() {
     return this.runner.listPolicies();
+  }
+
+  /** Read-only schedule for any tenant member — see scheduleSummary()'s doc
+   * comment for why this shows timestamps only, not counts. */
+  @Roles('owner', 'operator', 'viewer')
+  @Get('schedule')
+  schedule() {
+    return this.runner.scheduleSummary();
   }
 
   @PlatformRole('support')
