@@ -77,16 +77,35 @@ export class AnomaliesController {
     });
     if (!anomaly) throw new NotFoundException();
 
-    const [unit, batch] = await Promise.all([
+    const evidence = anomaly.evidence as {
+      scans?: Array<{ scanEventId: string }>;
+    } | null;
+    const scanIds = (evidence?.scans ?? []).map((s) => s.scanEventId);
+
+    const [unit, batch, linkedScans] = await Promise.all([
       anomaly.unitId
         ? this.prisma.unit.findUnique({ where: { id: anomaly.unitId } })
         : null,
       anomaly.batchId
         ? this.prisma.batch.findUnique({ where: { id: anomaly.batchId } })
         : null,
+      // velocity's evidence refs are unitIds, not scanEventIds — nothing to
+      // join there, and it's the one rule with no per-scan timeline anyway.
+      anomaly.rule === 'velocity'
+        ? []
+        : this.prisma.scanEvent.findMany({
+            where: { id: { in: scanIds } },
+            select: {
+              id: true,
+              createdAt: true,
+              geoCity: true,
+              geoCountry: true,
+              verdict: true,
+            },
+          }),
     ]);
 
-    return { anomaly, unit, batch };
+    return { anomaly, unit, batch, linkedScans };
   }
 
   @Post(':id/acknowledge')
