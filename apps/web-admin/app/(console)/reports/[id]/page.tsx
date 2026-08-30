@@ -77,116 +77,123 @@ export default function ReportDetailPage() {
     );
   }
 
-  if (!reportQuery.data) return null;
   const report = reportQuery.data;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={report.reference}
-        description={`${report.purchaseChannel} — ${report.verdictAtReport} verdict`}
+        title={report ? report.reference : 'Report'}
+        description={
+          report
+            ? `${report.purchaseChannel} — ${report.verdictAtReport} verdict`
+            : undefined
+        }
         actions={
-          <StatusChip variant={STATUS_VARIANT[report.status]}>
-            {report.status}
-          </StatusChip>
+          report ? (
+            <StatusChip variant={STATUS_VARIANT[report.status]}>
+              {report.status}
+            </StatusChip>
+          ) : undefined
         }
       />
 
-      <div className="grid grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <h3 className="font-medium">Photos</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {report.photos.map((p) => (
-              <div
-                key={p.id}
-                className="bg-muted flex aspect-square items-center justify-center rounded border text-xs"
-              >
-                {p.status}
-              </div>
-            ))}
-          </div>
-
-          <h3 className="font-medium">Anomalies</h3>
-          {report.anomalies.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              None (or E07 not yet available).
-            </p>
-          ) : (
-            <div className="flex gap-2">
-              {report.anomalies.map((a, i) => (
-                <Badge key={i}>{JSON.stringify(a)}</Badge>
+      {report && (
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h3 className="font-medium">Photos</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {report.photos.map((p) => (
+                <div
+                  key={p.id}
+                  className="bg-muted flex aspect-square items-center justify-center rounded border text-xs"
+                >
+                  {p.status}
+                </div>
               ))}
             </div>
-          )}
 
-          {report.unitId && (
-            <a
-              href={`/units/${report.unitId}`}
-              className="text-brand text-sm hover:underline"
-            >
-              View linked unit →
-            </a>
-          )}
-        </div>
+            <h3 className="font-medium">Anomalies</h3>
+            {report.anomalies.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                None (or E07 not yet available).
+              </p>
+            ) : (
+              <div className="flex gap-2">
+                {report.anomalies.map((a, i) => (
+                  <Badge key={i}>{JSON.stringify(a)}</Badge>
+                ))}
+              </div>
+            )}
 
-        <div className="space-y-4">
-          {canAct && (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                disabled={!user?.id}
-                onClick={() => user?.id && assignMutation.mutate(user.id)}
+            {report.unitId && (
+              <a
+                href={`/units/${report.unitId}`}
+                className="text-brand text-sm hover:underline"
               >
-                Assign to me
-              </Button>
-              <StatusDialog
-                reportId={params.id}
-                currentStatus={report.status}
-                hasContact={Boolean(report.contactEmail)}
-              />
-            </div>
-          )}
+                View linked unit →
+              </a>
+            )}
+          </div>
 
-          <h3 className="font-medium">Notes</h3>
-          <ul className="space-y-2">
-            {report.notes.map((n) => (
-              <li key={n.id} className="rounded border p-2 text-sm">
-                <p>{n.body}</p>
-                <p className="text-muted-foreground text-xs">
-                  {new Date(n.createdAt).toLocaleString()}
-                </p>
-              </li>
-            ))}
-          </ul>
-          {canAct && (
-            <div className="space-y-2">
-              <Textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Add a note…"
-              />
-              <Button
-                size="sm"
-                onClick={() => noteMutation.mutate()}
-                disabled={!note}
-              >
-                Add note
-              </Button>
-            </div>
-          )}
+          <div className="space-y-4">
+            {canAct && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={!user?.id}
+                  onClick={() => user?.id && assignMutation.mutate(user.id)}
+                >
+                  Assign to me
+                </Button>
+                <StatusDialog
+                  reportId={params.id}
+                  currentStatus={report.status}
+                  hasContact={Boolean(report.contactEmail)}
+                />
+              </div>
+            )}
 
-          <h3 className="font-medium">Status history</h3>
-          <ul className="space-y-1 text-sm">
-            {report.statusChanges.map((s) => (
-              <li key={s.id}>
-                {s.fromStatus ?? '—'} → {s.toStatus}{' '}
-                {s.outcome ? `(${s.outcome})` : ''} —{' '}
-                {new Date(s.createdAt).toLocaleString()}
-              </li>
-            ))}
-          </ul>
+            <h3 className="font-medium">Notes</h3>
+            <ul className="space-y-2">
+              {report.notes.map((n) => (
+                <li key={n.id} className="rounded border p-2 text-sm">
+                  <p>{n.body}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {new Date(n.createdAt).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            {canAct && (
+              <div className="space-y-2">
+                <Textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Add a note…"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => noteMutation.mutate()}
+                  disabled={!note}
+                >
+                  Add note
+                </Button>
+              </div>
+            )}
+
+            <h3 className="font-medium">Status history</h3>
+            <ul className="space-y-1 text-sm">
+              {report.statusChanges.map((s) => (
+                <li key={s.id}>
+                  {s.fromStatus ?? '—'} → {s.toStatus}{' '}
+                  {s.outcome ? `(${s.outcome})` : ''} —{' '}
+                  {new Date(s.createdAt).toLocaleString()}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
