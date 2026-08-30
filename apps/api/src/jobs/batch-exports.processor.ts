@@ -156,8 +156,14 @@ export class BatchExportsProcessor extends WorkerHost {
     const manifest = await this.manifestService.open(batchId);
     const units = (manifest.units as unknown as ManifestUnit[]) ?? [];
 
+    // Each unit's tier-1/tier-2 QR PNGs are generated once and shared by
+    // both the ZIP and the PDF sheet — encoding 2×count QR codes twice over
+    // (once per artefact) doesn't hold up at six- and seven-figure batch
+    // sizes.
+    const qrPngs = await this.generateQrPngs(units);
+
     // 1. QR ZIP — both tier-1 and tier-2 PNGs per unit
-    const qrZipBuffer = await this.generateQrZip(units);
+    const qrZipBuffer = await this.generateQrZip(qrPngs);
     await this.uploadArtefact(
       tenantId,
       batchId,
@@ -177,7 +183,12 @@ export class BatchExportsProcessor extends WorkerHost {
     );
 
     // 3. Application Sheet PDF
-    const pdfBuffer = await this.generateSheetPdf(batch, units, tenantName);
+    const pdfBuffer = await this.generateSheetPdf(
+      batch,
+      qrPngs,
+      units.length,
+      tenantName,
+    );
     await this.uploadArtefact(
       tenantId,
       batchId,
@@ -239,7 +250,21 @@ export class BatchExportsProcessor extends WorkerHost {
     });
   }
 
-  private async generateQrZip(units: ManifestUnit[]): Promise<Buffer> {
+  private async generateQrPngs(
+    units: ManifestUnit[],
+  ): Promise<ManifestArtefact[]> {
+    const pngs: ManifestArtefact[] = [];
+    for (const unit of units) {
+      const [tier1, tier2] = await Promise.all([
+        qrToBuffer(unit.tier1Url, QR_OPTIONS),
+        qrToBuffer(unit.tier2Url, QR_OPTIONS),
+      ]);
+      pngs.push({ serial: unit.serial, tier1, tier2 });
+    }
+    return pngs;
+  }
+
+  private async generateQrZip(pngs: ManifestArtefact[]): Promise<Buffer> {
     const chunks: Buffer[] = [];
     const sink = new Writable({
       write(chunk, _encoding, callback) {
@@ -251,12 +276,9 @@ export class BatchExportsProcessor extends WorkerHost {
     const archive = new ZipArchive({ zlib: { level: 6 } });
     archive.pipe(sink);
 
-    for (const unit of units) {
-      const tier1Png = await qrToBuffer(unit.tier1Url, QR_OPTIONS);
-      archive.append(tier1Png, { name: `qr/${unit.serial}-tier1.png` });
-
-      const tier2Png = await qrToBuffer(unit.tier2Url, QR_OPTIONS);
-      archive.append(tier2Png, { name: `qr/${unit.serial}-tier2.png` });
+    for (const png of pngs) {
+      archive.append(png.tier1, { name: `qr/${png.serial}-tier1.png` });
+      archive.append(png.tier2, { name: `qr/${png.serial}-tier2.png` });
     }
 
     await archive.finalize();
@@ -277,19 +299,10 @@ export class BatchExportsProcessor extends WorkerHost {
       product?: { name?: string | null; gtin?: string | null } | null;
       oem?: { name?: string | null } | null;
     },
-    units: ManifestUnit[],
+    cards: ManifestArtefact[],
+    unitCount: number,
     tenantName: string,
   ): Promise<Buffer> {
-    // Pre-generate all QR PNGs so the PDF build is synchronous.
-    const cards: ManifestArtefact[] = [];
-    for (const unit of units) {
-      const [tier1, tier2] = await Promise.all([
-        qrToBuffer(unit.tier1Url, QR_OPTIONS),
-        qrToBuffer(unit.tier2Url, QR_OPTIONS),
-      ]);
-      cards.push({ serial: unit.serial, tier1, tier2 });
-    }
-
     const cardElements = cards.map((card) =>
       React.createElement(
         View,
@@ -353,7 +366,7 @@ export class BatchExportsProcessor extends WorkerHost {
         React.createElement(
           Text,
           { style: sheetStyles.subtitle },
-          `Batch ${batch.id.substring(0, 8)} · ${batch.product?.name || ''} · ${units.length} units · OEM: ${batch.oem?.name || 'N/A'}`,
+          `Batch ${batch.id.substring(0, 8)} · ${batch.product?.name || ''} · ${unitCount} units · OEM: ${batch.oem?.name || 'N/A'}`,
         ),
         React.createElement(View, { style: sheetStyles.grid }, ...cardElements),
       ),

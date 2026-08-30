@@ -34,7 +34,12 @@ const units = [
 ];
 
 function processor(): BatchExportsProcessor {
-  return new BatchExportsProcessor({} as never, {} as never, {} as never, {} as never);
+  return new BatchExportsProcessor(
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+  );
 }
 
 describe('BatchExportsProcessor renderers', () => {
@@ -52,17 +57,35 @@ describe('BatchExportsProcessor renderers', () => {
   });
 
   it('renders the two-tier application sheet through React PDF', async () => {
+    const cards = units.map((u) => ({
+      serial: u.serial,
+      tier1: Buffer.from(`tier1-${u.serial}`),
+      tier2: Buffer.from(`tier2-${u.serial}`),
+    }));
+
     const result = await processor()['generateSheetPdf'](
       {
         id: 'batch-12345678',
         product: { name: 'Body Wash' },
         oem: { name: 'Guiba OEM' },
       },
-      units,
+      cards,
+      units.length,
       'IVORY GLOW',
     );
 
     expect(result).toEqual(Buffer.from('%PDF-1.7 test sheet'));
     expect(renderer.renderToBuffer).toHaveBeenCalledOnce();
+  });
+
+  it("generates each unit's QR PNGs once, shared by the zip and the sheet", async () => {
+    const pngs = await processor()['generateQrPngs'](units);
+
+    expect(pngs).toHaveLength(2);
+    expect(pngs.map((p: { serial: number }) => p.serial)).toEqual([1, 2]);
+    for (const png of pngs as { tier1: Buffer; tier2: Buffer }[]) {
+      expect(Buffer.isBuffer(png.tier1)).toBe(true);
+      expect(Buffer.isBuffer(png.tier2)).toBe(true);
+    }
   });
 });
