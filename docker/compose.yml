@@ -286,10 +286,20 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web-verify
+      args:
+        # Baked into the client bundle for lib/beacon.ts — must be
+        # reachable from the host browser, unlike API_INTERNAL_URL below.
+        NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
     ports:
       - '${WEB_VERIFY_PORT:-3000}:3000'
     environment:
+      # Read at runtime by lib/api.ts's server-only fetches — container-
+      # internal address is correct here since that code runs inside the
+      # container, not the browser.
+      API_INTERNAL_URL: http://api:4000
       NEXT_PUBLIC_API_URL: http://api:4000
+      NEXT_PUBLIC_MINIO_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}
+      NEXT_PUBLIC_DEFAULT_TENANT: ivoryglow
       HOSTNAME: 0.0.0.0
     depends_on:
       api:

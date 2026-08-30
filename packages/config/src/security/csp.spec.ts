@@ -68,4 +68,26 @@ describe('buildCsp', () => {
     expect(result).toHaveProperty('Content-Security-Policy');
     expect(result).not.toHaveProperty('Content-Security-Policy-Report-Only');
   });
+
+  it('omits default-src and img-src by default (no behaviour change for existing callers)', () => {
+    const result = buildCsp({
+      nonce: 'abc123',
+      apiOrigin: 'http://localhost:4000',
+    });
+    expect(result['Content-Security-Policy']).not.toContain('default-src');
+    expect(result['Content-Security-Policy']).not.toContain('img-src');
+  });
+
+  it('includes default-src and img-src when passed', () => {
+    const result = buildCsp({
+      nonce: 'abc123',
+      apiOrigin: 'http://localhost:4000',
+      defaultSrc: ["'self'"],
+      imgSrc: ['http://localhost:9000'],
+    });
+    expect(result['Content-Security-Policy']).toContain("default-src 'self'");
+    expect(result['Content-Security-Policy']).toContain(
+      "img-src 'self' data: http://localhost:9000",
+    );
+  });
 });

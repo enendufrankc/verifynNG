@@ -172,6 +172,13 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+// ── E09 Consumer Verify Web ─────────────────────────────────────
+const e09Schema = z.object({
+  NEXT_PUBLIC_MINIO_PUBLIC_URL: z.string().default('http://localhost:9000'),
+  NEXT_PUBLIC_DEFAULT_TENANT: z.string().default('ivoryglow'),
+  VERIFY_API_TIMEOUT_MS: z.coerce.number().default(3000),
+});
+
 // ── E12 Analytics & Metering ────────────────────────────────────
 const e12Schema = z.object({
   // Incremental scan rollup job — every 10 min per the epic's lag budget.
@@ -207,6 +214,7 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .merge(e04Schema)
+  .merge(e09Schema)
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
