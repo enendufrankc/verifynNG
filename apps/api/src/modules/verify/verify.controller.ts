@@ -215,7 +215,8 @@ export class VerifyController {
   ): Promise<VerifyResponseDto> {
     const startedAt = Date.now();
     const requestId = headers['x-request-id'] ?? '-';
-    const logCtx = { requestId, code: rawCode };
+    // Never put the raw code in logs — tier-2 codes are secrets (AGENTS.md).
+    const logCtx = { requestId, code: redactCode(rawCode) };
 
     // The last applied rate limit — surfaced as response headers.
     const setRateHeaders = (limit: number, remaining: number) => {
@@ -318,7 +319,7 @@ export class VerifyController {
             : null;
         } catch (err) {
           this.logger.warn(
-            `GeoIP lookup failed for ${ip}: ${
+            `GeoIP lookup failed: ${
               err instanceof Error ? err.message : String(err)
             }`,
             logCtx,
