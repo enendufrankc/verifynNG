@@ -3,7 +3,7 @@
 exports[`TemplateRegistry > renders anomaly.alert 1`] = `
 {
   "html": "<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Anomaly detected — repeat_scan</title></head>
+<html><head><meta charset="utf-8"><title>Anomaly detected — duplicate_first (Ivory Glow)</title></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
 <tr><td align="center">
@@ -12,7 +12,7 @@ exports[`TemplateRegistry > renders anomaly.alert 1`] = `
 <img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
 <h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
 </td></tr>
-<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected</strong></p><p style="margin:0 0 8px">Product: <strong>Glow Serum</strong> — Code: ivoryglow.2.k1.demo</p><p style="margin:0 0 8px">Type: repeat_scan</p><p style="margin:0 0 8px;color:#999;font-size:13px">Detected at 2026-08-29T00:00:00.000Z</p><p style="margin:12px 0 0"><a href="https://example.test/anomalies/1" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p></td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected — score 80</strong></p><p style="margin:0 0 8px">Same unit scanned twice 850km apart within the window</p><p style="margin:0 0 8px">Ref: <strong>ivoryglow.1.k1.demo</strong></p><p style="margin:0 0 8px;color:#999;font-size:13px">Cities: Lagos, Kano</p><p style="margin:12px 0 0"><a href="https://example.test/anomalies/1" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p></td></tr>
 <tr><td style="padding:16px 32px;border-top:1px solid #eee">
 <p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
 <p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
@@ -20,12 +20,11 @@ exports[`TemplateRegistry > renders anomaly.alert 1`] = `
 </table>
 </td></tr></table>
 </body></html>",
-  "sms": "ALERT: Anomaly repeat_scan on Glow Serum (ivoryglow.2.k1.demo)",
-  "subject": "Anomaly detected — repeat_scan",
-  "text": "Anomaly detected — repeat_scan
-Product: Glow Serum
-Code: ivoryglow.2.k1.demo
-Detected: 2026-08-29T00:00:00.000Z
+  "sms": "ALERT: duplicate_first anomaly (score 80) — Ivory Glow",
+  "subject": "Anomaly detected — duplicate_first (Ivory Glow)",
+  "text": "Anomaly detected — duplicate_first (score 80)
+Same unit scanned twice 850km apart within the window
+Ref: ivoryglow.1.k1.demo
 View: https://example.test/anomalies/1",
 }
 `;

@@ -33,6 +33,8 @@ import { ConsentModule } from './modules/consent/consent.module';
 import { DsarModule } from './modules/dsar/dsar.module';
 import { RetentionModule } from './modules/retention/retention.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
+import { UnitsModule } from './modules/units/units.module';
+import { AnomalyModule } from './modules/anomaly/anomaly.module';
 
 @Module({
   imports: [
@@ -68,6 +70,8 @@ import { IncidentsModule } from './modules/incidents/incidents.module';
     DsarModule,
     RetentionModule,
     IncidentsModule,
+    UnitsModule,
+    AnomalyModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

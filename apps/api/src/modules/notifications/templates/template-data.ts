@@ -63,12 +63,18 @@ export interface TemplateData {
     receivedCount: number;
     dashboardUrl: string;
   }>;
+  // Contract owned by E07 (docs/epics/E07-anomaly-detection.md, "Interfaces
+  // exposed"): { tenantName, rule, score, unitRef?, batchRef?, summary,
+  // cities[], adminUrl }.
   'anomaly.alert': NoCodeKeys<{
-    tier1Code: string;
-    productName: string;
-    anomalyType: string;
-    detectedAt: string;
-    dashboardUrl: string;
+    tenantName: string;
+    rule: string;
+    score: number;
+    unitRef?: string;
+    batchRef?: string;
+    summary: string;
+    cities: string[];
+    adminUrl: string;
   }>;
   'report.received': NoCodeKeys<{
     reportReference: string;

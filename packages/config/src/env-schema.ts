@@ -181,6 +181,12 @@ const e19Schema = z.object({
   DSAR_EXPORT_BUCKET: z.string().default('dsar-exports'),
 });
 
+// ── E07 Anomaly Detection & Unit Lifecycle ──────────────────────
+const e07Schema = z.object({
+  ANOMALY_SWEEP_CRON: z.string().default('*/15 * * * *'),
+  ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -190,6 +196,7 @@ export const envSchema = e02Schema
   .merge(e13Schema)
   .merge(e04Schema)
   .merge(e19Schema)
+  .merge(e07Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.

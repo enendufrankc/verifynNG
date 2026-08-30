@@ -19,6 +19,7 @@ import {
   Download,
   type LucideIcon,
 } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
 
 export type NavEntry = {
   id: string;
@@ -80,6 +81,16 @@ export const NAV: NavEntry[] = [
     icon: ShieldAlert,
     section: 'monitoring',
     order: 20,
+    badge: async () => {
+      try {
+        const summary = await apiClient.get<{ open: number }>(
+          '/v1/anomalies/summary',
+        );
+        return summary.open > 0 ? summary.open : null;
+      } catch {
+        return null;
+      }
+    },
   },
   {
     id: 'monitoring.reports',

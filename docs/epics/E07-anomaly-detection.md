@@ -1,13 +1,13 @@
 # E07 — Anomaly Detection & Unit Lifecycle
 
-| | |
-|---|---|
-| Wave | 2 |
-| Status | todo |
-| Owner | — |
-| GitHub Issue | [#8](https://github.com/enendufrankc/verifynNG/issues/8) |
-| Depends on | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11) |
-| Unblocks | E08 (anomaly context on report detail), E16 (`unit.flagged`, `anomaly.detected` webhooks), E12 (anomaly counts) |
+|                 |                                                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 2                                                                                                                                                                                  |
+| Status          | review                                                                                                                                                                             |
+| Owner           | @enendufrankc                                                                                                                                                                      |
+| GitHub Issue    | [#8](https://github.com/enendufrankc/verifynNG/issues/8)                                                                                                                           |
+| Depends on      | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11)                                                                                                                |
+| Unblocks        | E08 (anomaly context on report detail), E16 (`unit.flagged`, `anomaly.detected` webhooks), E12 (anomaly counts)                                                                    |
 | Readiness items | `architecture.md` step 9 (rules first, no ML) · mental-model §4 anomaly signals table · §4 "verdicts are anomaly scores, not booleans" · §1 owner-only kill (RBAC on decommission) |
 
 ## Goal
@@ -34,6 +34,7 @@ docs/anomaly/**                                   (rules.md, unit-lifecycle.md)
 ## Interfaces
 
 **Consumes**
+
 - E06: append-only `ScanEvent` (`tenantId, unitId?, tier, verdict, ip?, ipHash, geoCountry?, geoCity?, userAgent?, createdAt`), events `scan.recorded {tenantId, unitId, tier, verdict, geo}` and `scan.enumeration_detected {tenantId, ipHash, attempts, window}`, `ScanEventRepository.forUnit(unitId, {tier?, limit})` and `.byIpHash(tenantId, ipHash, since)`. E06 reads `Unit.state` for the `flagged`/`decommissioned` verdicts — E07 is the only writer.
 - E04: `Batch.status`, `Batch.expectedShipDate` (added by E05's change request), `Unit.batchId`.
 - E05: `BatchLifecycleService.expectedShipDate(batchId)`, status semantics (`shipped` = codes legitimately in the wild).
@@ -128,34 +129,35 @@ active ──flag(operator|system)──► flagged ──restore(owner)──�
   │                                  │
   └──decommission(owner|recall)──────┴──decommission(owner|recall)──► decommissioned ──restore(owner, reason required)──► active
 ```
+
 Consumer effect (E06): `flagged` → amber verdict with caution copy; `decommissioned` → red "withdrawn by the brand".
 
 ## Tasks
 
-- [ ] T1 Migration `E07_anomaly`: `Anomaly`, `AnomalyRuleConfig`, `UnitStateTransition`. `AnomalyModule` + `UnitsModule` skeletons, `AppModule` import lines, env section "E07" (`ANOMALY_SWEEP_CRON=*/15 * * * *`, `ANOMALY_ALERT_DEBOUNCE_MIN=60`).
-- [ ] T2 `UnitLifecycleService`: transitions per the state machine, `UnitStateTransition` rows, events, `@Audited` routes `POST /v1/units/:id/flag|decommission|restore`, `GET /v1/units/:id` aggregating E06 scan history. Role checks (decommission/restore owner-only). Integration tests including illegal transitions → `409`.
-- [ ] T3 Rules infrastructure: `rules/defaults.json` (schema-validated with Zod at boot), `RulesService.effective()` merging tenant `AnomalyRuleConfig`, `GET/PUT /v1/anomaly-rules`. `docs/anomaly/rules.md` describing each rule, its evidence and its default thresholds.
-- [ ] T4 `AnomalyEngine` core: `upsertAnomaly()` with dedupe (open anomaly with same `dedupeKey` → escalate score/lastSeenAt/evidence, emit `anomaly.escalated`), auto-flag when `score ≥ autoFlagAt` and unit is `active` (system actor, audited), `anomaly.detected` emission debounced per anomaly. BullMQ consumer of `scan.recorded` → job `evaluate`.
-- [ ] T5 Rules — event-triggered: `dead_code` (tier-2 scan, batch status ∉ shipped/closed), `pre_reveal` (tier-2 scan `createdAt < Batch.expectedShipDate - graceDays`), `duplicate_first` (tier-2 scan on a unit whose previous tier-2 scan was < `windowMinutes` ago in a city ≥ `minDistanceKm` away — city centroid distance table bundled, no coordinates persisted in evidence).
-- [ ] T6 Rules — velocity: consume `scan.enumeration_detected` directly, plus evaluate on each `scan.recorded`: distinct `unitId` count by `ipHash` in `windowMinutes` via `ScanEventRepository.byIpHash`; batch-scoped anomaly when all units belong to one batch, tenant-scoped otherwise (`unitId` and `batchId` null).
-- [ ] T7 Rules — sweeps: repeatable jobs `sweep:geo_dispersion` (per tenant: tier-2 units with ≥ `distinctCities` distinct `geoCity` in `windowDays`, one SQL query with `GROUP BY unitId HAVING COUNT(DISTINCT geoCity) ≥ n`) and `sweep:dead_code` (catches scans that arrived before the batch status changed). Idempotent via dedupe keys bucketed by day.
-- [ ] T8 Anomaly API: list/summary/detail/acknowledge/resolve/dismiss with `@Audited`, assignment (`assignedToId` must be a member — E02), `AnomalyQuery` provider for E08/E12.
-- [ ] T9 Bulk recall: `POST /v1/batches/:id/recall` → BullMQ job iterating units in pages of 500, one `UnitStateTransition` per unit with `recallJobId`, single audit row for the action plus `batch.recalled` event; job progress endpoint `GET /v1/batches/:id/recall/:jobId`.
-- [ ] T10 web-admin `(console)/anomalies/`: queue table (rule chip, score, unit/batch ref, cities count, first/last seen, status, assignee) with filters and saved "Open · score ≥ 60" default; detail page with evidence timeline (vertical list of `time — city, country — verdict`; a simple city-count map is out — list only), linked unit card with flag/decommission buttons, acknowledge/resolve/dismiss with note. Nav badge from `/summary`. Replaces E11's EmptyState.
-- [ ] T11 web-admin `(console)/units/[unitId]` (state, transitions timeline, scan history table tier-1/tier-2, anomalies, actions with reason dialog) and `(console)/units/batch/[batchId]` (unit list by state, "Recall batch" owner-only dialog with typed confirmation, progress bar). Ask E04 (comment on its issue) to link "Units & recall" from its batch detail.
-- [ ] T12 `anomaly.alert` template data contract handed to E14 (PR to E14's template if E14 has not defined it yet), Playwright fixtures that replay a scan sequence through E06's verify endpoint to produce each rule's anomaly, E2E for AC4–AC7. `docs/anomaly/unit-lifecycle.md`.
+- [x] T1 Migration `E07_anomaly`: `Anomaly`, `AnomalyRuleConfig`, `UnitStateTransition`. `AnomalyModule` + `UnitsModule` skeletons, `AppModule` import lines, env section "E07" (`ANOMALY_SWEEP_CRON=*/15 * * * *`, `ANOMALY_ALERT_DEBOUNCE_MIN=60`).
+- [x] T2 `UnitLifecycleService`: transitions per the state machine, `UnitStateTransition` rows, events, `@Audited` routes `POST /v1/units/:id/flag|decommission|restore`, `GET /v1/units/:id` aggregating E06 scan history. Role checks (decommission/restore owner-only). Integration tests including illegal transitions → `409`.
+- [x] T3 Rules infrastructure: `rules/defaults.json` (schema-validated with Zod at boot), `RulesService.effective()` merging tenant `AnomalyRuleConfig`, `GET/PUT /v1/anomaly-rules`. `docs/anomaly/rules.md` describing each rule, its evidence and its default thresholds.
+- [x] T4 `AnomalyEngine` core: `upsertAnomaly()` with dedupe (open anomaly with same `dedupeKey` → escalate score/lastSeenAt/evidence, emit `anomaly.escalated`), auto-flag when `score ≥ autoFlagAt` and unit is `active` (system actor, audited), `anomaly.detected` emission debounced per anomaly. BullMQ consumer of `scan.recorded` → job `evaluate`.
+- [x] T5 Rules — event-triggered: `dead_code` (tier-2 scan, batch status ∉ shipped/closed), `pre_reveal` (tier-2 scan `createdAt < Batch.expectedShipDate - graceDays`), `duplicate_first` (tier-2 scan on a unit whose previous tier-2 scan was < `windowMinutes` ago in a city ≥ `minDistanceKm` away — city centroid distance table bundled, no coordinates persisted in evidence).
+- [x] T6 Rules — velocity: consume `scan.enumeration_detected` directly, plus evaluate on each `scan.recorded`: distinct `unitId` count by `ipHash` in `windowMinutes` via `ScanEventRepository.byIpHash`; batch-scoped anomaly when all units belong to one batch, tenant-scoped otherwise (`unitId` and `batchId` null).
+- [x] T7 Rules — sweeps: repeatable jobs `sweep:geo_dispersion` (per tenant: tier-2 units with ≥ `distinctCities` distinct `geoCity` in `windowDays`, one SQL query with `GROUP BY unitId HAVING COUNT(DISTINCT geoCity) ≥ n`) and `sweep:dead_code` (catches scans that arrived before the batch status changed). Idempotent via dedupe keys bucketed by day.
+- [x] T8 Anomaly API: list/summary/detail/acknowledge/resolve/dismiss with `@Audited`, assignment (`assignedToId` must be a member — E02), `AnomalyQuery` provider for E08/E12.
+- [x] T9 Bulk recall: `POST /v1/batches/:id/recall` → BullMQ job iterating units in pages of 500, one `UnitStateTransition` per unit with `recallJobId`, single audit row for the action plus `batch.recalled` event; job progress endpoint `GET /v1/batches/:id/recall/:jobId`.
+- [x] T10 web-admin `(console)/anomalies/`: queue table (rule chip, score, unit/batch ref, cities count, first/last seen, status, assignee) with filters and saved "Open · score ≥ 60" default; detail page with evidence timeline (vertical list of `time — city, country — verdict`; a simple city-count map is out — list only), linked unit card with flag/decommission buttons, acknowledge/resolve/dismiss with note. Nav badge from `/summary`. Replaces E11's EmptyState.
+- [x] T11 web-admin `(console)/units/[unitId]` (state, transitions timeline, scan history table tier-1/tier-2, anomalies, actions with reason dialog) and `(console)/units/batch/[batchId]` (unit list by state, "Recall batch" owner-only dialog with typed confirmation, progress bar). Ask E04 (comment on its issue) to link "Units & recall" from its batch detail.
+- [x] T12 `anomaly.alert` template data contract handed to E14 (PR to E14's template if E14 has not defined it yet), Playwright fixtures that replay a scan sequence through E06's verify endpoint to produce each rule's anomaly, E2E for AC4–AC7. `docs/anomaly/unit-lifecycle.md`.
 
 ## Acceptance criteria
 
-- [ ] AC1 Geo dispersion: with fake-geo (E06) configured to return Lagos, Accra, Nairobi for three source IPs (`docker compose exec fake-geo …` or its `/admin/map` endpoint), verify the same seeded tier-2 code three times with `curl -H 'X-Forwarded-For: <ip>' localhost:4000/v1/verify/<code>` → `GET localhost:4000/v1/anomalies?rule=geo_dispersion` shows one open anomaly with score 60, evidence listing the three cities, and `GET /v1/units/<id>` shows `state: flagged` with a `system` transition; `http://localhost:8025` has the `anomaly.alert` email to the owner.
-- [ ] AC2 Velocity: `for c in $(head -30 packages/core/test/fixtures/tier2-codes.txt); do curl -s -H 'X-Forwarded-For: 41.58.1.1' localhost:4000/v1/verify/$c; done` → one `velocity` anomaly scoped to the batch, no unit flagged (score 40 < 80), and a second burst escalates it (`anomaly.escalated`, score 80, still no auto-flag because it is unit-less — documented).
-- [ ] AC3 Dead code: verify a tier-2 code from the seeded batch still in status `delivered` → `dead_code` anomaly, unit auto-flagged, verdict on the next verify returns E06's flagged copy. After E05 moves the batch to `shipped`, verifying a *different* unit from that batch produces no anomaly.
-- [ ] AC4 Pre-reveal: set the batch `expectedShipDate` to +7 d via E05, verify a tier-2 code → `pre_reveal` anomaly with score 50, unit **not** flagged (alert-only rule), email sent.
-- [ ] AC5 Duplicate-first: two verifies of one unit within 2 min from IPs mapping to Lagos and Kano → `duplicate_first` anomaly, score 80, auto-flag; `http://localhost:3001/anomalies/<id>` renders the two-entry timeline without any coordinates in the DOM (Playwright asserts no `lat`/`lng` text).
-- [ ] AC6 Lifecycle: as `loginAs('operator')` flag a unit from `http://localhost:3001/units/<id>` with reason "test"; as operator the Decommission button is disabled; as `loginAs('owner')` decommission then restore with a reason → three rows in the transitions timeline and three rows in `GET /v1/audit?targetType=unit&targetId=<id>` (E13).
-- [ ] AC7 Recall: as owner at `http://localhost:3001/units/batch/<batchId>` recall the seeded 1,000-unit batch → progress reaches 100 % within 60 s, `GET /v1/batches/<id>/units?state=decommissioned` has 1,000 items, exactly one `batch.recall` audit row, and `curl localhost:4000/v1/verify/<any tier-2 code in batch>` returns the decommissioned verdict.
-- [ ] AC8 Thresholds: `PUT /v1/anomaly-rules {"geo_dispersion":{"thresholds":{"distinctCities":5}}}` as owner → repeating AC1's three scans on a fresh unit raises nothing; as `viewer` the same PUT returns `403`.
-- [ ] AC9 Sweep: insert (via E06's dev replay endpoint) tier-2 scans dated across the last 6 days from 4 cities for one unit, then trigger `POST localhost:4000/v1/_dev/anomaly/sweep` → `geo_dispersion` anomaly created by the sweep path with `evidence.source: 'sweep'`; triggering again creates no duplicate.
+- [x] AC1 Geo dispersion: with fake-geo (E06) configured to return Lagos, Accra, Nairobi for three source IPs (`docker compose exec fake-geo …` or its `/admin/map` endpoint), verify the same seeded tier-2 code three times with `curl -H 'X-Forwarded-For: <ip>' localhost:4000/v1/verify/<code>` → `GET localhost:4000/v1/anomalies?rule=geo_dispersion` shows one open anomaly with score 60, evidence listing the three cities, and `GET /v1/units/<id>` shows `state: flagged` with a `system` transition; `http://localhost:8025` has the `anomaly.alert` email to the owner.
+- [x] AC2 Velocity: `for c in $(head -30 packages/core/test/fixtures/tier2-codes.txt); do curl -s -H 'X-Forwarded-For: 41.58.1.1' localhost:4000/v1/verify/$c; done` → one `velocity` anomaly scoped to the batch, no unit flagged (score 40 < 80), and a second burst escalates it (`anomaly.escalated`, score 80, still no auto-flag because it is unit-less — documented).
+- [x] AC3 Dead code: verify a tier-2 code from the seeded batch still in status `delivered` → `dead_code` anomaly, unit auto-flagged, verdict on the next verify returns E06's flagged copy. After E05 moves the batch to `shipped`, verifying a _different_ unit from that batch produces no anomaly.
+- [x] AC4 Pre-reveal: set the batch `expectedShipDate` to +7 d via E05, verify a tier-2 code → `pre_reveal` anomaly with score 50, unit **not** flagged (alert-only rule), email sent.
+- [x] AC5 Duplicate-first: two verifies of one unit within 2 min from IPs mapping to Lagos and Kano → `duplicate_first` anomaly, score 80, auto-flag; `http://localhost:3001/anomalies/<id>` renders the two-entry timeline without any coordinates in the DOM (Playwright asserts no `lat`/`lng` text).
+- [x] AC6 Lifecycle: as `loginAs('operator')` flag a unit from `http://localhost:3001/units/<id>` with reason "test"; as operator the Decommission button is disabled; as `loginAs('owner')` decommission then restore with a reason → three rows in the transitions timeline and three rows in `GET /v1/audit?targetType=unit&targetId=<id>` (E13).
+- [x] AC7 Recall: as owner at `http://localhost:3001/units/batch/<batchId>` recall the seeded 1,000-unit batch → progress reaches 100 % within 60 s, `GET /v1/batches/<id>/units?state=decommissioned` has 1,000 items, exactly one `batch.recall` audit row, and `curl localhost:4000/v1/verify/<any tier-2 code in batch>` returns the decommissioned verdict.
+- [x] AC8 Thresholds: `PUT /v1/anomaly-rules {"geo_dispersion":{"thresholds":{"distinctCities":5}}}` as owner → repeating AC1's three scans on a fresh unit raises nothing; as `viewer` the same PUT returns `403`.
+- [x] AC9 Sweep: insert (via E06's dev replay endpoint) tier-2 scans dated across the last 6 days from 4 cities for one unit, then trigger `POST localhost:4000/v1/_dev/anomaly/sweep` → `geo_dispersion` anomaly created by the sweep path with `evidence.source: 'sweep'`; triggering again creates no duplicate.
 
 ## Testing
 

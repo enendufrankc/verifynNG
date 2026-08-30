@@ -28,7 +28,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E04 Catalog & Minting
 
-- [ ] `Batch.expectedShipDate DateTime?`; expose `ManifestStore.read/write`, `ArtworkService.presignZip`, unvalidated `BatchService.setStatus` — E05 enforces the state machine (E05).
+- [x] `Batch.expectedShipDate DateTime?` — added by E07 (blocking, E05 hadn't started; see issues #5/#6). expose `ManifestStore.read/write`, `ArtworkService.presignZip`, unvalidated `BatchService.setStatus` — E05 enforces the state machine (E05).
 - [ ] `Batch.isTest` so `vk_test_` keys mint unbilled; E12 skips `isTest` (E16).
 - [ ] `MintService.mintBulk({ skipExports })` for the 50k-unit seed (E21).
 - [ ] `product.updated` event (E10).

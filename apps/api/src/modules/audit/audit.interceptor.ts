@@ -87,6 +87,7 @@ export class AuditInterceptor implements NestInterceptor {
       ? requestIdHeader[0]
       : requestIdHeader;
 
+    const actorId = user.userId ?? user.id;
     await this.auditService.record({
       // A platform-support-only principal's JWT carries tid:"" (no active
       // tenant), not null/undefined — passed straight through, that empty
@@ -97,12 +98,8 @@ export class AuditInterceptor implements NestInterceptor {
       // exactly the "no tenant context" case this normalizes to.
       tenantId: user.tenantId || undefined,
       actor: {
-        // req.user.id is E02's deprecated alias — real principals set
-        // userId; reading only .id meant actorId was empty on every
-        // @Audited() call platform-wide since E02's real auth replaced the
-        // header-stub era this field name predates.
-        type: (user.userId ?? user.id) ? 'user' : 'system',
-        id: user.userId ?? user.id,
+        type: actorId ? 'user' : 'system',
+        id: actorId,
         ip: req.ip ?? req.connection?.remoteAddress,
       },
       action: opts.action,
