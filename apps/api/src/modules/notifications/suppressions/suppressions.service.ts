@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient, NotificationChannel, SuppressionReason } from '@prisma/client';
+import {
+  PrismaClient,
+  NotificationChannel,
+  SuppressionReason,
+} from '@prisma/client';
 
 @Injectable()
 export class SuppressionsService {
@@ -38,10 +42,20 @@ export class SuppressionsService {
     return this.prisma.notificationSuppression.delete({ where: { id } });
   }
 
-  async listSuppressions(params: { tenantId?: string; channel?: NotificationChannel }) {
+  async listSuppressions(params: {
+    tenantId?: string;
+    channel?: NotificationChannel;
+  }) {
     const where: Record<string, unknown> = {};
-    if (params.tenantId) where.tenantId = params.tenantId;
+    // Suppressions are keyed on [channel, recipient] and apply platform-wide
+    // (tenantId is null for provider-webhook bounces); a tenant view must
+    // include both its own manual suppressions and the global ones.
+    if (params.tenantId)
+      where.OR = [{ tenantId: params.tenantId }, { tenantId: null }];
     if (params.channel) where.channel = params.channel;
-    return this.prisma.notificationSuppression.findMany({ where, orderBy: { createdAt: 'desc' } });
+    return this.prisma.notificationSuppression.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }
