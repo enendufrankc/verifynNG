@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { TenantId } from '../auth/decorators/tenant-id.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -40,7 +47,7 @@ export class UnitsController {
     const unit = await this.prisma.unit.findFirst({
       where: { id, tenantId },
     });
-    if (!unit) return { error: 'not_found' };
+    if (!unit) throw new NotFoundException();
 
     const [transitions, scanEvents, anomalies] = await Promise.all([
       this.prisma.unitStateTransition.findMany({
