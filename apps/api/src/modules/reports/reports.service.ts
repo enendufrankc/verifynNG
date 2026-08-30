@@ -190,8 +190,8 @@ export class ReportsService {
     const statusUrl = `/v1/public/${tenantSlug}/reports/${report.reference}`;
 
     if (dto.contact?.email) {
-      const productName = await this.resolveProductName(report.productId);
       try {
+        const productName = await this.resolveProductName(report.productId);
         await this.notifications.send(
           'report.consumer_ack',
           { email: dto.contact.email },
@@ -409,14 +409,14 @@ export class ReportsService {
       actorId,
     });
     if (input.notifyConsumer && report.contactEmail) {
-      const [tenant, productName] = await Promise.all([
-        this.prisma.tenant.findUnique({
-          where: { id: tenantId },
-          select: { slug: true },
-        }),
-        this.resolveProductName(report.productId),
-      ]);
       try {
+        const [tenant, productName] = await Promise.all([
+          this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { slug: true },
+          }),
+          this.resolveProductName(report.productId),
+        ]);
         await this.notifications.send(
           'report.consumer_update',
           { email: report.contactEmail },
