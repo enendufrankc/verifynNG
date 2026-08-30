@@ -1,7 +1,7 @@
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { TenantId } from '../../common/tenant-id.decorator';
+import { TenantId } from '../auth/decorators/tenant-id.decorator';
 
 @Controller('tenants/:tenantId/jobs')
 export class JobsController {

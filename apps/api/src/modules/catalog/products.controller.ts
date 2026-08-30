@@ -11,7 +11,7 @@ import {
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { TenantId } from '../../common/tenant-id.decorator';
+import { TenantId } from '../auth/decorators/tenant-id.decorator';
 
 @Controller('tenants/:tenantId/products')
 export class ProductsController {

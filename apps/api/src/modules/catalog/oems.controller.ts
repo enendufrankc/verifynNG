@@ -12,7 +12,7 @@ import { OemsService } from './oems.service';
 import { CreateOemDto } from './dto/create-oem.dto';
 import { UpdateOemDto } from './dto/update-oem.dto';
 import { SetOemStatusDto } from './dto/set-oem-status.dto';
-import { TenantId } from '../../common/tenant-id.decorator';
+import { TenantId } from '../auth/decorators/tenant-id.decorator';
 
 @Controller('tenants/:tenantId/oems')
 export class OemsController {

@@ -5,8 +5,8 @@ import { BatchesService } from './batches.service';
 import { MintService } from './mint.service';
 import { ExportsService } from './exports.service';
 import { CreateBatchDto } from './dto/create-batch.dto';
-import { TenantId } from '../../common/tenant-id.decorator';
-import { Roles } from '../../common/roles.decorator';
+import { TenantId } from '../auth/decorators/tenant-id.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 type ArtefactKind = 'qr-zip' | 'sheet-pdf' | 'tier1-csv' | 'all-zip';
 
