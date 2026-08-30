@@ -5,13 +5,16 @@ import {
   Body,
   Headers,
   Query,
-  Param,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Public } from '../../common/tenant';
 import { StatusService } from './status.service';
 import type { IngestProbeDto } from './status.service';
 
+// Public status surface (E17). Verification lives in E06's VerifyController — this
+// controller must never register a /v1/verify route (it shadowed E06's on main).
 @Controller('v1')
+@Public()
 export class StatusController {
   constructor(private readonly statusService: StatusService) {}
 
@@ -36,38 +39,5 @@ export class StatusController {
   async getHistory(@Query('days') days?: string) {
     const daysNum = days ? parseInt(days, 10) : 30;
     return this.statusService.getHistory(daysNum);
-  }
-
-  // Probe fixture verify target stub (until E06 verification module lands)
-  @Get('verify/:code')
-  async verifyCode(
-    @Param('code') code: string,
-    @Headers('x-synthetic-probe') probeHeader?: string,
-    @Headers('x-debug-throw') debugThrow?: string,
-  ) {
-    if (debugThrow === '1' && process.env.NODE_ENV !== 'production') {
-      throw new Error('Deliberate error thrown via x-debug-throw header');
-    }
-
-    const probeFixture = process.env.PROBE_FIXTURE_CODE || 'PROBE_TIER1_OK';
-
-    if (code === probeFixture || probeHeader) {
-      const delayMs = Number(process.env.VERIFY_ARTIFICIAL_DELAY_MS) || 0;
-      if (delayMs > 0) {
-        await new Promise((r) => setTimeout(r, delayMs));
-      }
-      return {
-        verdict: 'ok',
-        tier: 1,
-        code,
-        probe: true,
-      };
-    }
-
-    return {
-      verdict: 'ok',
-      tier: 1,
-      code,
-    };
   }
 }

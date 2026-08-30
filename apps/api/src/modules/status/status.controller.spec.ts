@@ -38,14 +38,4 @@ describe('StatusController', () => {
     const res = await controller.getStatus();
     expect(res).toEqual({ state: 'operational' });
   });
-
-  it('verifies probe fixture code', async () => {
-    const res = await controller.verifyCode('PROBE_TIER1_OK');
-    expect(res).toEqual({
-      verdict: 'ok',
-      tier: 1,
-      code: 'PROBE_TIER1_OK',
-      probe: true,
-    });
-  });
 });
