@@ -71,6 +71,7 @@ export class TokenService {
         role: payload.role,
         prole: payload.platformRole,
         sid: payload.sessionId,
+        typ: 'access',
       },
       {
         secret: Buffer.from(secret),
@@ -94,19 +95,26 @@ export class TokenService {
       throw new UnauthorizedException('Unknown signing key');
     }
 
+    let payload: DecodedToken & { typ?: string; mfa?: boolean };
     try {
-      return this.jwtService.verify<DecodedToken>(token, {
-        secret: Buffer.from(secret),
-      });
+      payload = this.jwtService.verify<
+        DecodedToken & { typ?: string; mfa?: boolean }
+      >(token, { secret: Buffer.from(secret) });
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
+    // Only tokens minted by issueAccessToken are access tokens. MFA-challenge and any
+    // other JWTs signed with the same key ring must never authenticate a request.
+    if (payload.typ !== 'access' || payload.mfa) {
+      throw new UnauthorizedException('Not an access token');
+    }
+    return payload;
   }
 
   async issueMfaToken(userId: string): Promise<string> {
     const { kid, secret } = this.keyRing.active();
     return this.jwtService.signAsync(
-      { sub: userId, mfa: true },
+      { sub: userId, mfa: true, typ: 'mfa' },
       { secret: Buffer.from(secret), expiresIn: '5m', keyid: kid },
     );
   }
@@ -125,11 +133,12 @@ export class TokenService {
     }
 
     try {
-      const payload = this.jwtService.verify<{ sub: string; mfa?: boolean }>(
-        token,
-        { secret: Buffer.from(secret) },
-      );
-      if (!payload.mfa) {
+      const payload = this.jwtService.verify<{
+        sub: string;
+        mfa?: boolean;
+        typ?: string;
+      }>(token, { secret: Buffer.from(secret) });
+      if (!payload.mfa || payload.typ !== 'mfa') {
         throw new UnauthorizedException('Not an MFA token');
       }
       return { userId: payload.sub };

@@ -58,6 +58,7 @@ function signTestAccessToken(claims: {
     tid: claims.tid,
     role: claims.role,
     sid: claims.sid,
+    typ: 'access',
     iat: now,
     exp: now + ttlSeconds,
   };
