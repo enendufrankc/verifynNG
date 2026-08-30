@@ -14,6 +14,9 @@ import {
   Settings,
   LifeBuoy,
   FileText,
+  Siren,
+  Trash2,
+  Download,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -145,6 +148,23 @@ export const NAV: NavEntry[] = [
     order: 50,
   },
   {
+    id: 'organization.complianceDsar',
+    label: 'Data export',
+    href: '/compliance/dsar',
+    icon: Download,
+    section: 'organization',
+    minRole: 'owner',
+    order: 60,
+  },
+  {
+    id: 'organization.complianceIncidents',
+    label: 'Incidents',
+    href: '/compliance/incidents',
+    icon: Siren,
+    section: 'organization',
+    order: 70,
+  },
+  {
     id: 'platform.support',
     label: 'Support',
     href: '/support',
@@ -161,6 +181,24 @@ export const NAV: NavEntry[] = [
     section: 'platform',
     platformRole: 'support',
     order: 20,
+  },
+  {
+    id: 'platform.incidents',
+    label: 'Incidents',
+    href: '/incidents',
+    icon: Siren,
+    section: 'platform',
+    platformRole: 'support',
+    order: 30,
+  },
+  {
+    id: 'platform.retention',
+    label: 'Retention',
+    href: '/compliance/retention',
+    icon: Trash2,
+    section: 'platform',
+    platformRole: 'support',
+    order: 40,
   },
 ];
 

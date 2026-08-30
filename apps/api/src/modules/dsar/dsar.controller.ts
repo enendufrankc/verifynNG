@@ -71,6 +71,12 @@ export class DsarController {
   }
 
   @Roles('owner')
+  @Get('tenant')
+  listTenant(@TenantId() tenantId: string) {
+    return this.dsar.listTenantDsar(tenantId);
+  }
+
+  @Roles('owner')
   @Get('tenant/:id')
   getTenant(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.dsar.getTenantDsar(tenantId, id);

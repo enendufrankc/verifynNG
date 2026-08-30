@@ -167,4 +167,11 @@ export class DsarService {
     if (!request) throw new NotFoundException('dsar_request_not_found');
     return request;
   }
+
+  async listTenantDsar(tenantId: string): Promise<DsarRequest[]> {
+    return prisma.dsarRequest.findMany({
+      where: { tenantId, subjectType: 'tenant' },
+      orderBy: { requestedAt: 'desc' },
+    });
+  }
 }
