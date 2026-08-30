@@ -5,7 +5,8 @@ import {
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AlertsService, AlertWebhookPayload } from './alerts.service';
+import { AlertsService } from './alerts.service';
+import type { AlertWebhookPayload } from './alerts.service';
 
 @Controller('internal/alerts')
 export class AlertsController {

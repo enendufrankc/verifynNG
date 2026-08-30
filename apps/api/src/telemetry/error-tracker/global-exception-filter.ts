@@ -6,8 +6,9 @@ import {
   HttpStatus,
   Inject,
 } from '@nestjs/common';
-import { Response } from 'express';
-import { ERROR_TRACKER, ErrorTrackerPort } from './error-tracker.port';
+import type { Response } from 'express';
+import { ERROR_TRACKER } from './error-tracker.port';
+import type { ErrorTrackerPort } from './error-tracker.port';
 import { getContext } from '../context';
 
 @Catch()
