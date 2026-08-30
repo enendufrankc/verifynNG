@@ -130,12 +130,21 @@ const renderers: Record<
   'anomaly.alert': (
     data: TemplateData['anomaly.alert'],
     _branding: BrandingData,
-  ) => ({
-    subject: `Anomaly detected — ${data.anomalyType}`,
-    bodyHtml: `<p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected</strong></p><p style="margin:0 0 8px">Product: <strong>${esc(data.productName)}</strong> — Code: ${esc(data.tier1Code)}</p><p style="margin:0 0 8px">Type: ${esc(data.anomalyType)}</p><p style="margin:0 0 8px;color:#999;font-size:13px">Detected at ${esc(data.detectedAt)}</p><p style="margin:12px 0 0"><a href="${esc(data.dashboardUrl)}" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p>`,
-    text: `Anomaly detected — ${data.anomalyType}\nProduct: ${data.productName}\nCode: ${data.tier1Code}\nDetected: ${data.detectedAt}\nView: ${data.dashboardUrl}`,
-    sms: `ALERT: Anomaly ${data.anomalyType} on ${data.productName} (${data.tier1Code})`,
-  }),
+  ) => {
+    const ref = data.unitRef ?? data.batchRef;
+    const refLine = ref
+      ? `<p style="margin:0 0 8px">Ref: <strong>${esc(ref)}</strong></p>`
+      : '';
+    const citiesLine = data.cities.length
+      ? `<p style="margin:0 0 8px;color:#999;font-size:13px">Cities: ${esc(data.cities.join(', '))}</p>`
+      : '';
+    return {
+      subject: `Anomaly detected — ${data.rule} (${data.tenantName})`,
+      bodyHtml: `<p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected — score ${data.score}</strong></p><p style="margin:0 0 8px">${esc(data.summary)}</p>${refLine}${citiesLine}<p style="margin:12px 0 0"><a href="${esc(data.adminUrl)}" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p>`,
+      text: `Anomaly detected — ${data.rule} (score ${data.score})\n${data.summary}\n${ref ? `Ref: ${ref}\n` : ''}View: ${data.adminUrl}`,
+      sms: `ALERT: ${data.rule} anomaly (score ${data.score}) — ${data.tenantName}`,
+    };
+  },
 
   'report.received': (data: TemplateData['report.received'], branding) => ({
     subject: `Consumer report — ${data.reportReference}`,
@@ -183,6 +192,38 @@ const renderers: Record<
     bodyHtml: `<p style="margin:0 0 12px">An MFA recovery was requested for your ${esc(branding.tenantName)} account.</p><p style="margin:0 0 8px">This link expires in ${esc(data.expiresIn)}.</p><p style="margin:0"><a href="${esc(data.recoveryUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Recover account</a></p>`,
     text: `MFA recovery — ${branding.tenantName}\n\nRecover your account: ${data.recoveryUrl}\nExpires in ${data.expiresIn}`,
     sms: `MFA recovery for ${branding.tenantName}: ${data.recoveryUrl} (expires ${data.expiresIn})`,
+  }),
+
+  // ── E19 Compliance & Data Governance ──────────────────────────
+  'dsar.verify': (data: TemplateData['dsar.verify'], branding) => ({
+    subject: `Confirm your data request — ${branding.tenantName}`,
+    bodyHtml: `<p style="margin:0 0 12px">We received a request to access or delete data linked to a report you submitted. Confirm it's you within ${esc(data.expiresIn)}.</p><p style="margin:0"><a href="${esc(data.verifyUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Confirm request</a></p>`,
+    text: `Confirm your data request\n\n${data.verifyUrl}\nExpires in ${data.expiresIn}`,
+    sms: `Confirm your data request: ${data.verifyUrl} (expires ${data.expiresIn})`,
+  }),
+
+  'dsar.ready': (data: TemplateData['dsar.ready'], branding) => ({
+    subject: `Your data export is ready — ${branding.tenantName}`,
+    bodyHtml: `<p style="margin:0 0 12px">Your requested data export is ready to download. This link expires in ${esc(data.expiresIn)}.</p><p style="margin:0"><a href="${esc(data.downloadUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Download</a></p>`,
+    text: `Your data export is ready\n\n${data.downloadUrl}\nExpires in ${data.expiresIn}`,
+    sms: `Your data export is ready: ${data.downloadUrl} (expires ${data.expiresIn})`,
+  }),
+
+  'dsar.erased': (
+    data: TemplateData['dsar.erased'],
+    _branding: BrandingData,
+  ) => ({
+    subject: `Your data has been erased`,
+    bodyHtml: `<p style="margin:0 0 12px">The data linked to your report has been erased, as requested on ${esc(data.requestedAt)}.</p>`,
+    text: `Your data has been erased, as requested on ${data.requestedAt}.`,
+    sms: `Your data has been erased as requested.`,
+  }),
+
+  'legal.reaccept': (data: TemplateData['legal.reaccept'], branding) => ({
+    subject: `Action needed: updated ${data.documentTitle}`,
+    bodyHtml: `<p style="margin:0 0 12px">We've published a new version (${esc(data.version)}) of our <strong>${esc(data.documentTitle)}</strong>. Your account owner must accept it to keep using the console.</p><p style="margin:0"><a href="${esc(data.reacceptUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Review and accept</a></p>`,
+    text: `We've published a new version (${data.version}) of our ${data.documentTitle}.\n\nReview and accept: ${data.reacceptUrl}`,
+    sms: `Action needed: review and accept the updated ${data.documentTitle} at ${data.reacceptUrl}`,
   }),
 };
 

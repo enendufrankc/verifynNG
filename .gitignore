@@ -19,3 +19,5 @@ test-results/
 tools/load/results/
 *.tsbuildinfo
 docker/secrets/
+apps/web-verify/lighthouse/.lhci/
+apps/web-verify/.lighthouseci/

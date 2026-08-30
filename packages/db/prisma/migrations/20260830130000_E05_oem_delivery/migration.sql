@@ -4,8 +4,6 @@
 -- treating an unrecognised role string as its own allowed set, so no other E02 code changes.
 ALTER TYPE "TenantRole" ADD VALUE IF NOT EXISTS 'oem';
 
--- Batch.expectedShipDate: written by E05 at delivery time, read by E07 in one join.
-ALTER TABLE "Batch" ADD COLUMN "expectedShipDate" TIMESTAMP(3);
 
 CREATE TYPE "DeliveryStatus" AS ENUM ('delivered', 'downloaded', 'receipted', 'revoked', 'expired');
 

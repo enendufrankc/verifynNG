@@ -140,8 +140,14 @@ export type IsolationMethod = 'get' | 'post' | 'patch' | 'put' | 'delete';
 
 export interface IsolationRoute {
   method: IsolationMethod;
-  /** Builds the request path against the "other" tenant's fixture (the one being probed). */
-  path: (other: TenantFixture) => string;
+  /**
+   * Builds the request path against the "other" tenant's fixture (the one
+   * being probed). May be async and seed whatever domain resource the route
+   * needs (e.g. a Unit or Anomaly row) scoped to `other.tenant.id` — each
+   * route gets its own fresh resource, so routes that mutate state (flag,
+   * decommission, ...) never interfere with one another.
+   */
+  path: (other: TenantFixture) => string | Promise<string>;
   body?: unknown;
   /** The status a cross-tenant call must return: 404 for the default rule, 403 for @PlatformRole exceptions. */
   expectWhenCrossTenant: 404 | 403;
@@ -235,7 +241,7 @@ export async function assertTenantIsolation(
   const server = app.getHttpServer();
 
   for (const route of routes) {
-    const path = route.path(b);
+    const path = await route.path(b);
     const before = await snapshotTenant(prisma, b.tenant.id);
 
     let req = request(server)

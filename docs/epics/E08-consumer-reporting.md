@@ -1,13 +1,13 @@
 # E08 — Consumer Fake Reporting
 
-| | |
-|---|---|
-| Wave | 2 |
-| Status | in-progress |
-| Owner | @enendufrankc |
-| GitHub Issue | [#9](https://github.com/enendufrankc/verifynNG/issues/9) |
-| Depends on | E06, E11 (also consumes E13, E14, E07 when available, E19 for consent) |
-| Unblocks | E09 (renders `ReportForm`), E12 (report counts), E16 (`report.created` webhook), E18 (support view of reports) |
+|                 |                                                                                                                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 2                                                                                                                                                                                                                      |
+| Status          | in-progress                                                                                                                                                                                                            |
+| Owner           | @enendufrankc                                                                                                                                                                                                          |
+| GitHub Issue    | [#9](https://github.com/enendufrankc/verifynNG/issues/9)                                                                                                                                                               |
+| Depends on      | E06, E11 (also consumes E13, E14, E07 when available, E19 for consent)                                                                                                                                                 |
+| Unblocks        | E09 (renders `ReportForm`), E12 (report counts), E16 (`report.created` webhook), E18 (support view of reports)                                                                                                         |
 | Readiness items | `architecture.md` step 10 (consumers report fakes) · mental-model §5 "detection is the product" → enforcement loop · §3 consent records for consumer contact data (NDPR) · §2 per-IP limits on a public write endpoint |
 
 ## Goal
@@ -34,6 +34,7 @@ docs/reports/**                                   (consumer-flow.md, triage-guid
 ## Interfaces
 
 **Consumes**
+
 - E06: `ScanEvent` rows (the verify response includes `scanEventId` — **confirm with E06**; E08's submission takes `scanEventId` and derives `unitId`/`batchId`/`productId`/`verdict` server-side, never trusting the client), `ScanEventRepository.forUnit()` for the detail view.
 - E07: `AnomalyQuery.forUnit(unitId)` / `.forBatch(batchId)` for context on the detail page (stubbed to empty until E07 ships).
 - E13: `QuotaService.registerKind('reports_per_ip_per_hour', { defaultLimit: 5, window: 'hour' })`, `registerKind('report_uploads_per_ip_per_hour', { defaultLimit: 15, window: 'hour' })`, `assertWithinQuota(tenantId, kind, { key: ipHash })`; `@Audited('report.status.change' | 'report.assign' | 'report.note.add' | 'report.export')`.
@@ -184,9 +185,9 @@ Status flow: `new → triaged → investigating → closed(outcome required)`; `
 
 ## Compose services added
 
-| Service | Image | Host port |
-|---|---|---|
-| fake-captcha | tools/fakes/captcha | 4106 |
+| Service      | Image               | Host port |
+| ------------ | ------------------- | --------- |
+| fake-captcha | tools/fakes/captcha | 4106      |
 
 MinIO buckets `reports-incoming` (24 h lifecycle) and `reports` are created by the API at boot (idempotent), not by E00's `mc` init.
 

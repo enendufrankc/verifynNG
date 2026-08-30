@@ -91,3 +91,23 @@ export { Breadcrumbs } from './components/ui/breadcrumbs';
 export { EmptyState } from './components/ui/empty-state';
 export { ProgressBar } from './components/ui/progress-bar';
 export { CodeBlock } from './components/ui/code-block';
+
+// E12 — Analytics charts
+export {
+  KpiTile,
+  StackedBars,
+  TimeSeries,
+  RankedTable,
+  GeoTable,
+  CHART_PALETTE,
+  verdictColor,
+  type KpiTileProps,
+  type StackedBarsProps,
+  type VerdictSeriesPoint,
+  type TimeSeriesProps,
+  type TimeSeriesPoint,
+  type RankedTableProps,
+  type RankedTableColumn,
+  type GeoTableProps,
+  type GeoTableRow,
+} from './charts';
