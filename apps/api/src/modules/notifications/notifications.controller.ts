@@ -13,7 +13,7 @@ import {
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { NotificationService } from './notifications.service';
 import { OutboxService } from './outbox/outbox.service';
 import { SuppressionsService } from './suppressions/suppressions.service';
@@ -24,7 +24,7 @@ import {
   NotificationChannel,
   SuppressionReason,
 } from '@prisma/client';
-import { TenantId } from '../../common/tenant-id.decorator';
+import { TenantId } from '../../common/tenant';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('v1/notifications')

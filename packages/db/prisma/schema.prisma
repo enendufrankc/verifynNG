@@ -378,6 +378,8 @@ model TenantSenderIdentity {
   updatedAt          DateTime           @updatedAt
 
   @@unique([tenantId, channel])
+}
+
 // ─── E17 Observability ──────────────────────────────────────────────────────
 model ProbeResult {
   id         String   @id @default(cuid())
