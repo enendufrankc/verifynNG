@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaClient, NotificationChannel } from '@prisma/client';
+import { PrismaClient, NotificationChannel, TenantRole } from '@prisma/client';
 import { NotificationService } from '../notifications.service';
 import { TemplateId } from '../templates/template-data';
 
@@ -60,7 +60,6 @@ export class EventRouter implements OnModuleInit {
 
     if (rules.length === 0) return;
 
-    // Resolve members by roles (stubbed until E02 lands)
     for (const rule of rules) {
       const members = await this.resolveMembers(tenantId, rule.roles);
       const templateId = rule.templateId as TemplateId;
@@ -85,23 +84,31 @@ export class EventRouter implements OnModuleInit {
     }
   }
 
-  /** Stub: resolves members by roles until E02 ships UsersService.listMembers */
+  /**
+   * Resolves members by role for a tenant. Tenant membership lives on
+   * `Membership` (users can belong to multiple tenants), not `User.tenantId`
+   * — that field is unset for every user created via the normal signup/seed
+   * path, so a `User.findMany({where:{tenantId}})` stub here previously
+   * matched zero rows for every real tenant, meaning no routed event has
+   * ever actually reached a recipient (see the CROSS-EPIC-REQUESTS.md ask
+   * for `UsersService.listMembers` — this was the interim stub for that,
+   * written against a User-based model E02 didn't ship).
+   */
   private async resolveMembers(
     tenantId: string,
     roles: string[],
   ): Promise<Array<{ id: string; email: string; phone?: string }>> {
-    // For now, return all users in the tenant (role filtering comes with E02)
-    const users = await this.prisma.user.findMany({
-      where: { tenantId },
+    const memberships = await this.prisma.membership.findMany({
+      where: {
+        tenantId,
+        ...(roles.length ? { role: { in: roles as TenantRole[] } } : {}),
+      },
+      include: { user: true },
     });
 
-    // If roles includes 'owner', we return all users as a stub
-    // E02 will provide proper role-based filtering
-    if (roles.length === 0) return users;
-
-    return users.map((u) => ({
-      id: u.id,
-      email: u.email,
+    return memberships.map((m) => ({
+      id: m.user.id,
+      email: m.user.email,
       phone: undefined,
     }));
   }
