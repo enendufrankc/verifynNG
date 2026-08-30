@@ -13,17 +13,32 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 @Injectable()
 export class TenantS3Service {
   readonly client: S3Client;
+  // Presigned URLs handed to a browser must be signed for a host the
+  // browser can actually reach — the api container talks to `minio:9000`
+  // over the compose network, but that hostname doesn't resolve outside it.
+  private readonly publicClient: S3Client;
   private readonly bucket: string;
   constructor(config: ConfigService) {
     this.bucket = config.get<string>('S3_BUCKET', 'verifyng');
+    const credentials = {
+      accessKeyId: config.get<string>('S3_ACCESS_KEY', 'minioadmin'),
+      secretAccessKey: config.get<string>('S3_SECRET_KEY', 'minioadmin'),
+    };
+    const forcePathStyle = config.get<boolean>('S3_FORCE_PATH_STYLE', true);
     this.client = new S3Client({
       endpoint: config.get<string>('S3_ENDPOINT', 'http://minio:9000'),
       region: 'us-east-1',
-      forcePathStyle: config.get<boolean>('S3_FORCE_PATH_STYLE', true),
-      credentials: {
-        accessKeyId: config.get<string>('S3_ACCESS_KEY', 'minioadmin'),
-        secretAccessKey: config.get<string>('S3_SECRET_KEY', 'minioadmin'),
-      },
+      forcePathStyle,
+      credentials,
+    });
+    this.publicClient = new S3Client({
+      endpoint: config.get<string>(
+        'S3_PUBLIC_ENDPOINT',
+        'http://localhost:9000',
+      ),
+      region: 'us-east-1',
+      forcePathStyle,
+      credentials,
     });
   }
   async presignPut(
@@ -32,7 +47,7 @@ export class TenantS3Service {
     size: number,
   ): Promise<string> {
     return getSignedUrl(
-      this.client,
+      this.publicClient,
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -59,7 +74,7 @@ export class TenantS3Service {
   }
   async presignGet(key: string, expiresIn = 86400): Promise<string> {
     return getSignedUrl(
-      this.client,
+      this.publicClient,
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
       { expiresIn },
     );

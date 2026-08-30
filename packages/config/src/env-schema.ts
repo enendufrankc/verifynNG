@@ -15,6 +15,10 @@ const e00Schema = z.object({
   API_PORT: z.coerce.number().default(4000),
   // MinIO / S3
   S3_ENDPOINT: z.string().default('http://minio:9000'),
+  // Browser-reachable MinIO URL for presigned PUT/GET links — the api
+  // container talks to `minio:9000` over the compose network, but a
+  // browser on the host can't resolve that hostname.
+  S3_PUBLIC_ENDPOINT: z.string().default('http://localhost:9000'),
   S3_ACCESS_KEY: z.string().default('minioadmin'),
   S3_SECRET_KEY: z.string().default('minioadmin'),
   S3_BUCKET: z.string().default('verifyng'),
