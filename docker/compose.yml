@@ -229,6 +229,7 @@ services:
       REPORT_INCOMING_TTL_HOURS: '24'
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
+      REPORT_MAX_INPUT_PIXELS: '40000000'
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a

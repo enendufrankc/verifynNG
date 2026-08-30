@@ -182,6 +182,7 @@ const e08Schema = z.object({
   REPORT_INCOMING_TTL_HOURS: z.coerce.number().default(24),
   REPORTS_BUCKET_INCOMING: z.string().default('reports-incoming'),
   REPORTS_BUCKET: z.string().default('reports'),
+  REPORT_MAX_INPUT_PIXELS: z.coerce.number().default(40_000_000),
 });
 
 const ZERO_KEY = '0'.repeat(64);
