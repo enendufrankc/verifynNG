@@ -98,7 +98,7 @@ Domain events:
 'manifest.generated'{ tenantId, batchId, objectKey, sha256, at }
 ```
 
-BullMQ queues: `mint` (concurrency 2, job id = `${tenantId}:${idempotencyKey}`), `batch-exports` (concurrency 1 per batch).
+BullMQ queues: `mint` (concurrency 2, job id = the `Batch.id` it mints — not `${tenantId}:${idempotencyKey}` as originally spec'd here, since BullMQ rejects a custom jobId containing `:` unless it splits into exactly 3 parts, and `idempotencyKey` is arbitrary client input), `batch-exports` (concurrency 1 per batch).
 
 MinIO layout (bucket `verifyng`):
 

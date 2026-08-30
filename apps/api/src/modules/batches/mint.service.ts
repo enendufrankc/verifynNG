@@ -163,8 +163,17 @@ export class MintService {
           count,
         },
         {
-          jobId: `${tenantId}:${idempotencyKey}`,
-          removeOnComplete: true,
+          // The batch id is already a unique, BullMQ-safe identifier for
+          // this (tenantId, idempotencyKey) pair — composing one from
+          // tenantId + idempotencyKey is redundant and unsafe besides:
+          // BullMQ rejects a custom jobId containing ':' unless it splits
+          // into exactly 3 parts (a legacy repeatable-job format check),
+          // and idempotencyKey is arbitrary client input.
+          //
+          // No removeOnComplete override here — GET /jobs/:jobId must be
+          // able to observe the 'completed' state; the queue-level default
+          // (BullMQModule: keep the last 100) bounds Redis growth instead.
+          jobId: batch.id,
         },
       );
       await this.prisma.batch.update({
