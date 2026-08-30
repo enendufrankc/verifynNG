@@ -10,6 +10,21 @@ export const queryKeys = {
     security: (tenantId: string) => ['settings', 'security', tenantId] as const,
     sessions: (tenantId: string) => ['settings', 'sessions', tenantId] as const,
   },
+  products: {
+    list: (tenantId: string) => ['products', 'list', tenantId] as const,
+  },
+  oems: {
+    list: (tenantId: string) => ['oems', 'list', tenantId] as const,
+  },
+  batches: {
+    list: (tenantId: string) => ['batches', 'list', tenantId] as const,
+    detail: (tenantId: string, batchId: string) =>
+      ['batches', 'detail', tenantId, batchId] as const,
+    units: (tenantId: string, batchId: string) =>
+      ['batches', 'units', tenantId, batchId] as const,
+    job: (tenantId: string, jobId: string) =>
+      ['batches', 'job', tenantId, jobId] as const,
+  },
 };
 
 export function usePagedQuery<TItem>(
