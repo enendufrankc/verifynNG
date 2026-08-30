@@ -74,6 +74,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${FAKE_SMS_PORT:-4101}:4101'
+    environment:
+      API_URL: http://api:4000
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4101/health']
       interval: 5s
@@ -129,7 +131,9 @@ services:
     ports:
       - '${API_HOST_PORT:-4000}:4000'
     environment:
-      NODE_ENV: production
+      # Local compose exposes the dev-only acceptance endpoints; production deployments
+      # must set NODE_ENV=production outside this local stack.
+      NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifynng?schema=public
       REDIS_URL: redis://redis:6379
       API_PORT: '4000'
@@ -145,6 +149,63 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:4000
       WORKER_INLINE: 'true'
       OFFBOARDING_GRACE_DAYS: ${OFFBOARDING_GRACE_DAYS:-30}
+      CORS_ORIGINS_ADMIN: http://localhost:${WEB_ADMIN_PORT:-3001}
+      CORS_ORIGINS_VERIFY: http://localhost:${WEB_VERIFY_PORT:-3000}
+      # ── E14 Notifications ──
+      MAIL_PROVIDER: smtp
+      SMS_PROVIDER: fake
+      FAKE_SMS_URL: http://fake-sms:4101
+      WHATSAPP_PROVIDER: fake
+      NOTIFICATIONS_FROM: 'VerifyN <noreply@verifyn.ng>'
+      FAKE_WEBHOOK_SECRET: dev-secret
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: api
+      LOKI_URL: http://loki:3100
+      PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
+      PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OPS_ALERT_EMAILS: ${OPS_ALERT_EMAILS:-ops@verifynng.local}
+      ALERT_WEBHOOK_SECRET: ${ALERT_WEBHOOK_SECRET:-alert-webhook-secret-local}
+      METRICS_PORT: '9464'
+      VERIFY_ARTIFICIAL_DELAY_MS: ${VERIFY_ARTIFICIAL_DELAY_MS:-0}
+      # ── E02 Identity & Access ──
+      JWT_KEYS: k1:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2,k2:f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5d4c3b2a1f6e5
+      JWT_ACTIVE_KID: k1
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TTL: 30d
+      MFA_ENC_KEY: aabbccdd11223344aabbccdd11223344aabbccdd11223344aabbccdd11223344
+      ARGON2_M_COST: '65536'
+      ARGON2_T_COST: '3'
+      ARGON2_P_COST: '4'
+      # Deterministic dev-only bearer keys for @InternalOnly() routes (jobs/fakes). Format
+      # vk_<prefix>_<secret>, seeded idempotently at boot by ApiClientService.seedInternalClients().
+      # FAKE_SMS_KEY is consumed by both E02's InternalOnlyGuard (global) and E06's
+      # VerifySmsController's own bearer check — must be the vk_ format both understand.
+      WORKER_KEY: vk_87eba76e_87eba76e7f3164534045ba922e7770fb58bbd14ad732bbf5ba6f11cc56989e6e
+      FAKE_SMS_KEY: vk_e3ecb35c_e3ecb35c6a1bdd71e31eb3bc10e3eeb1163f0fd3f8411fa3404cd77ad4e0134e
+      FAKE_PAY_KEY: vk_5c2211be_5c2211bec4d8076bc5049669861ce211faf0be91738aa2ebe6803e091400460a
+      FAKE_GEO_KEY: vk_70b02ab6_70b02ab67319f58d15520e558280b06417d84a5211f18f464dfa6d5e7e844d88
+      APP_BASE_URL: http://localhost:3001
+      # ── E06 Verification & Scan Events ──
+      RATE_LIMIT_IP_PER_MIN: '20'
+      RATE_LIMIT_CODE_PER_MIN: '10'
+      RATE_LIMIT_TENANT_DEFAULT_PER_MIN: '600'
+      ENUMERATION_INVALID_THRESHOLD: '15'
+      ENUMERATION_WINDOW_SEC: '300'
+      ENUMERATION_BLOCK_SEC: '900'
+      IP_HASH_SALT: verifynng-ip-salt-dev
+      GEOIP_PROVIDER: fake
+      GEOIP_URL: http://fake-geo:4103
+      TRUST_PROXY: 'true'
+      SMS_URL: http://fake-sms:4101
+      CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
+      CORE_ACTIVE_KID: k1
+    volumes:
+      # Directory (not the file itself) so a first `docker compose up`, before
+      # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
+      # missing file into an empty directory. EnvFileSecrets already handles
+      # a missing local.env by falling back to the CORE_KEYS_JSON env default.
+      - ./secrets:/app/docker/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,7 +214,8 @@ services:
       db-migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/health']
+      test:
+        ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:4000/ready']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -199,7 +261,7 @@ services:
 
   # ── Load testing (profile: load) ────────────────────────
   k6:
-    image: grafana/k6:0.54
+    image: grafana/k6:0.54.0
     profiles:
       - load
     volumes:
@@ -211,6 +273,73 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  # ── Observability stack (profile: observability) ───────────
+  grafana:
+    image: grafana/grafana:11.6.0
+    profiles:
+      - observability
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    ports:
+      - '${GRAFANA_PORT:-3100}:3000'
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+
+  loki:
+    image: grafana/loki:3.0.0
+    profiles:
+      - observability
+    ports:
+      - '${LOKI_PORT:-3101}:3100'
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    profiles:
+      - observability
+    ports:
+      - '${TEMPO_PORT:-3102}:3200'
+    command: -config.file=/etc/tempo/tempo.yaml
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    profiles:
+      - observability
+    ports:
+      - '${PROMETHEUS_PORT:-3103}:9090'
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.98.0
+    profiles:
+      - observability
+    ports:
+      - '${OTEL_COLLECTOR_PORT:-3104}:4317'
+    command: ['--config=/etc/otel-collector-config.yaml']
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otel-collector-config.yaml:ro
+
+  uptime-probe:
+    build:
+      context: ../tools/uptime-probe
+      dockerfile: Dockerfile
+    profiles:
+      - observability
+    ports:
+      - '${UPTIME_PROBE_PORT:-3105}:9465'
+    environment:
+      API_URL: http://api:4000
+      WEB_VERIFY_URL: http://web-verify:3000
+      WEB_ADMIN_URL: http://web-admin:3001
+      PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
+      PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
 
 volumes:
   pgdata:

@@ -46,6 +46,18 @@ enum UnitState {
   decommissioned
 }
 
+// ─── E02 Identity & Access ────────────────────────────────────────
+
+enum TenantRole {
+  owner
+  operator
+  viewer
+}
+
+enum PlatformRole {
+  support
+}
+
 model Tenant {
   id        String       @id @default(cuid())
   slug      String       @unique
@@ -63,6 +75,7 @@ model Tenant {
   branding Json?
   supportEmail String?
   websiteUrl String?
+  verifyRateLimitPerMin Int @default(600)   // E06: per-tenant verify rate limit
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
@@ -73,11 +86,11 @@ model Tenant {
   units      Unit[]
   scanEvents ScanEvent[]
   auditLogs  AuditLog[]
-  memberships Membership[]
   verificationDocuments VerificationDocument[]
   reviewNotes TenantReviewNote[]
   policyAcceptances PolicyAcceptance[]
   exports TenantExport[]
+  memberships Membership[] // E02
 }
 
 model User {
@@ -89,23 +102,23 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  tenant Tenant? @relation(fields: [tenantId], references: [id])
-  memberships Membership[]
+  // E02 Identity & Access fields
+  mfaEnabled       Boolean       @default(false)
+  mfaSecret        String?       // base32, AES-GCM encrypted with MFA_ENC_KEY
+  recoveryCodes    String[]      // argon2 hashes of unused codes
+  platformRole     PlatformRole?
+  lastLoginAt      DateTime?
+  failedLoginCount Int           @default(0)
+  lockedUntil      DateTime?
+
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
+  memberships       Membership[]
+  sessions          Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([tenantId])
 }
 
-model Membership {
-  id String @id @default(cuid())
-  tenantId String
-  userId String
-  role String @default("owner")
-  createdAt DateTime @default(now())
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([tenantId, userId])
-  @@index([userId])
-}
 
 model VerificationDocument {
   id String @id @default(cuid())
@@ -234,23 +247,106 @@ model Unit {
   @@index([tenantId])
 }
 
+enum ScanTier {
+  tier1
+  tier2
+}
+
+enum ScanSource {
+  qr
+  manual
+  sms
+  api
+}
+
 model ScanEvent {
-  id         String   @id @default(cuid())
+  id         String     @id @default(cuid())
   tenantId   String
   unitId     String?
-  tier       Int
+  tier       ScanTier
   verdict    String
-  ip         String?
-  geoCountry String?
+  batchId    String?
+  productId  String?
+  source     ScanSource  @default(qr)
+  codeRedacted String
+  ipHash     String?
+  ipPrefix   String?
+  geoCountry String?    @db.Char(2)
+  geoRegion  String?
   geoCity    String?
+  deviceClass String?
   userAgent  String?
-  createdAt  DateTime @default(now())
+  latencyMs  Int?
+  createdAt  DateTime   @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   unit   Unit?  @relation(fields: [unitId], references: [id])
 
+  @@index([tenantId, createdAt])
+  @@index([unitId, tier, createdAt])
+  @@index([tenantId, verdict, createdAt])
+  @@index([ipHash, createdAt])
+}
+
+// ─── E02 Identity & Access models ──────────────────────────────────
+
+model Membership {
+  id        String     @id @default(cuid())
+  userId    String
+  tenantId  String
+  role      TenantRole
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, role])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  tenantId         String?            // active tenant at issue time
+  refreshTokenHash String    @unique // hashForStorage(rawToken); rotated on every /auth/refresh
+  familyId         String            // stable across rotations; reuse of superseded hash revokes the family
+  userAgent        String?
+  ipPrefix         String?           // /24 or /48 truncated per E19
+  createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  revokedReason    String?
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime                     // 30 min
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ApiClient {
+  id         String    @id @default(cuid())
+  tenantId   String?                     // null = platform-level (jobs, fakes)
+  name       String
+  keyHash    String    @unique          // hashForStorage(rawKey); rawKey shown once
+  keyPrefix  String                      // first 8 chars for display
+  scopes     String[]
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
   @@index([tenantId])
-  @@index([unitId])
 }
 
 model AuditLog {
@@ -261,10 +357,216 @@ model AuditLog {
   target    String
   payload   Json
   prevHash  String?
-  hash      String
+  hash      String   @unique
   createdAt DateTime @default(now())
+
+  // E13 — AuditLog extensions
+  seq          BigInt          @unique @default(autoincrement())
+  actorType    AuditActorType  @default(user)
+  actorIp      String?
+  requestId    String?
+  targetType   String          @default("")
+  targetId     String          @default("")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@index([targetType, targetId])
+}
+
+enum AuditActorType {
+  user
+  system
+  oem
+  support
+  apikey
+}
+
+// E13 — Audit chain verification checkpoints
+model AuditChainCheckpoint {
+  id            String   @id @default(cuid())
+  fromSeq       BigInt
+  toSeq         BigInt
+  headHash      String
+  ok            Boolean
+  rowsChecked   Int
+  firstBadSeq   BigInt?
+  triggeredById String?
+  createdAt     DateTime @default(now())
+}
+
+// E13 — Per-tenant quota overrides
+model QuotaOverride {
+  id          String   @id @default(cuid())
+  tenantId    String
+  kind        String
+  limit       Int
+  window      String
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, kind])
+}
+
+// ── E14 Notifications ──────────────────────────────────────────
+
+enum NotificationChannel {
+  email
+  sms
+  whatsapp
+}
+
+enum OutboxStatus {
+  queued
+  sending
+  sent
+  failed
+  suppressed
+  bounced
+}
+
+enum DeliveryEventType {
+  queued
+  sent
+  delivered
+  bounced
+  complained
+  failed
+  retried
+}
+
+enum SuppressionReason {
+  bounce
+  complaint
+  unsubscribe
+  manual
+}
+
+enum SenderVerification {
+  pending
+  verified
+  failed
+}
+
+model NotificationOutbox {
+  id                String              @id @default(cuid())
+  tenantId          String?
+  templateId        String
+  channel           NotificationChannel
+  recipient         String
+  recipientUserId   String?
+  data              Json
+  renderedSubject   String?
+  idempotencyKey    String              @unique
+  status            OutboxStatus        @default(queued)
+  attempts          Int                 @default(0)
+  lastError         String?
+  providerMessageId String?
+  scheduledAt       DateTime            @default(now())
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  events            NotificationDeliveryEvent[]
+
+  @@index([tenantId, createdAt])
+  @@index([status, scheduledAt])
+  @@index([providerMessageId])
+}
+
+model NotificationDeliveryEvent {
+  id              String             @id @default(cuid())
+  outboxId        String
+  type            DeliveryEventType
+  providerPayload Json?
+  createdAt       DateTime           @default(now())
+
+  outbox NotificationOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+
+  @@index([outboxId])
+}
+
+model NotificationRoutingRule {
+  id         String                @id @default(cuid())
+  tenantId   String
+  eventName  String
+  templateId String
+  channels   NotificationChannel[]
+  roles      String[]
+  enabled    Boolean               @default(true)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@unique([tenantId, eventName, templateId])
+  @@index([tenantId])
+}
+
+model NotificationSuppression {
+  id        String             @id @default(cuid())
+  tenantId  String?
+  channel   NotificationChannel
+  recipient String
+  reason    SuppressionReason
+  source    String
+  createdAt DateTime           @default(now())
+
+  @@unique([channel, recipient])
+}
+
+model TenantSenderIdentity {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  channel            NotificationChannel
+  fromName           String
+  fromAddress        String
+  replyTo            String?
+  domain             String?
+  verificationStatus SenderVerification @default(pending)
+  dnsRecords         Json?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([tenantId, channel])
+}
+
+// ─── E17 Observability ──────────────────────────────────────────────────────
+model ProbeResult {
+  id         String   @id @default(cuid())
+  target     String
+  ok         Boolean
+  statusCode Int?
+  latencyMs  Int
+  verdict    String?
+  region     String   @default("local")
+  at         DateTime
+
+  @@index([target, at])
+}
+
+model StatusDaily {
+  id       String   @id @default(cuid())
+  target   String
+  date     DateTime @db.Date
+  checks   Int
+  failures Int
+  p95Ms    Int
+
+  @@unique([target, date])
+}
+
+// ─── E06 ───────────────────────────────────────────────────────────────
+
+model IpBlock {
+  id           String   @id @default(cuid())
+  ipHash       String
+  tenantSlug   String?
+  reason       String   // enumeration
+  invalidCount Int
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([ipHash, expiresAt])
 }

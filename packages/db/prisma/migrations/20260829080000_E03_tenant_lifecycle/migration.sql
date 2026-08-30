@@ -19,14 +19,6 @@ CREATE TYPE "VerificationDocumentKind" AS ENUM ('cac_certificate', 'trademark_ce
 CREATE TYPE "VerificationDocumentStatus" AS ENUM ('awaiting_upload', 'uploaded', 'accepted', 'rejected');
 CREATE TYPE "PolicyKind" AS ENUM ('aup', 'tos', 'privacy');
 
-CREATE TABLE "Membership" (
-  "id" TEXT NOT NULL,
-  "tenantId" TEXT NOT NULL,
-  "userId" TEXT NOT NULL,
-  "role" TEXT NOT NULL DEFAULT 'owner',
-  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "Membership_pkey" PRIMARY KEY ("id")
-);
 CREATE TABLE "VerificationDocument" (
   "id" TEXT NOT NULL,
   "tenantId" TEXT NOT NULL,
@@ -84,8 +76,6 @@ CREATE TABLE "TenantExport" (
   CONSTRAINT "TenantExport_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "Membership_tenantId_userId_key" ON "Membership"("tenantId", "userId");
-CREATE INDEX "Membership_userId_idx" ON "Membership"("userId");
 CREATE UNIQUE INDEX "VerificationDocument_objectKey_key" ON "VerificationDocument"("objectKey");
 CREATE INDEX "VerificationDocument_tenantId_kind_idx" ON "VerificationDocument"("tenantId", "kind");
 CREATE INDEX "TenantReviewNote_tenantId_createdAt_idx" ON "TenantReviewNote"("tenantId", "createdAt");
@@ -94,8 +84,6 @@ CREATE UNIQUE INDEX "PolicyAcceptance_tenantId_kind_version_key" ON "PolicyAccep
 CREATE INDEX "PolicyAcceptance_tenantId_idx" ON "PolicyAcceptance"("tenantId");
 CREATE INDEX "TenantExport_tenantId_idx" ON "TenantExport"("tenantId");
 
-ALTER TABLE "Membership" ADD CONSTRAINT "Membership_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "VerificationDocument" ADD CONSTRAINT "VerificationDocument_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "TenantReviewNote" ADD CONSTRAINT "TenantReviewNote_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PolicyAcceptance" ADD CONSTRAINT "PolicyAcceptance_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;

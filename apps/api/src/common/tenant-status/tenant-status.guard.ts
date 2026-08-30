@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { prisma } from '@verifynng/db';
-import { PrincipalRequest } from '../principal';
+import type { PrincipalRequest } from '../principal';
 import { ALLOW_SUSPENDED_KEY, TENANT_STATUS_KEY } from './decorators';
 import {
   decidePolicyAcceptance,

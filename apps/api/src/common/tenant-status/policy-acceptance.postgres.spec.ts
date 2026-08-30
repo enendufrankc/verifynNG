@@ -106,17 +106,13 @@ describe('policy acceptance gate with Postgres', () => {
       }) as never;
     const tenantFindFirst = vi
       .spyOn(prisma.tenant, 'findFirst')
-      .mockImplementation((args) => testDb!.prisma.tenant.findFirst(args));
+      .mockImplementation(((args: never) => testDb!.prisma.tenant.findFirst(args)) as never);
     const policyFindMany = vi
       .spyOn(prisma.policyDocument, 'findMany')
-      .mockImplementation((args) =>
-        testDb!.prisma.policyDocument.findMany(args),
-      );
+      .mockImplementation(((args: never) => testDb!.prisma.policyDocument.findMany(args)) as never);
     const acceptanceFindMany = vi
       .spyOn(prisma.policyAcceptance, 'findMany')
-      .mockImplementation((args) =>
-        testDb!.prisma.policyAcceptance.findMany(args),
-      );
+      .mockImplementation(((args: never) => testDb!.prisma.policyAcceptance.findMany(args)) as never);
 
     await expect(guard.canActivate(context())).resolves.toBe(true);
     expect(policyFindMany).toHaveBeenCalledWith(

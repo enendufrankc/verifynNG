@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "turbo lint && tsx scripts/check-token-drift.ts",
+    "check:tokens": "tsx scripts/check-token-drift.ts",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "playwright test",
@@ -18,13 +19,17 @@
     "db:reset": "pnpm --filter @verifynng/db db:reset",
     "db:seed": "pnpm --filter @verifynng/db db:seed",
     "db:seed:realistic": "pnpm --filter @verifynng/db db:seed:realistic",
+    "secrets:rotate-core-key": "node tools/scripts/secrets/rotate-core-key.mjs",
     "test:smoke": "pnpm test:e2e --grep @smoke",
     "test:contract": "echo 'TODO(E16): contract tests pending E16 public API'",
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
+    "notifications:preview": "pnpm --filter @verifynng/api notifications:preview",
     "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
+    "@nestjs/common": "11.2.3",
+    "@nestjs/core": "11.2.3",
     "@playwright/test": "1.62.1",
     "@prisma/client": "6.19.3",
     "depcheck": "1.4.7",
@@ -36,12 +41,11 @@
     "prettier": "3.6.2",
     "prettier-plugin-tailwindcss": "0.7.1",
     "prisma": "6.19.3",
+    "reflect-metadata": "0.2.2",
+    "tsx": "^4.19.2",
     "turbo": "2.10.12",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.68.0",
-    "vitest": "4.1.11",
-    "@nestjs/common": "11.2.3",
-    "@nestjs/core": "11.2.3",
-    "reflect-metadata": "0.2.2"
+    "vitest": "4.1.11"
   }
 }

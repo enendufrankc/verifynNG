@@ -51,9 +51,11 @@ describe('TenantOffboardingProcessor.runDelete with Postgres and MinIO', () => {
       data: {
         tenantId,
         unitId: unit.id,
-        tier: 1,
-        verdict: 'genuine',
-        ip: '203.0.113.5',
+        tier: 'tier1',
+        verdict: 'ok',
+        codeRedacted: 'ivoryglow.1.k1.ABCD…',
+        ipHash: 'hash-offboard-1',
+        ipPrefix: '203.0.113.0/24',
         userAgent: 'integration-test',
         geoCity: 'Lagos',
       },
@@ -76,27 +78,26 @@ describe('TenantOffboardingProcessor.runDelete with Postgres and MinIO', () => {
 
     const spies = [
       vi
+        .spyOn(prisma, '$executeRawUnsafe')
+        .mockImplementation(((q: string) => testDb!.prisma.$executeRawUnsafe(q)) as never),
+      vi
         .spyOn(prisma.scanEvent, 'updateMany')
-        .mockImplementation((args) =>
-          testDb!.prisma.scanEvent.updateMany(args),
-        ),
+        .mockImplementation(((args: never) => testDb!.prisma.scanEvent.updateMany(args)) as never),
       vi
         .spyOn(prisma.scanEvent, 'deleteMany')
-        .mockImplementation((args) =>
-          testDb!.prisma.scanEvent.deleteMany(args),
-        ),
+        .mockImplementation(((args: never) => testDb!.prisma.scanEvent.deleteMany(args)) as never),
       vi
         .spyOn(prisma.unit, 'deleteMany')
-        .mockImplementation((args) => testDb!.prisma.unit.deleteMany(args)),
+        .mockImplementation(((args: never) => testDb!.prisma.unit.deleteMany(args)) as never),
       vi
         .spyOn(prisma.batch, 'deleteMany')
-        .mockImplementation((args) => testDb!.prisma.batch.deleteMany(args)),
+        .mockImplementation(((args: never) => testDb!.prisma.batch.deleteMany(args)) as never),
       vi
         .spyOn(prisma.product, 'deleteMany')
-        .mockImplementation((args) => testDb!.prisma.product.deleteMany(args)),
+        .mockImplementation(((args: never) => testDb!.prisma.product.deleteMany(args)) as never),
       vi
         .spyOn(prisma.oem, 'deleteMany')
-        .mockImplementation((args) => testDb!.prisma.oem.deleteMany(args)),
+        .mockImplementation(((args: never) => testDb!.prisma.oem.deleteMany(args)) as never),
     ];
     const emitSpy = vi.spyOn(events, 'emit');
 
@@ -110,7 +111,7 @@ describe('TenantOffboardingProcessor.runDelete with Postgres and MinIO', () => {
     });
     expect(remainingScanEvents).toHaveLength(1);
     expect(remainingScanEvents[0].unitId).toBeNull();
-    expect(remainingScanEvents[0].ip).toBeNull();
+    expect(remainingScanEvents[0].ipHash).toBeNull();
 
     await expect(
       storage.head(`tenants/${tenantId}/verification/keep-out.txt`),

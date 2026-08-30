@@ -6,11 +6,11 @@ import {
   Param,
   Post,
   Query,
-  ForbiddenException,
 } from '@nestjs/common';
 import { prisma } from '@verifynng/db';
 import { Req } from '@nestjs/common';
-import { PrincipalRequest } from '../../common/principal';
+import type { PrincipalRequest } from '../../common/principal';
+import { PlatformRole } from '../../common/tenant';
 import {
   AllowWhenSuspended,
   RequireTenantStatus,
@@ -19,20 +19,16 @@ import { TenantLifecycleService } from './tenant-lifecycle.service';
 import { TenantS3Service } from './s3.service';
 
 @Controller('support')
+@PlatformRole('support')
 export class SupportTenantsController {
   constructor(
     private readonly lifecycle: TenantLifecycleService,
     private readonly storage: TenantS3Service,
   ) {}
-  private ensureSupport(req: PrincipalRequest) {
-    if (req.principal?.platformRole !== 'support')
-      throw new ForbiddenException('support_role_required');
-  }
   @Get('tenants') async list(
     @Query('status') status = 'in_review',
-    @Req() req: PrincipalRequest,
+    @Req() _req: PrincipalRequest,
   ): Promise<any> {
-    this.ensureSupport(req);
     return prisma.tenant.findMany({
       where: { status: status as any },
       orderBy: { createdAt: 'asc' },
@@ -41,9 +37,8 @@ export class SupportTenantsController {
   }
   @Get('tenants/:tenantId/verification') async verification(
     @Param('tenantId') id: string,
-    @Req() req: PrincipalRequest,
+    @Req() _req: PrincipalRequest,
   ): Promise<any> {
-    this.ensureSupport(req);
     const documents = await prisma.verificationDocument.findMany({
       where: { tenantId: id },
       orderBy: { createdAt: 'asc' },
@@ -61,7 +56,6 @@ export class SupportTenantsController {
     @Param('tenantId') id: string,
     @Req() req: PrincipalRequest,
   ): Promise<any> {
-    this.ensureSupport(req);
     return this.lifecycle
       .transition(id, 'active', req.principal!.userId)
       .then(() =>
@@ -80,7 +74,6 @@ export class SupportTenantsController {
     @Body() body: { reason: string; canResubmit?: boolean },
     @Req() req: PrincipalRequest,
   ): Promise<any> {
-    this.ensureSupport(req);
     return this.lifecycle
       .transition(
         id,
@@ -100,7 +93,6 @@ export class SupportTenantsController {
     @Body() body: { reason: string; note?: string },
     @Req() req: PrincipalRequest,
   ): Promise<any> {
-    this.ensureSupport(req);
     return this.lifecycle
       .transition(
         id,
@@ -123,7 +115,6 @@ export class SupportTenantsController {
     @Param('tenantId') id: string,
     @Req() req: PrincipalRequest,
   ): Promise<any> {
-    this.ensureSupport(req);
     return this.lifecycle
       .transition(id, 'active', req.principal!.userId)
       .then(() =>

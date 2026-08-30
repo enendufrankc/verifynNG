@@ -82,9 +82,6 @@ export default function OrganizationSettingsPage() {
         ...init,
         headers: {
           'content-type': 'application/json',
-          'x-user-id': 'development-user',
-          'x-role': 'owner',
-          ...(tenantId ? { 'x-tenant-id': tenantId } : {}),
           ...init.headers,
         },
       }),

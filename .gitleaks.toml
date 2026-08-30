@@ -1,0 +1,8 @@
+title = "verifynNG gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fabricated test fixtures — not real key material"
+paths = ['''packages/core/test/fixtures/.*''']

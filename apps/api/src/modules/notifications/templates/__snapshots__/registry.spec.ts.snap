@@ -1,0 +1,406 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TemplateRegistry > renders anomaly.alert 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Anomaly detected — repeat_scan</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#c00"><strong>⚠ Anomaly detected</strong></p><p style="margin:0 0 8px">Product: <strong>Glow Serum</strong> — Code: ivoryglow.2.k1.demo</p><p style="margin:0 0 8px">Type: repeat_scan</p><p style="margin:0 0 8px;color:#999;font-size:13px">Detected at 2026-08-29T00:00:00.000Z</p><p style="margin:12px 0 0"><a href="https://example.test/anomalies/1" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">View details</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "ALERT: Anomaly repeat_scan on Glow Serum (ivoryglow.2.k1.demo)",
+  "subject": "Anomaly detected — repeat_scan",
+  "text": "Anomaly detected — repeat_scan
+Product: Glow Serum
+Code: ivoryglow.2.k1.demo
+Detected: 2026-08-29T00:00:00.000Z
+View: https://example.test/anomalies/1",
+}
+`;
+
+exports[`TemplateRegistry > renders batch.minted 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Batch minted — GLOW-001</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px"><strong>Glow Serum</strong> batch <strong>GLOW-001</strong> has been minted with 100 units.</p><p style="margin:0"><a href="https://example.test/batches/GLOW-001" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View batch</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Batch GLOW-001 minted: 100 units of Glow Serum",
+  "subject": "Batch minted — GLOW-001",
+  "text": "Batch minted — GLOW-001
+Product: Glow Serum
+Units: 100
+View: https://example.test/batches/GLOW-001",
+}
+`;
+
+exports[`TemplateRegistry > renders invoice.failed 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Invoice INV-001 payment failed</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#c00"><strong>⚠ Payment failed</strong></p><p style="margin:0 0 8px">Invoice <strong>INV-001</strong> for <strong>₦10,000</strong> — Card declined</p><p style="margin:12px 0 0"><a href="https://example.test/invoices/INV-001/retry" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">Retry payment</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "FAILED: Invoice INV-001 (₦10,000). Card declined",
+  "subject": "Invoice INV-001 payment failed",
+  "text": "Invoice INV-001 payment failed
+Amount: ₦10,000
+Reason: Card declined
+Retry: https://example.test/invoices/INV-001/retry",
+}
+`;
+
+exports[`TemplateRegistry > renders invoice.issued 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Invoice INV-001 issued</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Invoice <strong>INV-001</strong> has been issued for <strong>₦10,000</strong>.</p><p style="margin:0 0 8px">Due date: 2026-09-29</p><p style="margin:0"><a href="https://example.test/invoices/INV-001" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View invoice</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Invoice INV-001: ₦10,000 due 2026-09-29",
+  "subject": "Invoice INV-001 issued",
+  "text": "Invoice INV-001 issued
+Amount: ₦10,000
+Due: 2026-09-29
+View: https://example.test/invoices/INV-001",
+}
+`;
+
+exports[`TemplateRegistry > renders invoice.paid 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Invoice INV-001 paid</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Invoice <strong>INV-001</strong> of <strong>₦10,000</strong> has been paid.</p><p style="margin:0;color:#999;font-size:13px">Paid at 2026-08-29T00:00:00.000Z</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Invoice INV-001 (₦10,000) paid",
+  "subject": "Invoice INV-001 paid",
+  "text": "Invoice INV-001 paid
+Amount: ₦10,000
+Paid at: 2026-08-29T00:00:00.000Z",
+}
+`;
+
+exports[`TemplateRegistry > renders manifest.delivered 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Manifest delivered — GLOW-001</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">The manifest for batch <strong>GLOW-001</strong> has been delivered to <strong>Example OEM</strong> (100 units).</p><p style="margin:0"><a href="https://example.test/manifests/GLOW-001" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View details</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Manifest for batch GLOW-001 delivered to Example OEM",
+  "subject": "Manifest delivered — GLOW-001",
+  "text": "Manifest delivered — GLOW-001
+OEM: Example OEM
+Units: 100
+View: https://example.test/manifests/GLOW-001",
+}
+`;
+
+exports[`TemplateRegistry > renders mfa.recovery 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>MFA recovery — IVORY GLOW</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">An MFA recovery was requested for your IVORY GLOW account.</p><p style="margin:0 0 8px">This link expires in 30 minutes.</p><p style="margin:0"><a href="https://example.test/recover/token" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">Recover account</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "MFA recovery for IVORY GLOW: https://example.test/recover/token (expires 30 minutes)",
+  "subject": "MFA recovery — IVORY GLOW",
+  "text": "MFA recovery — IVORY GLOW
+
+Recover your account: https://example.test/recover/token
+Expires in 30 minutes",
+}
+`;
+
+exports[`TemplateRegistry > renders notification.test 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Test notification from IVORY GLOW</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">This is a test notification.</p><p style="margin:0"><strong>Message:</strong> Template smoke test</p><p style="margin:8px 0 0;color:#999;font-size:13px">Sent at 2026-08-29T00:00:00.000Z</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Test: Template smoke test",
+  "subject": "Test notification from IVORY GLOW",
+  "text": "Test notification from IVORY GLOW
+
+Message: Template smoke test
+Sent at 2026-08-29T00:00:00.000Z",
+}
+`;
+
+exports[`TemplateRegistry > renders password.reset 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Password reset — IVORY GLOW</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">A password reset was requested for your IVORY GLOW account.</p><p style="margin:0 0 8px">This link expires in 30 minutes.</p><p style="margin:0"><a href="https://example.test/reset/token" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">Reset password</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Reset your IVORY GLOW password: https://example.test/reset/token (expires 30 minutes)",
+  "subject": "Password reset — IVORY GLOW",
+  "text": "Password reset — IVORY GLOW
+
+Reset your password: https://example.test/reset/token
+Expires in 30 minutes",
+}
+`;
+
+exports[`TemplateRegistry > renders receipt.mismatch 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Receipt mismatch — GLOW-001</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#c00"><strong>⚠ Receipt mismatch for batch GLOW-001</strong></p><p style="margin:0 0 8px">OEM: Example OEM</p><p style="margin:0 0 8px">Expected: 100 units — Received: 98 units</p><p style="margin:0"><a href="https://example.test/manifests/GLOW-001" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">Investigate</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "MISMATCH: Batch GLOW-001 — expected 100, got 98",
+  "subject": "Receipt mismatch — GLOW-001",
+  "text": "Receipt mismatch — GLOW-001
+OEM: Example OEM
+Expected: 100, Received: 98
+View: https://example.test/manifests/GLOW-001",
+}
+`;
+
+exports[`TemplateRegistry > renders report.received 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Consumer report — RPT-001</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">A consumer report has been received.</p><p style="margin:0 0 8px">Reference: <strong>RPT-001</strong></p><p style="margin:0 0 8px">Code: ivoryglow.2.k1.demo — Type: suspected counterfeit</p><p style="margin:0 0 8px;color:#999;font-size:13px">Reported at 2026-08-29T00:00:00.000Z</p><p style="margin:12px 0 0"><a href="https://example.test/reports/RPT-001" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View report</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Report RPT-001: suspected counterfeit on ivoryglow.2.k1.demo",
+  "subject": "Consumer report — RPT-001",
+  "text": "Consumer report — RPT-001
+Code: ivoryglow.2.k1.demo
+Type: suspected counterfeit
+Reported: 2026-08-29T00:00:00.000Z
+View: https://example.test/reports/RPT-001",
+}
+`;
+
+exports[`TemplateRegistry > renders tenant.welcome 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Welcome to IVORY GLOW</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Your account has been set up on the IVORY GLOW verification platform.</p><p style="margin:0"><a href="https://example.test/login" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">Log in</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Welcome to IVORY GLOW. Log in: https://example.test/login",
+  "subject": "Welcome to IVORY GLOW",
+  "text": "Welcome to IVORY GLOW
+
+Your account has been set up.
+Log in: https://example.test/login",
+}
+`;
+
+exports[`TemplateRegistry > renders verification.approved 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Verification approved — Glow Serum</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">The product <strong>Glow Serum</strong> with code <strong>ivoryglow.2.k1.demo</strong> has been verified as authentic.</p><p style="margin:0;color:#999;font-size:13px">Verified at 2026-08-29T00:00:00.000Z</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Verified: Glow Serum (ivoryglow.2.k1.demo) is authentic.",
+  "subject": "Verification approved — Glow Serum",
+  "text": "Verification approved — Glow Serum
+Code: ivoryglow.2.k1.demo
+Verified at 2026-08-29T00:00:00.000Z",
+}
+`;
+
+exports[`TemplateRegistry > renders verification.rejected 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Verification rejected — Glow Serum</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">The product <strong>Glow Serum</strong> with code <strong>ivoryglow.2.k1.demo</strong> could not be verified.</p><p style="margin:0;color:#c00"><strong>Reason:</strong> Code was not found</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Rejected: Glow Serum (ivoryglow.2.k1.demo). Reason: Code was not found",
+  "subject": "Verification rejected — Glow Serum",
+  "text": "Verification rejected — Glow Serum
+Code: ivoryglow.2.k1.demo
+Reason: Code was not found",
+}
+`;

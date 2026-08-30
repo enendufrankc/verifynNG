@@ -1,0 +1,23 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "title": "Logs Stream",
+      "type": "logs",
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": "Loki",
+          "expr": "{service=~\"api|web-verify|web-admin\"}"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["logs", "e17"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Logs Explorer"
+}
