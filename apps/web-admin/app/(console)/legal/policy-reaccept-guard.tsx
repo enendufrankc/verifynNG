@@ -34,7 +34,10 @@ export function PolicyReacceptGuard({
   const [checked, setChecked] = useState(false);
 
   const refresh = useCallback(() => {
-    if (!isAuthenticated) {
+    // A pure platform-support session (no tenant membership) has no
+    // @TenantId() context — the API throws 500 for this route without one,
+    // and there is nothing to re-accept on a platform-level account anyway.
+    if (!isAuthenticated || !role) {
       setChecked(true);
       return;
     }
@@ -43,7 +46,7 @@ export function PolicyReacceptGuard({
       .then(setPending)
       .catch(() => setPending([]))
       .finally(() => setChecked(true));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, role]);
 
   useEffect(() => {
     refresh();

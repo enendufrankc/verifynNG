@@ -6,7 +6,9 @@ import {
   Param,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import {
   PlatformRole,
   Principal,
@@ -56,14 +58,16 @@ export class LegalController {
 
   // Any tenant member may read this (not just `owner`) so operators/viewers
   // can render the "your owner must accept" banner — only accepting is
-  // owner-only.
+  // owner-only. @Roles(...) lets a platform-support principal through too
+  // (RolesGuard bypasses tenant-role checks for platformRole === 'support'),
+  // and such a caller has no tenant context at all — @TenantId() would
+  // throw 500 for them, so this reads req.tenantId directly and treats
+  // "no tenant" as "nothing to re-accept" rather than an error.
   @Roles('owner', 'operator', 'viewer')
   @Get('acceptance-status')
-  acceptanceStatus(
-    @TenantId() tenantId: string,
-    @Principal() principal: UserPrincipal,
-  ) {
-    return this.legal.needsReacceptance(tenantId, principal.userId);
+  acceptanceStatus(@Req() req: Request, @Principal() principal: UserPrincipal) {
+    if (!req.tenantId) return [];
+    return this.legal.needsReacceptance(req.tenantId, principal.userId);
   }
 
   @Roles('owner', 'operator', 'viewer')
