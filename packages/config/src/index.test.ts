@@ -5,6 +5,9 @@ describe('envSchema', () => {
   it('has defaults for all E00 variables', () => {
     const result = envSchema.safeParse({});
     expect(result.success).toBe(true);
+    if (!result.success) {
+      console.log(result.error.flatten().fieldErrors);
+    }
   });
 
   it('parses a valid env', () => {

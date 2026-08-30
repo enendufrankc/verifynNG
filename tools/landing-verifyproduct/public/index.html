@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>VerifyProduct — product verification</title>
+<style>
+  :root { --bg:#F5F7FB; --card:#fff; --ink:#131720; --muted:#5A6280; --brand:#1CCFB8; --brand-ink:#0E8F7F; --line:#DDE5F3; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Plus Jakarta Sans", Segoe UI, Roboto, system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:520px; margin:0 auto; padding:32px 20px 48px; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.02em; margin-bottom:28px; }
+  .dot { width:14px; height:14px; border-radius:50%; background:var(--brand); box-shadow:0 0 0 4px #EDFDFB; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; box-shadow:0 4px 16px rgba(19,23,32,.06); }
+  h1 { font-size:22px; line-height:1.25; margin:0 0 8px; }
+  p { margin:0 0 12px; line-height:1.5; color:var(--muted); }
+  .badge { display:inline-flex; align-items:center; gap:8px; background:#EDFDFB; color:var(--brand-ink); font-weight:600; border-radius:999px; padding:6px 12px; font-size:13px; margin-bottom:14px; }
+  code { display:block; font-family: ui-monospace, "IBM Plex Mono", Menlo, monospace; background:#F0F3F9; border-radius:8px; padding:10px 12px; font-size:13px; color:var(--ink); word-break:break-all; margin:12px 0; }
+  .hint { border-left:3px solid var(--brand); padding:10px 12px; background:#F7FCFB; border-radius:0 8px 8px 0; font-size:14px; }
+  .hidden { display:none; }
+  footer { margin-top:28px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand"><span class="dot"></span> VerifyProduct</div>
+  <div class="card">
+    <div class="badge">● Verification service launching</div>
+    <h1>This QR code is registered with VerifyProduct.</h1>
+    <p>You scanned a genuine verification code issued by the brand. Full, instant verification — including a check that this exact unit hasn't been copied — goes live at this address shortly.</p>
+    <div id="code-block" class="hidden">
+      <p>Code reference (kept private — only the start is shown):</p>
+      <code id="code"></code>
+    </div>
+    <div id="tier2" class="hint hidden">This is a <strong>hidden scratch-off code</strong>. Keep the label — you'll be able to confirm you're the first to verify this unit once the service is live.</div>
+    <div id="tier1" class="hint hidden">This is the <strong>public</strong> code printed on the pack. For full unit verification, look for the hidden scratch-off code inside or under the seal.</div>
+    <p id="nocode">Scan the QR code on a product to see its verification reference.</p>
+  </div>
+  <footer>Nothing is stored when you visit this page. Operated for participating brands by VerifyProduct.</footer>
+</main>
+<script>
+  (function () {
+    var m = location.pathname.match(/^\/v\/([^/]+)/);
+    if (!m) return;
+    var raw = decodeURIComponent(m[1]);
+    var parts = raw.split('.');
+    var redacted = parts.length >= 4 ? parts.slice(0, parts.length - 2).join('.') + '.' + parts[parts.length - 2].slice(0, 4) + '…' : raw.slice(0, 12) + '…';
+    document.getElementById('code').textContent = redacted;
+    document.getElementById('code-block').classList.remove('hidden');
+    document.getElementById('nocode').classList.add('hidden');
+    var tier = parts[1];
+    if (tier === '2') document.getElementById('tier2').classList.remove('hidden');
+    else if (tier === '1') document.getElementById('tier1').classList.remove('hidden');
+    try { history.replaceState(null, '', '/v/' + encodeURIComponent(redacted.replace('…', ''))); } catch (e) {}
+  })();
+</script>
+</body>
+</html>

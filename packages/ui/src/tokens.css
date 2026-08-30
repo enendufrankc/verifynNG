@@ -1,0 +1,154 @@
+@import 'tailwindcss';
+
+@theme {
+  /* ── neutral ramp ─────────────────────────────────────── */
+  --color-n0: #ffffff;
+  --color-n50: #fafcff;
+  --color-n100: #e9eef7;
+  --color-n200: #dde5f3;
+  --color-n300: #ccd0e0;
+  --color-n400: #a9afc4;
+  --color-n500: #868da6;
+  --color-n600: #5a6280;
+  --color-n700: #333b57;
+  --color-n800: #202537;
+  --color-n900: #131720;
+  --color-n1000: #040506;
+
+  /* ── brand / turquoise ────────────────────────────────── */
+  --color-tq: #5ae9d7;
+  --color-tq-dark: #1ccfb8;
+  --color-tq-500: #9ef8ec;
+  --color-tq-light: #edfdfb;
+
+  /* ── accent colours ───────────────────────────────────── */
+  --color-orange: #ff7958;
+  --color-red: #ff5858;
+  --color-red-light: #ffebeb;
+  --color-green: #6cda91;
+  --color-green-dark: #2fbb5e;
+  --color-blue-light: #ebf3ff;
+
+  /* ── verdict family (platform-locked, AA-deepened) ────── */
+  --color-v-pos: #14713a;
+  --color-v-pos-tint: #e4f7eb;
+  --color-v-hist: #3d4767;
+  --color-v-hist-tint: #ebf3ff;
+  --color-v-susp: #a8461f;
+  --color-v-susp-tint: #ffede7;
+  --color-v-flag: #b92b2b;
+  --color-v-flag-tint: #ffebeb;
+  --color-v-dec: #333b57;
+  --color-v-dec-tint: #e9eef7;
+  --color-v-unk: #6b3fa0;
+  --color-v-unk-tint: #f1eafb;
+  --color-v-util: #5a6280;
+  --color-v-util-tint: #fafcff;
+
+  /* ── semantic aliases (light mode) ────────────────────── */
+  --color-bg: #d9dcef;
+  --color-surface: var(--color-n0);
+  --color-surface-sunken: var(--color-n50);
+  --color-fg: var(--color-n900);
+  --color-fg-muted: var(--color-n600);
+  --color-fg-faint: var(--color-n400);
+  --color-border: var(--color-n200);
+  --color-border-strong: var(--color-n300);
+  --color-brand: var(--color-tq);
+  --color-brand-ink: var(--color-n1000);
+  --color-brand-text: #0e8f7f;
+  --color-brand-strong: var(--color-tq-dark);
+  --color-focus: var(--color-tq-dark);
+  --color-success: var(--color-green-dark);
+  --color-warning: var(--color-orange);
+  --color-danger: var(--color-red);
+  --color-info: var(--color-tq-dark);
+
+  /* ── shadcn/ui compatibility aliases ──────────────────── */
+  /* shadcn-generated primitives (dialog, sheet, table, …) use the
+     library's default token names; bridge them to the semantic
+     tokens above so no component hardcodes a colour outside tokens.css. */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-fg);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-fg);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-fg);
+  --color-primary: var(--color-brand);
+  --color-primary-foreground: var(--color-brand-ink);
+  --color-secondary: var(--color-surface-sunken);
+  --color-secondary-foreground: var(--color-fg);
+  --color-muted: var(--color-surface-sunken);
+  --color-muted-foreground: var(--color-fg-muted);
+  --color-accent: var(--color-surface-sunken);
+  --color-accent-foreground: var(--color-fg);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-n0);
+  --color-input: var(--color-border);
+  --color-ring: var(--color-focus);
+
+  /* ── chart tokens ─────────────────────────────────────── */
+  --color-chart-1: #5ae9d7;
+  --color-chart-2: #6cda91;
+  --color-chart-3: #ff7958;
+  --color-chart-4: #6b3fa0;
+  --color-chart-5: #3d4767;
+  --color-chart-6: #e3a93c;
+
+  /* ── spacing ──────────────────────────────────────────── */
+  --spacing-s1: 4px;
+  --spacing-s2: 8px;
+  --spacing-s3: 12px;
+  --spacing-s4: 16px;
+  --spacing-s5: 20px;
+  --spacing-s6: 24px;
+  --spacing-s8: 32px;
+  --spacing-s10: 40px;
+  --spacing-s12: 48px;
+  --spacing-s16: 64px;
+  --spacing-s20: 80px;
+
+  /* ── radius ───────────────────────────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 999px;
+
+  /* ── shadows ──────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(19, 23, 32, 0.05);
+  --shadow-md: 0 4px 16px rgba(19, 23, 32, 0.07), 0 1px 3px rgba(19, 23, 32, 0.04);
+  --shadow-lg: 0 18px 48px rgba(19, 23, 32, 0.10), 0 4px 12px rgba(19, 23, 32, 0.05);
+
+  /* ── fonts ────────────────────────────────────────────── */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* ── animation ───────────────────────────────────────── */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  [data-theme='dark'] {
+    color-scheme: dark;
+    --color-bg: var(--color-n900);
+    --color-surface: var(--color-n800);
+    --color-surface-sunken: var(--color-n1000);
+    --color-fg: var(--color-n50);
+    --color-fg-muted: var(--color-n400);
+    --color-fg-faint: var(--color-n500);
+    --color-border: var(--color-n700);
+    --color-border-strong: var(--color-n600);
+    --color-brand: var(--color-tq-dark);
+    --color-brand-ink: var(--color-n0);
+    --color-brand-text: #5ae9d7;
+    --color-brand-strong: var(--color-tq);
+  }
+}
