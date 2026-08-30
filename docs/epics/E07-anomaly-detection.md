@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 2 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | @enendufrankc |
 | GitHub Issue | [#8](https://github.com/enendufrankc/verifynNG/issues/8) |
 | Depends on | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11) |
 | Unblocks | E08 (anomaly context on report detail), E16 (`unit.flagged`, `anomaly.detected` webhooks), E12 (anomaly counts) |
