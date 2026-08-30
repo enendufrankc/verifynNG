@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaClient } from '@prisma/client';
@@ -172,5 +172,19 @@ export class MintProcessor extends WorkerHost {
       { tenantId, batchId },
       { removeOnComplete: true },
     );
+  }
+
+  // Units written before the failure stay — the batch remains inspectable —
+  // but no manifest or exports are generated for a failed batch.
+  @OnWorkerEvent('failed')
+  async onFailed(
+    job: Job<{ tenantId: string; batchId: string; count: number }> | undefined,
+    error: Error,
+  ): Promise<void> {
+    if (!job?.data?.batchId) return;
+    await this.prisma.batch.update({
+      where: { id: job.data.batchId },
+      data: { status: 'failed', failedReason: error.message },
+    });
   }
 }
