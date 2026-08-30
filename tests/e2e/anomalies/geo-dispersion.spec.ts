@@ -11,7 +11,8 @@ import {
 // Nairobi raises one geo_dispersion anomaly, auto-flags the unit, and shows
 // up correctly in web-admin.
 test.describe('AC1: geo dispersion @e07', () => {
-  test.beforeEach(async (_fixtures, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires the destructured first param
+  test.beforeEach(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'web-admin-desktop', 'web-admin only');
   });
 

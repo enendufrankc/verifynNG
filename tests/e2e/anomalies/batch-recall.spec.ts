@@ -21,7 +21,8 @@ async function clickDialogButton(page: Page, text: string): Promise<void> {
 // written, and a verify on any code from the batch returns the
 // decommissioned verdict.
 test.describe('AC7: batch recall @e07', () => {
-  test.beforeEach(async (_fixtures, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires the destructured first param
+  test.beforeEach(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'web-admin-desktop', 'web-admin only');
   });
 

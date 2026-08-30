@@ -11,7 +11,8 @@ import {
 // Lagos then Kano raise a score-80 anomaly, auto-flag the unit, and the
 // evidence timeline never renders coordinates.
 test.describe('AC5: duplicate-first @e07', () => {
-  test.beforeEach(async (_fixtures, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires the destructured first param
+  test.beforeEach(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'web-admin-desktop', 'web-admin only');
   });
 

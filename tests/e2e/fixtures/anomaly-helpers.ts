@@ -5,6 +5,14 @@ import type { APIRequestContext, Page } from '@playwright/test';
  * real login form, rather than depending on `db:seed:realistic` (which
  * doesn't generate units/scans/anomalies yet — see CROSS-EPIC-REQUESTS.md's
  * ask to E21) or an E11 `loginAs` fixture (not built yet either).
+ *
+ * These specs each mint+verify against the shared local stack's real rate
+ * limiters (RATE_LIMIT_IP_PER_MIN etc.) — reliably green run serially or at
+ * normal suite concurrency; running only this @e07 subset at very high
+ * parallelism (e.g. 4+ workers, nothing else warming up the stack first)
+ * can occasionally trip a limiter. Prefer `pnpm test:e2e` (the full suite,
+ * default workers) or `--workers=1` for this subset alone over
+ * `--grep '@e07'` at max parallelism.
  */
 
 export const API_BASE = `http://localhost:${process.env.API_HOST_PORT ?? '4000'}`;

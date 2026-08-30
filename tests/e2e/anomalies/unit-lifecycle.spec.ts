@@ -20,7 +20,8 @@ async function clickConfirm(page: Page): Promise<void> {
 test.describe('AC6: unit lifecycle @e07', () => {
   test.use({ viewport: { width: 1280, height: 1400 } });
 
-  test.beforeEach(async (_fixtures, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern -- Playwright requires the destructured first param
+  test.beforeEach(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'web-admin-desktop', 'web-admin only');
   });
 
