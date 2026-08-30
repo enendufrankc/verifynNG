@@ -50,5 +50,6 @@
   "footer.status": "System status",
   "footer.support": "Support",
   "footer.verifiedBy": "Verified by {platform}",
-  "footer.platformName": "Tunnel Light Verify Platform"
+  "footer.platformName": "Tunnel Light Verify Platform",
+  "offline.banner": "You're offline — reconnect to check a new code."
 }

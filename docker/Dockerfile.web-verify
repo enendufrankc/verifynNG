@@ -37,6 +37,7 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/web-verify/.next/standalone ./
 COPY --from=builder /app/apps/web-verify/.next/static ./apps/web-verify/.next/static
+COPY --from=builder /app/apps/web-verify/public ./apps/web-verify/public
 
 USER appuser
 EXPOSE 3000

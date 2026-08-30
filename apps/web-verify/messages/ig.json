@@ -50,5 +50,6 @@
   "footer.status": "TODO_TRANSLATE: System status",
   "footer.support": "TODO_TRANSLATE: Support",
   "footer.verifiedBy": "TODO_TRANSLATE: Verified by {platform}",
-  "footer.platformName": "TODO_TRANSLATE: Tunnel Light Verify Platform"
+  "footer.platformName": "TODO_TRANSLATE: Tunnel Light Verify Platform",
+  "offline.banner": "TODO_TRANSLATE: You're offline — reconnect to check a new code."
 }

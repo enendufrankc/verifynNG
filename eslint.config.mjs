@@ -14,6 +14,9 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.d.ts',
       'legacy/**',
+      // Service worker script — runs in its own global scope (self,
+      // caches, fetch as globals), not the app's TS/React lint surface.
+      'apps/web-verify/public/**',
     ],
   },
   {
