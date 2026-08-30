@@ -1,9 +1,10 @@
 name = "verifyproduct-landing"
 compatibility_date = "2026-08-01"
 main = "src/worker.mjs"
+# Custom domains: Cloudflare creates the DNS records + certificate automatically.
 routes = [
-  { pattern = "verifyproduct.app/*", zone_name = "verifyproduct.app" },
-  { pattern = "www.verifyproduct.app/*", zone_name = "verifyproduct.app" }
+  { pattern = "verifyproduct.app", custom_domain = true },
+  { pattern = "www.verifyproduct.app", custom_domain = true }
 ]
 [assets]
 directory = "./public"
