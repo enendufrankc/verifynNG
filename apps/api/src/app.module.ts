@@ -15,6 +15,7 @@ import { InternalOnlyGuard } from './modules/auth/guards/internal-only.guard';
 import { DatabaseModule } from './modules/database/database.module';
 import { VerifyModule } from './modules/verify/verify.module';
 import { VerifySmsModule } from './modules/verify-sms/verify-sms.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { VerifySmsModule } from './modules/verify-sms/verify-sms.module';
     DatabaseModule,
     VerifyModule,
     VerifySmsModule,
+    NotificationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

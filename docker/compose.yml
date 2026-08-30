@@ -74,6 +74,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${FAKE_SMS_PORT:-4101}:4101'
+    environment:
+      API_URL: http://api:4000
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4101/health']
       interval: 5s
@@ -129,7 +131,9 @@ services:
     ports:
       - '${API_HOST_PORT:-4000}:4000'
     environment:
-      NODE_ENV: production
+      # Local compose exposes the dev-only acceptance endpoints; production deployments
+      # must set NODE_ENV=production outside this local stack.
+      NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/verifynng?schema=public
       REDIS_URL: redis://redis:6379
       API_PORT: '4000'
@@ -142,6 +146,13 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      # ── E14 Notifications ──
+      MAIL_PROVIDER: smtp
+      SMS_PROVIDER: fake
+      FAKE_SMS_URL: http://fake-sms:4101
+      WHATSAPP_PROVIDER: fake
+      NOTIFICATIONS_FROM: 'VerifyN <noreply@verifyn.ng>'
+      FAKE_WEBHOOK_SECRET: dev-secret
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_SERVICE_NAME: api
       LOKI_URL: http://loki:3100
@@ -181,7 +192,6 @@ services:
       GEOIP_PROVIDER: fake
       GEOIP_URL: http://fake-geo:4103
       TRUST_PROXY: 'true'
-      SMS_PROVIDER: fake
       SMS_URL: http://fake-sms:4101
       CORE_KEYS: 'k1:0000000000000000000000000000000000000000000000000000000000000000'
       CORE_ACTIVE_KID: k1
