@@ -9,7 +9,7 @@ import { prisma } from '@verifynng/db';
 import { TenantS3Service } from './s3.service';
 import { TenantEventBus } from './tenant-events';
 import { brandingSchema } from './branding.schema';
-import { TenantOffboardingProcessor } from '../../jobs/tenant-offboarding.processor';
+import { TenantOffboardingQueue } from '../../jobs/tenant-offboarding.queue';
 
 const requiredDocuments = ['cac_certificate', 'director_id'] as const;
 const slugify = (value: string) =>
@@ -30,7 +30,7 @@ export class TenantLifecycleService {
   constructor(
     private readonly storage: TenantS3Service,
     private readonly events: TenantEventBus,
-    private readonly offboarding: TenantOffboardingProcessor,
+    private readonly offboarding: TenantOffboardingQueue,
   ) {}
   async create(input: {
     ownerUserId: string;
@@ -213,8 +213,11 @@ export class TenantLifecycleService {
     const exportRecord = await prisma.tenantExport.create({
       data: { tenantId, status: 'queued' },
     });
-    if (process.env.WORKER_INLINE === 'true')
-      await this.offboarding.runExport(tenantId, exportRecord.id);
+    await this.offboarding.enqueueExport({
+      tenantId,
+      exportId: exportRecord.id,
+    });
+    await this.offboarding.enqueueDelete({ tenantId }, graceDays * 86400000);
     this.events.emit('tenant.offboarded', {
       tenantId,
       by,

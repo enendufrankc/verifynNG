@@ -9,6 +9,7 @@ export type TenantEventName =
   | 'tenant.reactivated'
   | 'tenant.offboarded'
   | 'tenant.exported'
+  | 'tenant.deleted'
   | 'policy.accepted';
 
 @Injectable()

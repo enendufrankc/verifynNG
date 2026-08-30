@@ -22,6 +22,7 @@
     "@verifynng/config": "workspace:*",
     "@verifynng/db": "workspace:*",
     "archiver": "7.0.1",
+    "bullmq": "^6.3.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "ioredis": "5.7.0",
@@ -33,9 +34,12 @@
   "devDependencies": {
     "@nestjs/cli": "11.0.24",
     "@nestjs/schematics": "11.0.2",
+    "@nestjs/testing": "^11.2.3",
     "@types/archiver": "6.0.2",
     "@types/express": "5.0.3",
+    "@types/supertest": "^7.2.1",
     "@types/uuid": "10.0.0",
+    "supertest": "^7.2.2",
     "typescript": "5.9.2",
     "vitest": "4.1.11"
   }
