@@ -112,9 +112,11 @@ const e06Schema = z.object({
 // ── E13 Audit & Security ────────────────────────────────────────
 const e13Schema = z.object({
   // Core keys for HMAC signing (JSON format preferred)
-  CORE_KEYS_JSON: z.string().default(
-    '{"active":"k1","keys":{"k1":"0000000000000000000000000000000000000000000000000000000000000000"}}',
-  ),
+  CORE_KEYS_JSON: z
+    .string()
+    .default(
+      '{"active":"k1","keys":{"k1":"0000000000000000000000000000000000000000000000000000000000000000"}}',
+    ),
   // CORE_KEYS / CORE_ACTIVE_KID (legacy E01 format) are defined in e06Schema.
   // CORS
   CORS_ORIGINS_ADMIN: z.string().default('http://localhost:3001'),
@@ -154,8 +156,6 @@ const e17Schema = z.object({
   VERIFY_ARTIFICIAL_DELAY_MS: z.coerce.number().default(0),
 });
 
-
-
 // ── E14 Notifications ──────────────────────────────────────────
 const e14Schema = z.object({
   MAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
@@ -172,6 +172,18 @@ const e14Schema = z.object({
   FAKE_WEBHOOK_SECRET: z.string().default('dev-secret'),
 });
 
+// ── E08 Consumer Fake Reporting ─────────────────────────────────
+const e08Schema = z.object({
+  CAPTCHA_PROVIDER: z.enum(['fake', 'turnstile']).default('fake'),
+  TURNSTILE_SECRET: z.string().default(''),
+  FAKE_CAPTCHA_URL: z.string().default('http://fake-captcha:4106'),
+  REPORT_PHOTO_MAX_BYTES: z.coerce.number().default(8_000_000),
+  REPORTS_MAX_PHOTOS: z.coerce.number().default(5),
+  REPORT_INCOMING_TTL_HOURS: z.coerce.number().default(24),
+  REPORTS_BUCKET_INCOMING: z.string().default('reports-incoming'),
+  REPORTS_BUCKET: z.string().default('reports'),
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -180,17 +192,37 @@ export const envSchema = e02Schema
   .merge(e14Schema)
   .merge(e13Schema)
   .merge(e04Schema)
+  .merge(e08Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.
     if (env.JWT_KEYS.includes(ZERO_KEY))
-      ctx.addIssue({ code: 'custom', path: ['JWT_KEYS'], message: 'dev default key not allowed in production' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['JWT_KEYS'],
+        message: 'dev default key not allowed in production',
+      });
     if (env.MFA_ENC_KEY === ZERO_KEY)
-      ctx.addIssue({ code: 'custom', path: ['MFA_ENC_KEY'], message: 'dev default key not allowed in production' });
-    if (env.CORE_KEYS_JSON.includes(ZERO_KEY) || env.CORE_KEYS.includes(ZERO_KEY))
-      ctx.addIssue({ code: 'custom', path: ['CORE_KEYS_JSON'], message: 'dev default core key not allowed in production' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MFA_ENC_KEY'],
+        message: 'dev default key not allowed in production',
+      });
+    if (
+      env.CORE_KEYS_JSON.includes(ZERO_KEY) ||
+      env.CORE_KEYS.includes(ZERO_KEY)
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['CORE_KEYS_JSON'],
+        message: 'dev default core key not allowed in production',
+      });
     if (env.CSP_REPORT_ONLY)
-      ctx.addIssue({ code: 'custom', path: ['CSP_REPORT_ONLY'], message: 'CSP must be enforced (CSP_REPORT_ONLY=false) in production' });
+      ctx.addIssue({
+        code: 'custom',
+        path: ['CSP_REPORT_ONLY'],
+        message: 'CSP must be enforced (CSP_REPORT_ONLY=false) in production',
+      });
   });
 
 export type Env = z.infer<typeof envSchema>;

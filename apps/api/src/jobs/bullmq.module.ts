@@ -23,6 +23,10 @@ import { loadEnv } from '@verifynng/config';
         name: 'batch-exports',
         defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
       },
+      {
+        name: 'reports',
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
+      },
     ),
   ],
   exports: [BullModule],
