@@ -1,0 +1,311 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": ["Health"]
+      }
+    },
+    "/v1/verify/_schema": {
+      "get": {
+        "operationId": "VerifyController_schema",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI schema for VerifyResponse"
+          }
+        },
+        "summary": "JSON schema of VerifyResponse",
+        "tags": ["verify"]
+      }
+    },
+    "/v1/verify/{code}": {
+      "get": {
+        "operationId": "VerifyController_verify",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "src",
+            "required": false,
+            "in": "query",
+            "description": "Scan source (default: qr)",
+            "schema": {
+              "enum": ["qr", "manual", "sms"],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponseDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Infrastructure unavailable"
+          }
+        },
+        "summary": "Verify a unit code",
+        "tags": ["verify"]
+      }
+    },
+    "/v1/verify/sms": {
+      "post": {
+        "operationId": "VerifySmsController_verifySms",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmsWebhookBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Webhook accepted; reply sent via SmsPort",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "verdict": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — bad bearer key"
+          },
+          "503": {
+            "description": "Infrastructure unavailable"
+          }
+        },
+        "summary": "Verify a code received via inbound SMS",
+        "tags": ["verify"]
+      }
+    }
+  },
+  "info": {
+    "title": "verifynNG — Verification & Scan Events",
+    "description": "GET /v1/verify/:code and POST /v1/verify/sms — the consumer verification hot path (E06).",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "verify",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "BrandDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["slug", "displayName"]
+      },
+      "ProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "gtin": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "sku"]
+      },
+      "BatchDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "oem": {
+            "type": "string"
+          },
+          "commissionedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "commissionedAt"]
+      },
+      "HistoryDto": {
+        "type": "object",
+        "properties": {
+          "firstVerifiedAt": {
+            "type": "object"
+          },
+          "scanCount": {
+            "type": "number"
+          },
+          "distinctRegions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lastVerifiedAt": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "firstVerifiedAt",
+          "scanCount",
+          "distinctRegions",
+          "lastVerifiedAt"
+        ]
+      },
+      "SignalsDto": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "boolean"
+          },
+          "multiRegion": {
+            "type": "boolean"
+          },
+          "highCount": {
+            "type": "boolean"
+          },
+          "flagged": {
+            "type": "boolean"
+          }
+        },
+        "required": ["first", "multiRegion", "highCount", "flagged"]
+      },
+      "VerifyResponseDto": {
+        "type": "object",
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "invalid",
+              "unknown",
+              "ok",
+              "authentic",
+              "already-verified",
+              "suspicious",
+              "flagged",
+              "decommissioned",
+              "rate-limited"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["green", "amber", "red", "grey"]
+          },
+          "tier": {
+            "type": "number"
+          },
+          "code": {
+            "type": "string"
+          },
+          "brand": {
+            "$ref": "#/components/schemas/BrandDto"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductDto"
+          },
+          "batch": {
+            "$ref": "#/components/schemas/BatchDto"
+          },
+          "message": {
+            "type": "string"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistoryDto"
+          },
+          "signals": {
+            "$ref": "#/components/schemas/SignalsDto"
+          },
+          "retryAfterSec": {
+            "type": "number"
+          },
+          "reportable": {
+            "type": "boolean"
+          },
+          "scanEventId": {
+            "type": "string"
+          }
+        },
+        "required": ["verdict", "severity", "code", "message", "reportable"]
+      },
+      "SmsWebhookBody": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Sender phone number"
+          },
+          "to": {
+            "type": "string",
+            "description": "Receiving short code"
+          },
+          "text": {
+            "type": "string",
+            "description": "Message text containing the code"
+          },
+          "providerMessageId": {
+            "type": "string",
+            "description": "ID from the SMS provider"
+          }
+        },
+        "required": ["from", "to", "text", "providerMessageId"]
+      }
+    }
+  }
+}
