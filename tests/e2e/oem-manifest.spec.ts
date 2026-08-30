@@ -1,28 +1,14 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { loginAs, mailpit } from './fixtures/index.js';
 
 // Targets web-admin only — run with `pnpm test:e2e --project web-admin-desktop`.
-// tests/e2e/fixtures/auth.ts's loginAs() is still E02/E11's unimplemented stub
-// (a bare `page.goto('/')`), so this drives the real login form directly
-// rather than depending on it.
-const DEV_PASSWORD = 'Passw0rd!Passw0rd!';
-const MAILPIT_API = process.env.MAILPIT_API_URL ?? 'http://localhost:8025/api';
-
-async function loginViaForm(page: Page, email: string): Promise<void> {
-  await page.goto('/login');
-  await page.locator('#email').fill(email);
-  await page.locator('#password').fill(DEV_PASSWORD);
-  await page.getByRole('button', { name: /sign in/i }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
-    timeout: 15_000,
-  });
-}
 
 test.describe('E05 OEM Manifest Delivery @e2e', () => {
   test('AC1: owner delivers the seeded minted batch to Guangzhou Pack Co.', async ({
     page,
     request,
   }) => {
-    await loginViaForm(page, 'owner@ivoryglow.local');
+    await loginAs(page, 'owner');
 
     await page.goto('/deliveries');
     await page.getByRole('button', { name: /deliver batch/i }).click();
@@ -48,39 +34,22 @@ test.describe('E05 OEM Manifest Delivery @e2e', () => {
     ).toBeVisible();
     await expect(page.getByText('delivered').first()).toBeVisible();
 
-    // Mailpit receives the manifest.delivered email addressed to the OEM.
-    // Not using fixtures/mailpit.ts's waitFor() here: its `To` extraction
-    // assumes a plain string, but Mailpit's real /v1/messages response shape
-    // is `To: [{ Name, Address }]`, and a delivery sends this subject to both
-    // the OEM and the tenant owner, so the first match isn't necessarily the
-    // OEM's — this polls and filters directly against the real shape instead.
-    await expect
-      .poll(
-        async () => {
-          const res = await request.get(`${MAILPIT_API}/v1/messages`);
-          const body = (await res.json()) as {
-            messages?: Array<{
-              Subject?: string;
-              To?: Array<{ Address: string }>;
-            }>;
-          };
-          return (body.messages ?? []).some(
-            (m) =>
-              m.Subject?.includes('Manifest delivered') &&
-              m.To?.some(
-                (t) => t.Address.toLowerCase() === 'oem@guangzhou-pack.test',
-              ),
-          );
-        },
-        { timeout: 10_000 },
-      )
-      .toBe(true);
+    // Mailpit receives the manifest.delivered email addressed to the OEM
+    // (a delivery also emails the tenant owner with the same subject, so the
+    // `to` filter matters — the first match by subject alone isn't
+    // necessarily the OEM's).
+    const email = await mailpit.waitFor(request, 'Manifest delivered', {
+      to: 'oem@guangzhou-pack.test',
+    });
+    expect(email.to.map((a) => a.toLowerCase())).toContain(
+      'oem@guangzhou-pack.test',
+    );
   });
 
   test("AC-ish: the OEM portal shows the factory's own deliveries, not the tenant console", async ({
     page,
   }) => {
-    await loginViaForm(page, 'oem@guangzhou-pack.test');
+    await loginAs(page, 'oem');
 
     // Login with no `next` param routes an oem-role user straight to the portal.
     await page.waitForURL(/\/oem\/deliveries/, { timeout: 15_000 });
