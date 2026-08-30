@@ -8,7 +8,8 @@ import {
   Param,
   UnauthorizedException,
 } from '@nestjs/common';
-import { StatusService, IngestProbeDto } from './status.service';
+import { StatusService } from './status.service';
+import type { IngestProbeDto } from './status.service';
 
 @Controller('v1')
 export class StatusController {

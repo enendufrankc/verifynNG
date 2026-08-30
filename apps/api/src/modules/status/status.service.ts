@@ -1,5 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { prisma, PrismaClient } from '@verifynng/db';
+import { prisma } from '@verifynng/db';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 export interface IngestProbeDto {
@@ -17,11 +17,11 @@ export type StatusState = 'operational' | 'degraded' | 'outage';
 @Injectable()
 export class StatusService {
   private readonly logger = new Logger(StatusService.name);
-  private db: PrismaClient;
+  private db: typeof prisma;
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
-    @Optional() dbClient?: PrismaClient,
+    @Optional() dbClient?: typeof prisma,
   ) {
     this.db = dbClient || prisma;
   }
