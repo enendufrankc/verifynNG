@@ -16,18 +16,41 @@ interface SessionRequestBody {
   tenantId?: string;
 }
 
+interface ApiMembership {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  role: string;
+}
+
+interface ApiUser {
+  id: string;
+  email: string;
+  displayName: string;
+  platformRole: string | null;
+  mfaEnabled: boolean;
+}
+
 interface LoginApiResponse {
   accessToken: string;
   expiresIn: number;
   refreshToken: string;
   mfaRequired?: boolean;
   mfaToken?: string;
+  user?: ApiUser;
+  memberships?: ApiMembership[];
+  activeTenantId?: string | null;
+  activeRole?: string | null;
 }
 
 interface RefreshApiResponse {
   accessToken: string;
   expiresIn: number;
   refreshToken: string;
+  user?: ApiUser;
+  memberships?: ApiMembership[];
+  activeTenantId?: string | null;
+  activeRole?: string | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -41,7 +64,7 @@ export async function POST(req: NextRequest) {
         { code: 'BAD_REQUEST', message: 'Email and password are required' },
         { status: 400 },
       );
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.API_INTERNAL_URL || 'http://localhost:4000';
     try {
       const apiRes = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
@@ -58,6 +81,10 @@ export async function POST(req: NextRequest) {
         const response = NextResponse.json({
           accessToken: data.accessToken,
           expiresIn: data.expiresIn,
+          user: data.user,
+          memberships: data.memberships,
+          activeTenantId: data.activeTenantId,
+          activeRole: data.activeRole,
         });
         response.cookies.set('vg_refresh', data.refreshToken, {
           httpOnly: true,
@@ -120,7 +147,7 @@ export async function POST(req: NextRequest) {
         { code: 'NO_REFRESH_TOKEN', message: 'No refresh token' },
         { status: 401 },
       );
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const apiUrl = process.env.API_INTERNAL_URL || 'http://localhost:4000';
     try {
       const apiRes = await fetch(`${apiUrl}/auth/refresh`, {
         method: 'POST',
@@ -132,6 +159,10 @@ export async function POST(req: NextRequest) {
         const response = NextResponse.json({
           accessToken: data.accessToken,
           expiresIn: data.expiresIn,
+          user: data.user,
+          memberships: data.memberships,
+          activeTenantId: data.activeTenantId,
+          activeRole: data.activeRole,
         });
         response.cookies.set('vg_refresh', data.refreshToken, {
           httpOnly: true,

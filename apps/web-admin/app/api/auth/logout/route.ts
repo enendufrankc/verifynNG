@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   const refreshToken = req.cookies.get('vg_refresh')?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const apiUrl = process.env.API_INTERNAL_URL || 'http://localhost:4000';
   try {
     await fetch(`${apiUrl}/auth/logout`, {
       method: 'POST',

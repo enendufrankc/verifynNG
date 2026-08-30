@@ -172,7 +172,7 @@ services:
       FAKE_SMS_KEY: vk_e3ecb35c_e3ecb35c6a1bdd71e31eb3bc10e3eeb1163f0fd3f8411fa3404cd77ad4e0134e
       FAKE_PAY_KEY: vk_5c2211be_5c2211bec4d8076bc5049669861ce211faf0be91738aa2ebe6803e091400460a
       FAKE_GEO_KEY: vk_70b02ab6_70b02ab67319f58d15520e558280b06417d84a5211f18f464dfa6d5e7e844d88
-      APP_BASE_URL: http://localhost:3001
+      APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
       # ── E06 Verification & Scan Events ──
       RATE_LIMIT_IP_PER_MIN: '20'
       RATE_LIMIT_CODE_PER_MIN: '10'
@@ -266,10 +266,17 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web-admin
+      args:
+        # Baked into the client bundle — must be reachable from the host
+        # browser, unlike the runtime value below (container-internal only).
+        NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
     ports:
       - '${WEB_ADMIN_PORT:-3001}:3001'
     environment:
-      NEXT_PUBLIC_API_URL: http://api:4000
+      # Read at runtime by server-side Route Handlers only (never inlined,
+      # unlike NEXT_PUBLIC_API_URL) — container-internal address is correct
+      # here since this code runs inside the container, not the browser.
+      API_INTERNAL_URL: http://api:4000
       HOSTNAME: 0.0.0.0
     depends_on:
       api:
