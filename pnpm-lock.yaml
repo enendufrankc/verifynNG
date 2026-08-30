@@ -7,6 +7,9 @@ settings:
 importers:
   .:
     devDependencies:
+      '@axe-core/playwright':
+        specifier: ^4.10.2
+        version: 4.13.0(playwright-core@1.62.1)
       '@eslint/js':
         specifier: ^9.35.0
         version: 9.35.0
@@ -25,6 +28,12 @@ importers:
       '@prisma/client':
         specifier: 6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.2))(typescript@5.9.2)
+      '@verifynng/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@verifynng/db':
+        specifier: workspace:*
+        version: link:packages/db
       depcheck:
         specifier: 1.4.7
         version: 1.4.7
