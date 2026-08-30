@@ -87,12 +87,17 @@ export class AuditInterceptor implements NestInterceptor {
       ? requestIdHeader[0]
       : requestIdHeader;
 
+    // E02's TenantContextGuard populates user.userId, not the deprecated
+    // user.id this interceptor originally targeted (pre-E02 stub shape) —
+    // fall back to .id only for any caller that still sets the old field.
+    const actorId = user.userId ?? user.id;
+
     await this.auditService.record({
       // No tenant context until E02 ships auth — AuditLog.tenantId is nullable for this reason.
       tenantId: user.tenantId,
       actor: {
-        type: user.id ? 'user' : 'system',
-        id: user.id,
+        type: actorId ? 'user' : 'system',
+        id: actorId,
         ip: req.ip ?? req.connection?.remoteAddress,
       },
       action: opts.action,

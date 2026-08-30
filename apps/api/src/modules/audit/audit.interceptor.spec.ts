@@ -129,6 +129,62 @@ describe('AuditInterceptor', () => {
     );
   });
 
+  it('resolves the actor from req.user.userId (the field TenantContextGuard actually sets)', async () => {
+    const req = {
+      params: { id: 'unit-42' },
+      headers: {},
+      body: {},
+      user: { userId: 'u2', tenantId: 't1' },
+    };
+    const { reflector, context } = makeContext({
+      handlerMeta: { action: 'unit.flag' },
+      req,
+      className: 'UnitController',
+    });
+    const interceptor = new AuditInterceptor(
+      reflector,
+      auditService as unknown as AuditService,
+    );
+    const next: CallHandler = { handle: () => of('ok') };
+
+    await lastValueFrom(interceptor.intercept(context, next));
+    await flush();
+
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actor: expect.objectContaining({ type: 'user', id: 'u2' }),
+        tenantId: 't1',
+      }),
+    );
+  });
+
+  it('prefers req.user.userId over the deprecated req.user.id when both are present', async () => {
+    const req = {
+      params: {},
+      headers: {},
+      body: {},
+      user: { userId: 'u3', id: 'stale-id', tenantId: 't1' },
+    };
+    const { reflector, context } = makeContext({
+      handlerMeta: { action: 'demo.touch' },
+      req,
+    });
+    const interceptor = new AuditInterceptor(
+      reflector,
+      auditService as unknown as AuditService,
+    );
+    const next: CallHandler = { handle: () => of('ok') };
+
+    await lastValueFrom(interceptor.intercept(context, next));
+    await flush();
+
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actor: expect.objectContaining({ type: 'user', id: 'u3' }),
+      }),
+    );
+  });
+
   it('uses a custom target resolver when provided', async () => {
     const req = { params: {}, headers: {}, body: {} };
     const target = { type: 'custom', id: 'c1' };
