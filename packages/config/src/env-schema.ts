@@ -25,9 +25,13 @@ const e00Schema = z.object({
   SMTP_PASS: z.string().default(''),
   // Next.js
   NEXT_PUBLIC_API_URL: z.string().default('http://localhost:4000'),
+  JWT_SECRET: z.string().default('development-only-secret-change-me'),
+  // ── E03: tenant lifecycle ───────────────────────────────────
   OFFBOARDING_GRACE_DAYS: z.coerce.number().int().nonnegative().default(30),
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
-  JWT_SECRET: z.string().default('development-only-secret-change-me'),
+  // Runs the tenant-offboarding BullMQ worker in the api process until
+  // E04's api-worker service exists.
+  WORKER_INLINE: z.coerce.boolean().default(true),
 });
 
 // ── Sections for other epics will be added here ────────────────

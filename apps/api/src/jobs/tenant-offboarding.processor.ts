@@ -1,16 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import archiver from 'archiver';
 import { PassThrough } from 'node:stream';
 import { prisma } from '@verifynng/db';
 import { TenantEventBus } from '../modules/tenants/tenant-events';
 import { TenantS3Service } from '../modules/tenants/s3.service';
 import { ndjson, exportRows } from '../modules/tenants/tenant-export.data';
+import {
+  RETENTION_POLICY,
+  RetentionPolicy,
+} from '../modules/tenants/retention-policy';
 
 @Injectable()
 export class TenantOffboardingProcessor {
   constructor(
     private readonly storage: TenantS3Service,
     private readonly events: TenantEventBus,
+    @Inject(RETENTION_POLICY) private readonly retention: RetentionPolicy,
   ) {}
 
   async runExport(tenantId: string, exportId: string): Promise<void> {
@@ -161,5 +166,27 @@ export class TenantOffboardingProcessor {
       });
       throw error;
     }
+  }
+
+  async runDelete(tenantId: string): Promise<void> {
+    const cutoff = new Date(
+      Date.now() - this.retention.scanEventsDays * 86400000,
+    );
+    await prisma.scanEvent.updateMany({
+      where: { tenantId, createdAt: { gte: cutoff } },
+      data: { unitId: null, ip: null, userAgent: null, geoCity: null },
+    });
+    await prisma.scanEvent.deleteMany({
+      where: { tenantId, createdAt: { lt: cutoff } },
+    });
+    await prisma.unit.deleteMany({ where: { tenantId } });
+    await prisma.batch.deleteMany({ where: { tenantId } });
+    await prisma.product.deleteMany({ where: { tenantId } });
+    await prisma.oem.deleteMany({ where: { tenantId } });
+    await this.storage.deletePrefix(`tenants/${tenantId}/`);
+    this.events.emit('tenant.deleted', {
+      tenantId,
+      at: new Date().toISOString(),
+    });
   }
 }

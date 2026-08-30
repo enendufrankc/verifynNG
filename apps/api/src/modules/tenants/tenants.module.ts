@@ -5,6 +5,8 @@ import { TenantLifecycleService } from './tenant-lifecycle.service';
 import { TenantS3Service } from './s3.service';
 import { TenantEventBus } from './tenant-events';
 import { TenantOffboardingProcessor } from '../../jobs/tenant-offboarding.processor';
+import { TenantOffboardingQueue } from '../../jobs/tenant-offboarding.queue';
+import { RETENTION_POLICY, defaultRetentionPolicy } from './retention-policy';
 
 @Module({
   controllers: [TenantsController, SupportTenantsController],
@@ -13,7 +15,9 @@ import { TenantOffboardingProcessor } from '../../jobs/tenant-offboarding.proces
     TenantS3Service,
     TenantEventBus,
     TenantOffboardingProcessor,
+    TenantOffboardingQueue,
     { provide: 'S3', useExisting: TenantS3Service },
+    { provide: RETENTION_POLICY, useValue: defaultRetentionPolicy },
   ],
   exports: [
     TenantLifecycleService,
@@ -21,6 +25,7 @@ import { TenantOffboardingProcessor } from '../../jobs/tenant-offboarding.proces
     TenantEventBus,
     TenantOffboardingProcessor,
     'S3',
+    RETENTION_POLICY,
   ],
 })
 export class TenantsModule {}

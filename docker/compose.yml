@@ -142,6 +142,7 @@ services:
       SMTP_USER: ''
       SMTP_PASS: ''
       NEXT_PUBLIC_API_URL: http://localhost:4000
+      WORKER_INLINE: 'true'
     depends_on:
       postgres:
         condition: service_healthy
