@@ -72,9 +72,17 @@ test.describe('AC6: unit lifecycle @e07', () => {
       page.getByText('active', { exact: true }).first(),
     ).toBeVisible();
 
-    const bodyText = await page.locator('body').innerText();
-    expect(bodyText).toContain('decommission test');
-    expect(bodyText).toContain('restore test');
+    // A static innerText() snapshot here raced the transitions table's refetch
+    // (invalidateQueries after the restore mutation) — the same request that
+    // makes 'restore test' and 'active' visible above also repaints the whole
+    // table, and a plain snapshot can land between clear and repaint. Use
+    // auto-retrying assertions for the final check too, not a one-shot read.
+    // Scoped to `tbody` — the reason also transiently appears in a toast/dialog
+    // remnant elsewhere on the page, which makes an unscoped getByText ambiguous.
+    await expect(
+      page.locator('tbody').getByText('decommission test'),
+    ).toBeVisible();
+    await expect(page.locator('tbody').getByText('restore test')).toBeVisible();
 
     const { accessToken } = await request
       .post(

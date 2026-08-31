@@ -3,10 +3,10 @@ import { test, expect } from '@playwright/test';
 /**
  * Cookie-less-by-default is a tested invariant of web-verify (see
  * docs/compliance/data-map.md and content/legal/cookie/en.md). This suite
- * only makes sense against the web-verify projects — web-admin is an
- * authenticated app with a real session cookie by design, so each test
- * skips itself there rather than the shared playwright.config.ts needing a
- * per-suite testMatch carve-out.
+ * only makes sense against the web-verify projects — playwright.config.ts's
+ * testMatch already keeps it out of web-admin-desktop, but each test also
+ * skips itself by project name as a second guard (web-admin is an
+ * authenticated app with a real session cookie by design).
  *
  * Routes covered are limited to what actually exists today: `/`, `/status`,
  * and `/legal/*` (T3, this epic). `/verify`, `/v/<code>` (E06/E09) and
