@@ -1,0 +1,62 @@
+{
+  "interactiveLogin": true,
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "username",
+          "match": "owner@ivoryglow.com",
+          "claims": {
+            "sub": "fake-owner-ivoryglow",
+            "email": "owner@ivoryglow.com",
+            "email_verified": true,
+            "hd": "ivoryglow.com",
+            "amr": ["mfa"]
+          }
+        },
+        {
+          "requestParam": "username",
+          "match": "ops@ivoryglow.com",
+          "claims": {
+            "sub": "fake-ops-ivoryglow",
+            "email": "ops@ivoryglow.com",
+            "email_verified": true,
+            "hd": "ivoryglow.com"
+          }
+        },
+        {
+          "requestParam": "username",
+          "match": "newhire@ivoryglow.com",
+          "claims": {
+            "sub": "fake-newhire-ivoryglow",
+            "email": "newhire@ivoryglow.com",
+            "email_verified": true,
+            "hd": "ivoryglow.com"
+          }
+        },
+        {
+          "requestParam": "username",
+          "match": "newhire2@ivoryglow.com",
+          "claims": {
+            "sub": "fake-newhire2-ivoryglow",
+            "email": "newhire2@ivoryglow.com",
+            "email_verified": true,
+            "hd": "ivoryglow.com"
+          }
+        },
+        {
+          "requestParam": "username",
+          "match": "outsider@gmail.com",
+          "claims": {
+            "sub": "fake-outsider-gmail",
+            "email": "outsider@gmail.com",
+            "email_verified": true,
+            "hd": "gmail.com"
+          }
+        }
+      ]
+    }
+  ]
+}

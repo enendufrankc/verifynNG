@@ -184,6 +184,20 @@ export class SsoConfigService {
     return this.toSafeConfig(saved);
   }
 
+  async recordTestResult(
+    tenantId: string,
+    ok: boolean,
+    detail: string,
+  ): Promise<void> {
+    await this.prisma.tenantSsoConfig.update({
+      where: { tenantId },
+      data: {
+        lastTestedAt: new Date(),
+        lastTestResult: ok ? 'ok' : `error: ${detail}`,
+      },
+    });
+  }
+
   async disable(
     tenantId: string,
     actorId: string | undefined,

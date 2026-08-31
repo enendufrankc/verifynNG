@@ -228,9 +228,11 @@ const e07Schema = z.object({
 
 // ── E20 SSO & MFA Policy ─────────────────────────────────────────
 const e20Schema = z.object({
+  // No `v1/` prefix — see the routing-convention note in E20-sso.md's T1
+  // checklist entry (this codebase doesn't actually use one).
   SSO_CALLBACK_URL: z
     .string()
-    .default('http://localhost:4000/v1/auth/sso/callback'),
+    .default('http://localhost:4000/auth/sso/callback'),
   SSO_STATE_TTL_SECONDS: z.coerce.number().default(600),
   SSO_DISCOVERY_TIMEOUT_MS: z.coerce.number().default(5000),
   // `api` reaches the fake IdP over the compose network; a browser on the
