@@ -90,6 +90,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${FAKE_PAY_PORT:-4102}:4102'
+    environment:
+      FAKE_PAY_SECRET: fake_sk_test
+      FAKE_PAY_WEBHOOK_URL: http://api:4000/v1/billing/webhooks/paystack
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4102/health']
       interval: 5s
@@ -245,6 +248,17 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E15 Billing & Entitlements ──
+      PAYMENT_GATEWAY: fake
+      PAYSTACK_BASE_URL: http://fake-pay:4102
+      PAYSTACK_SECRET_KEY: fake_sk_test
+      PAYSTACK_PUBLIC_KEY: fake_pk_test
+      FAKE_PAY_URL: http://fake-pay:4102
+      FAKE_PAY_SECRET: fake_sk_test
+      BILLING_TAX_RATE_BPS_NGN: '0'
+      BILLING_TAX_RATE_BPS_GBP: '0'
+      BILLING_DUNNING_SCHEDULE_DAYS: '1,3,7'
+      BILLING_CLOCK_SKEW_SECONDS: '0'
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a

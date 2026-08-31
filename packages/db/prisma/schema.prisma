@@ -1231,3 +1231,172 @@ model UnitStateTransition {
 }
 
 // ── end E07 models ────────────────────────────────────────────
+
+// ── E15 Billing & Entitlements ──────────────────────────────────
+// Additive-only. tenantId fields below are plain scalars (no Prisma
+// @relation to Tenant), matching the E07 models above — Tenant stays owned
+// by E03 and is never edited by other epics.
+
+enum Currency {
+  NGN
+  GBP
+}
+
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  restricted
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  paid
+  void
+  uncollectible
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+}
+
+enum PaymentProvider {
+  paystack
+  fake
+  manual
+}
+
+model Plan {
+  id                       String   @id @default(cuid())
+  code                     String   @unique // free-trial | starter | growth | enterprise
+  name                     String
+  monthlyPriceNgnMinor     Int // kobo; enterprise = 0 with features.customPricing = true
+  monthlyPriceGbpMinor     Int // pence
+  includedUnitsPerYear     Int // free-trial = 500 total (not per year: features.trialTotalCap = true)
+  includedScansPerMonth    Int
+  overageUnitPriceNgnMinor Int
+  overageUnitPriceGbpMinor Int
+  overageScanPriceNgnMinor Int
+  overageScanPriceGbpMinor Int
+  features                 Json // { publicApi, webhooks, sso, customPages, maxApiKeys, apiRateLimitPerMin, trialTotalCap?, customPricing? }
+  sortOrder                Int
+  active                   Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  tenantId           String             @unique // one live subscription per tenant; history lives in AuditLog + subscription.changed events
+  planId             String
+  status             SubscriptionStatus
+  currency           Currency // fixed at creation from Tenant.country (GB → GBP, else NGN)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  pendingPlanId      String? // downgrade scheduled for period end
+  restrictedAt       DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([status, currentPeriodEnd])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  tenantId      String
+  number        String        @unique // INV-<YYYYMM>-<tenantSlug>-<seq>
+  status        InvoiceStatus
+  currency      Currency
+  periodStart   DateTime
+  periodEnd     DateTime
+  subtotalMinor Int
+  taxMinor      Int // flat BILLING_TAX_RATE_BPS per currency; 0 by default
+  totalMinor    Int
+  issuedAt      DateTime?
+  dueAt         DateTime? // issuedAt + 7 days
+  paidAt        DateTime?
+  attemptCount  Int       @default(0)
+  nextRetryAt   DateTime?
+  usageSnapshot Json // the E12 UsageSummary used, frozen
+  createdAt     DateTime  @default(now())
+
+  lines    InvoiceLine[]
+  payments Payment[]
+
+  @@index([tenantId, periodStart])
+  @@index([status, nextRetryAt])
+}
+
+model InvoiceLine {
+  id             String @id @default(cuid())
+  invoiceId      String
+  tenantId       String
+  kind           String // plan_fee | unit_overage | scan_overage | proration_credit | proration_charge | adjustment
+  description    String
+  quantity       Int
+  unitPriceMinor Int
+  amountMinor    Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  tenantId        String
+  invoiceId       String
+  provider        PaymentProvider
+  reference       String          @unique // our reference sent to the gateway
+  providerRef     String?
+  status          PaymentStatus
+  amountMinor     Int
+  currency        Currency
+  failureReason   String?
+  paymentMethodId String?
+  rawResponse     Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([tenantId, createdAt])
+}
+
+model PaymentMethod {
+  id                String    @id @default(cuid())
+  tenantId          String
+  provider          PaymentProvider
+  authorizationCode String // Paystack reusable authorization; encrypted at rest via E13 secrets helper
+  cardBrand         String?
+  cardLast4         String?
+  expMonth          Int?
+  expYear           Int?
+  isDefault         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  revokedAt         DateTime?
+
+  @@index([tenantId, isDefault])
+}
+
+model GatewayWebhookEvent {
+  id          String          @id // provider event id (Paystack `data.id` + type) — idempotency key
+  provider    PaymentProvider
+  type        String
+  reference   String?
+  receivedAt  DateTime        @default(now())
+  processedAt DateTime?
+  rawBody     Json
+}
+
+// ── end E15 models ───────────────────────────────────────────

@@ -226,6 +226,20 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E15 Billing & Entitlements ──────────────────────────────────
+const e15Schema = z.object({
+  PAYMENT_GATEWAY: z.enum(['paystack', 'fake']).default('fake'),
+  PAYSTACK_BASE_URL: z.string().default('http://fake-pay:4102'),
+  PAYSTACK_SECRET_KEY: z.string().default('fake_sk_test'),
+  PAYSTACK_PUBLIC_KEY: z.string().default('fake_pk_test'),
+  FAKE_PAY_URL: z.string().default('http://fake-pay:4102'),
+  FAKE_PAY_SECRET: z.string().default('fake_sk_test'),
+  BILLING_TAX_RATE_BPS_NGN: z.coerce.number().default(0),
+  BILLING_TAX_RATE_BPS_GBP: z.coerce.number().default(0),
+  BILLING_DUNNING_SCHEDULE_DAYS: z.string().default('1,3,7'),
+  BILLING_CLOCK_SKEW_SECONDS: z.coerce.number().default(0),
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -240,6 +254,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e15Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.

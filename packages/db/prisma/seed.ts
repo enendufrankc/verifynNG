@@ -8,6 +8,8 @@ import { seedPolicies } from './seed/policies';
 import { seedLegalDocuments } from './seed/legal-documents';
 import { seedAnalyticsFixtures } from './seed/e12-analytics-fixtures';
 import { seedOemDelivery } from './seed/e05-oem';
+import { seedPlans } from '../src/plan-catalogue';
+import { seedSubscriptions } from './seed/plans';
 
 const prisma = new PrismaClient();
 
@@ -241,6 +243,10 @@ async function main() {
 
   // ── E05: OEM Manifest Delivery — dev fixtures ────────────────
   await seedOemDelivery(prisma);
+
+  // ── E15: Billing & Entitlements — plan catalogue + trialing subscriptions ──
+  await seedPlans(prisma);
+  await seedSubscriptions(prisma);
 }
 
 main()
