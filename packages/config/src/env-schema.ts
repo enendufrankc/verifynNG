@@ -226,6 +226,26 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E10 Product Pages & Page Builder ─────────────────────────────
+const e10Schema = z.object({
+  PAGE_REVALIDATE_SECRET: z.string().default('dev-page-revalidate-secret'),
+  // Browser-facing web-verify origin — used by web-verify itself to build
+  // canonical URLs, sitemap <loc> entries and JSON-LD. Never used for
+  // server-to-server calls (see WEB_VERIFY_INTERNAL_URL below) — `localhost`
+  // inside a container never reaches another container.
+  PAGES_PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
+  // Container-internal web-verify address — what apps/api's PageRevalidator
+  // calls for POST /p/revalidate. Same split as API_INTERNAL_URL/
+  // NEXT_PUBLIC_API_URL elsewhere in this app.
+  WEB_VERIFY_INTERNAL_URL: z.string().default('http://web-verify:3000'),
+  PLATFORM_HOSTS: z.string().default('localhost:3000'),
+  // Compose-only stub for host→tenant domain lookup readiness, e.g.
+  // "ivoryglow.localhost:3000:ivoryglow" — no DNS/TLS involved.
+  PAGE_DOMAIN_STUB: z.string().default(''),
+  PAGES_MEDIA_BUCKET: z.string().default('pages'),
+  PAGES_MAX_UPLOAD_MB: z.coerce.number().default(10),
+});
+
 // ── E16 Public API & Webhooks ────────────────────────────────────
 const e16Schema = z.object({
   PUBLIC_API_DEFAULT_RPM: z.coerce.number().default(120),
@@ -280,6 +300,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e10Schema)
   .merge(e16Schema)
   .merge(e20Schema)
   .superRefine((env, ctx) => {

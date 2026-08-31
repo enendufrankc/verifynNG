@@ -11,9 +11,13 @@
   },
   "dependencies": {
     "@verifynng/config": "workspace:*",
+    "@verifynng/page-schema": "workspace:*",
     "@verifyng/ui": "workspace:*",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-table": "^8.21.3",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "zustand": "^5.0.5",
     "react-hook-form": "^7.60.0",
     "@hookform/resolvers": "^5.1.1",

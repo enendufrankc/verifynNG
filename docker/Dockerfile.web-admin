@@ -5,12 +5,14 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web-admin/package.json apps/web-admin/
 COPY packages/config/package.json packages/config/
+COPY packages/page-schema/package.json packages/page-schema/
 COPY packages/ui/package.json packages/ui/
 
 RUN pnpm install --frozen-lockfile
 
 COPY apps/web-admin/ apps/web-admin/
 COPY packages/config/ packages/config/
+COPY packages/page-schema/ packages/page-schema/
 COPY packages/ui/ packages/ui/
 COPY tsconfig.base.json ./
 
@@ -18,11 +20,15 @@ COPY tsconfig.base.json ./
 # browser-reachable URL must be supplied here as a build ARG — the
 # container-internal `http://api:4000` set at runtime below is only ever
 # seen by server-side code (Route Handlers), never by code already compiled
-# into the client JS.
+# into the client JS. NEXT_PUBLIC_VERIFY_URL (E10) is the same story — the
+# page-builder's live preview iframe (client-side) needs the browser-facing
+# web-verify origin.
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_VERIFY_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_VERIFY_URL=$NEXT_PUBLIC_VERIFY_URL
 
-RUN pnpm --filter @verifynng/config build && pnpm --filter @verifyng/ui build && pnpm --filter @verifynng/web-admin build
+RUN pnpm --filter @verifynng/config build && pnpm --filter @verifynng/page-schema build && pnpm --filter @verifyng/ui build && pnpm --filter @verifynng/web-admin build
 
 # ── Production stage ───────────────────────────────────────────
 FROM node:22-alpine AS runner

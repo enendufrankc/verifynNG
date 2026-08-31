@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Locale } from '@/lib/i18n';
+// E10's one-line registration (see AGENTS.md / docs/epics/E10-product-pages.md).
+import { ProductPageTier1Renderer } from '@/components/product-page/ProductPageTier1Renderer';
 
 export interface Tier1ProductSlotProps {
   tenantSlug: string;
@@ -28,3 +30,5 @@ export function registerTier1Renderer(
 export function getTier1Renderer(): ComponentType<Tier1ProductSlotProps> | null {
   return renderer;
 }
+
+registerTier1Renderer(ProductPageTier1Renderer);
