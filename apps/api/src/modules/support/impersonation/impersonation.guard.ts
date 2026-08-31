@@ -8,9 +8,19 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { PLATFORM_ROLE_KEY } from '../../auth/decorators/platform-role.decorator';
 import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
+import { ROLES_KEY } from '../../auth/decorators/roles.decorator';
 import type { UserPrincipal } from '../../auth/types/principal';
 import { isApiClientPrincipal } from '../../auth/types/principal';
 import { ImpersonationService } from './impersonation.service';
+
+// Mirrors RolesGuard's own ROLE_HIERARCHY (apps/api/src/modules/auth/guards/
+// roles.guard.ts) — not exported there, so duplicated rather than reaching
+// into another epic's file for a private const.
+const ROLE_HIERARCHY: Record<string, string[]> = {
+  owner: ['owner', 'operator', 'viewer'],
+  operator: ['operator', 'viewer'],
+  viewer: ['viewer'],
+};
 
 export type RequestWithImpersonation = Request & {
   tenantId?: string;
@@ -93,6 +103,22 @@ export class ImpersonationGuard implements CanActivate {
 
     if (!active || active.mode !== 'write') {
       throw new ForbiddenException({ error: 'impersonation_read_only' });
+    }
+
+    // RolesGuard's own `platformRole === 'support'` branch bypasses @Roles()
+    // entirely (see its comment), so a write-mode session's role='operator'
+    // JWT claim would otherwise still reach an owner-only route uninterrupted.
+    // "Impersonation never grants owner" (docs/support-impersonation-policy.md)
+    // is enforced here instead, against the granted 'operator' ceiling.
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (requiredRoles?.length) {
+      const allowed = ROLE_HIERARCHY['operator'];
+      if (!requiredRoles.some((r) => allowed.includes(r))) {
+        throw new ForbiddenException({ error: 'impersonation_owner_only' });
+      }
     }
 
     return true;
