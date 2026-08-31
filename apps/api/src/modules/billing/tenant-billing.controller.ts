@@ -1,4 +1,5 @@
-import { Controller, Get, Inject, Param, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Param, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { Roles, TenantId } from '../../common/tenant';
 import { SubscriptionService } from './subscription.service';
 import { InvoiceService } from './invoice.service';
@@ -21,6 +22,32 @@ export class TenantBillingController {
   @Roles('owner')
   listInvoices(@TenantId() tenantId: string, @Query('cursor') cursor?: string) {
     return this.invoices.listForTenant(tenantId, { cursor });
+  }
+
+  // `invoices/:id/pdf`, not the dot-suffix `invoices/:id.pdf` the epic doc
+  // originally sketched: verified live that NestJS's route registration
+  // (unlike plain Express, which handles a literal `.` in a path
+  // correctly) matches the plain `:id` route for a `.pdf`-suffixed request
+  // instead of this more specific one, regardless of declaration order.
+  @Get('invoices/:id/pdf')
+  @Roles('owner')
+  async getInvoicePdf(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const invoice = await this.invoices.getForTenant(tenantId, id);
+    const pdf = await this.invoices.renderPdf(tenantId, id);
+    // Returning the Buffer instead of calling res.send() directly gets
+    // JSON-serialised by Nest's default response handler (verified live:
+    // the body came back as `{"type":"Buffer","data":[...]}`, not raw
+    // bytes) — @Header()+passthrough alone isn't enough for a Buffer body.
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${invoice.number}.pdf"`,
+    );
+    res.send(pdf);
   }
 
   @Get('invoices/:id')

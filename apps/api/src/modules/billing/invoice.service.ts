@@ -11,6 +11,7 @@ import { EventsService } from '../../common/events.service';
 import { UsageReadService } from '../metering/usage-read.service';
 import { monthRangeUtc } from '../metering/month.util';
 import type { PlanFeatures } from './entitlement.service';
+import { renderInvoicePdf } from './invoice-pdf.renderer';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -222,5 +223,18 @@ export class InvoiceService {
     });
     if (!invoice) throw new NotFoundException('invoice_not_found');
     return invoice;
+  }
+
+  async renderPdf(tenantId: string, invoiceId: string): Promise<Buffer> {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id: invoiceId, tenantId },
+      include: { lines: true },
+    });
+    if (!invoice) throw new NotFoundException('invoice_not_found');
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { name: true, legalName: true, country: true },
+    });
+    return renderInvoicePdf(invoice, tenant);
   }
 }
