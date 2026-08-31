@@ -245,6 +245,31 @@ const renderers: Record<
     text: `We've published a new version (${data.version}) of our ${data.documentTitle}.\n\nReview and accept: ${data.reacceptUrl}`,
     sms: `Action needed: review and accept the updated ${data.documentTitle} at ${data.reacceptUrl}`,
   }),
+
+  // ── E18 Support Tooling ────────────────────────────────────────
+  'impersonation.started': (
+    data: TemplateData['impersonation.started'],
+    _branding: BrandingData,
+  ) => ({
+    subject: `Platform support viewed your account`,
+    bodyHtml: `<p style="margin:0 0 12px">A member of platform support opened your ${esc(data.tenantName)} console in <strong>${esc(data.mode)}</strong> mode at ${esc(data.startedAt)}.</p><p style="margin:0;color:#999;font-size:13px">This is logged in your audit trail. You can turn this notice off in Settings.</p>`,
+    text: `A member of platform support opened your ${data.tenantName} console in ${data.mode} mode at ${data.startedAt}.`,
+    sms: `Platform support viewed your ${data.tenantName} account (${data.mode}).`,
+  }),
+
+  'ticket.created': (data: TemplateData['ticket.created'], branding) => ({
+    subject: `We received your request — #${data.ticketNumber}`,
+    bodyHtml: `<p style="margin:0 0 12px">Thanks for reaching out to ${esc(branding.tenantName)} support.</p><p style="margin:0 0 8px">Reference: <strong>#${data.ticketNumber}</strong> — ${esc(data.subject)}</p><p style="margin:12px 0 0"><a href="${esc(data.statusUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">View ticket</a></p>`,
+    text: `We received your request #${data.ticketNumber}: ${data.subject}\n${data.statusUrl}`,
+    sms: `Ticket #${data.ticketNumber} received: ${data.subject}`,
+  }),
+
+  'ticket.replied': (data: TemplateData['ticket.replied'], branding) => ({
+    subject: `Re: ${data.subject} [#${data.ticketNumber}]`,
+    bodyHtml: `<p style="margin:0 0 12px">${esc(data.replyBody).replace(/\n/g, '<br/>')}</p><p style="margin:12px 0 0"><a href="${esc(data.statusUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">View ticket</a></p>`,
+    text: `${data.replyBody}\n\n${data.statusUrl}`,
+    sms: `Reply on ticket #${data.ticketNumber}: ${data.replyBody.slice(0, 100)}`,
+  }),
 };
 
 @Injectable()

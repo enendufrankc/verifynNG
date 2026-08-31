@@ -142,6 +142,32 @@ Expires in 30 minutes",
 }
 `;
 
+exports[`TemplateRegistry > renders impersonation.started 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Platform support viewed your account</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">A member of platform support opened your IVORY GLOW console in <strong>read</strong> mode at 2026-08-29T00:00:00.000Z.</p><p style="margin:0;color:#999;font-size:13px">This is logged in your audit trail. You can turn this notice off in Settings.</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Platform support viewed your IVORY GLOW account (read).",
+  "subject": "Platform support viewed your account",
+  "text": "A member of platform support opened your IVORY GLOW console in read mode at 2026-08-29T00:00:00.000Z.",
+}
+`;
+
 exports[`TemplateRegistry > renders invoice.failed 1`] = `
 {
   "html": "<!DOCTYPE html>
@@ -513,6 +539,61 @@ exports[`TemplateRegistry > renders tenant.welcome 1`] = `
 
 Your account has been set up.
 Log in: https://example.test/login",
+}
+`;
+
+exports[`TemplateRegistry > renders ticket.created 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>We received your request — #1042</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Thanks for reaching out to IVORY GLOW support.</p><p style="margin:0 0 8px">Reference: <strong>#1042</strong> — Codes not scanning</p><p style="margin:12px 0 0"><a href="https://example.test/help/tickets/1042" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View ticket</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Ticket #1042 received: Codes not scanning",
+  "subject": "We received your request — #1042",
+  "text": "We received your request #1042: Codes not scanning
+https://example.test/help/tickets/1042",
+}
+`;
+
+exports[`TemplateRegistry > renders ticket.replied 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Re: Codes not scanning [#1042]</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Please try applying the label per our printer spec guide.</p><p style="margin:12px 0 0"><a href="https://example.test/help/tickets/1042" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View ticket</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Reply on ticket #1042: Please try applying the label per our printer spec guide.",
+  "subject": "Re: Codes not scanning [#1042]",
+  "text": "Please try applying the label per our printer spec guide.
+
+https://example.test/help/tickets/1042",
 }
 `;
 

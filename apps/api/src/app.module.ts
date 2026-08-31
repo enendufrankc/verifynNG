@@ -37,6 +37,7 @@ import { RetentionModule } from './modules/retention/retention.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
 import { UnitsModule } from './modules/units/units.module';
 import { AnomalyModule } from './modules/anomaly/anomaly.module';
+import { SupportModule } from './modules/support/support.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { AnomalyModule } from './modules/anomaly/anomaly.module';
     IncidentsModule,
     UnitsModule,
     AnomalyModule,
+    SupportModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

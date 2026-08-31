@@ -88,7 +88,17 @@ export class AuditInterceptor implements NestInterceptor {
       : requestIdHeader;
 
     const actorId = user.userId ?? user.id;
+    // E18 — set by ImpersonationGuard (apps/api/src/modules/support/impersonation/
+    // impersonation.guard.ts) on every request from a support principal with an
+    // active ImpersonationSession; undefined on any other request.
+    const impersonation = (
+      req as AuthenticatedRequest & {
+        impersonation?: { supportEmail: string; id: string };
+      }
+    ).impersonation;
     await this.auditService.record({
+      impersonatedBy: impersonation?.supportEmail,
+      impersonationSessionId: impersonation?.id,
       // A platform-support-only principal's JWT carries tid:"" (no active
       // tenant), not null/undefined — passed straight through, that empty
       // string violates AuditLog's tenantId foreign key (found via E19's

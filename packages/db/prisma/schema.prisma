@@ -97,6 +97,9 @@ model Tenant {
   branding              Json?
   supportEmail          String?
   websiteUrl            String?
+  // E18 — requested via CROSS-EPIC-REQUESTS.md "To E03 Tenant Lifecycle";
+  // silences the "Platform support viewed your account" notice on impersonation start.
+  notifyOnImpersonation Boolean      @default(true)
   verifyRateLimitPerMin Int          @default(600) // E06: per-tenant verify rate limit
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt

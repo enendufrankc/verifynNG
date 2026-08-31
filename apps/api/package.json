@@ -13,6 +13,7 @@
     "test": "vitest run",
     "mint-bench": "tsx scripts/mint-bench.ts",
     "jobs:run": "tsx scripts/jobs-run.ts",
+    "cli": "tsx scripts/cli.ts",
     "openapi:generate": "node scripts/generate-openapi.mjs",
     "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code -- openapi/verify.v1.json"
   },
