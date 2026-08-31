@@ -70,9 +70,20 @@ test.describe.serial('E15 billing: plan change and dunning @billing', () => {
       await expect(page.getByText('Growth', { exact: true })).toBeVisible();
       await expect(page.getByText('Active', { exact: true })).toBeVisible();
 
-      const newInvoice = await prisma.invoice.findFirstOrThrow({
+      // The webhook that marks the invoice paid is processed asynchronously
+      // by api-worker's BullMQ job, not synchronously with fake-pay's
+      // redirect — poll rather than assert immediately (same idiom as
+      // fixtures/mailpit.ts's waitForEmail, and the AC5/AC6 test below).
+      const deadline = Date.now() + 10_000;
+      let newInvoice = await prisma.invoice.findFirstOrThrow({
         where: { tenantId: TENANT_ID, id: { notIn: [...existingInvoiceIds] } },
       });
+      while (newInvoice.status !== 'paid' && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 500));
+        newInvoice = await prisma.invoice.findUniqueOrThrow({
+          where: { id: newInvoice.id },
+        });
+      }
       expect(newInvoice.status).toBe('paid');
 
       await waitForEmail(request, 'paid', { to: OWNER_EMAIL });
