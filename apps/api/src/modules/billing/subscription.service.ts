@@ -1,9 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaClient, Subscription, SubscriptionStatus } from '@prisma/client';
 import { EventsService } from '../../common/events.service';
 import { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 import { IllegalSubscriptionTransition } from './errors';
+import { InvoiceService } from './invoice.service';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -25,11 +26,14 @@ function addMonthsUtc(date: Date, months: number): Date {
 
 @Injectable()
 export class SubscriptionService {
+  private readonly logger = new Logger(SubscriptionService.name);
+
   constructor(
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     @Inject(EventsService) private readonly events: EventsService,
     @Inject(TenantLifecycleService)
     private readonly tenantLifecycle: TenantLifecycleService,
+    @Inject(InvoiceService) private readonly invoices: InvoiceService,
   ) {}
 
   async getForTenant(tenantId: string): Promise<Subscription | null> {
@@ -187,6 +191,27 @@ export class SubscriptionService {
       },
     });
     for (const sub of dueForRoll) {
+      // billing.invoice-run: bill the period that's ending before rolling
+      // forward. Best-effort — a tenant whose E12 usage isn't finalised yet
+      // (or has no rows at all) must not block every other tenant's roll;
+      // it simply gets invoiced on the next nightly pass once it is.
+      try {
+        const period = `${sub.currentPeriodStart.getUTCFullYear()}-${String(
+          sub.currentPeriodStart.getUTCMonth() + 1,
+        ).padStart(2, '0')}`;
+        const invoice = await this.invoices.generateForPeriod(
+          sub.tenantId,
+          period,
+        );
+        await this.invoices.issue(invoice.id);
+      } catch (err) {
+        this.logger.warn(
+          `billing.invoice-run skipped for tenant ${sub.tenantId}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+
       await this.prisma.subscription.update({
         where: { tenantId: sub.tenantId },
         data: {

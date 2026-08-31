@@ -16,8 +16,10 @@ import {
   seedPlans,
 } from '@verifynng/db';
 import { SubscriptionService } from './subscription.service';
+import { InvoiceService } from './invoice.service';
 import { IllegalSubscriptionTransition } from './errors';
 import { EventsService } from '../../common/events.service';
+import { UsageReadService } from '../metering/usage-read.service';
 import type { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 
 describe('SubscriptionService integration (real Postgres)', () => {
@@ -49,10 +51,17 @@ describe('SubscriptionService integration (real Postgres)', () => {
   beforeEach(() => {
     emitter = new EventEmitter2();
     tenantLifecycle = { transition: vi.fn().mockResolvedValue(undefined) };
+    const events = new EventsService(emitter);
+    const invoices = new InvoiceService(
+      prisma,
+      events,
+      new UsageReadService(prisma),
+    );
     subscriptions = new SubscriptionService(
       prisma,
-      new EventsService(emitter),
+      events,
       tenantLifecycle as unknown as TenantLifecycleService,
+      invoices,
     );
   });
 
