@@ -18,6 +18,7 @@ import {
   Siren,
   Trash2,
   Download,
+  FileStackIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
@@ -74,6 +75,14 @@ export const NAV: NavEntry[] = [
     icon: Truck,
     section: 'catalog',
     order: 40,
+  },
+  {
+    id: 'catalog.pages',
+    label: 'Pages',
+    href: '/pages',
+    icon: FileStackIcon,
+    section: 'catalog',
+    order: 50,
   },
   {
     id: 'monitoring.units',
