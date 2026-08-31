@@ -393,6 +393,9 @@ importers:
       '@verifynng/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@verifynng/page-schema':
+        specifier: workspace:*
+        version: link:../../packages/page-schema
       '@zxing/browser':
         specifier: ^0.1.5
         version: 0.1.5(@zxing/library@0.21.3)
