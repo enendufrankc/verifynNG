@@ -73,6 +73,7 @@ export class ImpersonationService {
     // Never `owner` — see epic Notes: billing/member management/SSO config
     // stay off-limits even in write mode.
     const role = opts.mode === 'write' ? 'operator' : 'viewer';
+    const ttlSeconds = this.ttlSeconds();
     const refreshToken = this.tokenService.generateRefreshToken();
     const session = await this.tokenService.createSession(
       supportUserId,
@@ -81,15 +82,17 @@ export class ImpersonationService {
       meta.userAgent,
       meta.ipPrefix,
     );
-    const token = await this.tokenService.issueAccessToken({
-      userId: supportUserId,
-      tenantId,
-      role,
-      platformRole: 'support',
-      sessionId: session.id,
-    });
+    const token = await this.tokenService.issueAccessToken(
+      {
+        userId: supportUserId,
+        tenantId,
+        role,
+        platformRole: 'support',
+        sessionId: session.id,
+      },
+      { expiresInSeconds: ttlSeconds },
+    );
 
-    const ttlSeconds = this.ttlSeconds();
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
     const record = await this.prisma.impersonationSession.create({

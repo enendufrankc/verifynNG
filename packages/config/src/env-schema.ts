@@ -232,6 +232,7 @@ const e18Schema = z.object({
   SUPPORT_INBOUND_ADDRESS: z.string().default('support@verifyng.local'),
   SUPPORT_PUBLIC_FORM_RPH: z.coerce.number().default(5),
   DOCS_BASE_URL: z.string().default('http://localhost:3002'),
+  NEXT_PUBLIC_DOCS_URL: z.string().default('http://localhost:3002'),
 });
 
 const ZERO_KEY = '0'.repeat(64);

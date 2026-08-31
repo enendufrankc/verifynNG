@@ -58,6 +58,17 @@ export const queryKeys = {
     geo: (tenantId: string, range: string, groupBy: string) =>
       ['analytics', 'geo', tenantId, range, groupBy] as const,
   },
+  support: {
+    tenants: (q?: string, status?: string) =>
+      ['support', 'tenants', q, status] as const,
+    tenant: (tenantId: string) => ['support', 'tenant', tenantId] as const,
+    tickets: (filters?: string) => ['support', 'tickets', filters] as const,
+    ticket: (id: string) => ['support', 'ticket', id] as const,
+    cannedResponses: () => ['support', 'canned-responses'] as const,
+    impersonationHistory: () => ['support', 'impersonation-history'] as const,
+    helpTickets: (tenantId: string) =>
+      ['support', 'help-tickets', tenantId] as const,
+  },
 };
 
 export function usePagedQuery<TItem>(

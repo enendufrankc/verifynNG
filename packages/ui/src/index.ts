@@ -114,3 +114,5 @@ export {
   type GeoTableProps,
   type GeoTableRow,
 } from './charts';
+// E18 — Support Tooling
+export { HelpLink, type HelpLinkProps } from './HelpLink';
