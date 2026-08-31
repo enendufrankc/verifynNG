@@ -3,11 +3,14 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
+  Inject,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { getContext } from '../../../telemetry/context.js';
 import { QuotaExceededError } from '../../quota/quota-error.js';
 import { IdempotencyMismatchException } from '../errors/idempotency-mismatch.exception.js';
+import { ERROR_TRACKER } from '../../../telemetry/error-tracker/error-tracker.port.js';
+import type { ErrorTrackerPort } from '../../../telemetry/error-tracker/error-tracker.port.js';
 
 export type PublicApiErrorType =
   | 'not_found'
@@ -34,6 +37,10 @@ interface ErrorDetail {
  */
 @Catch()
 export class ApiErrorFilter implements ExceptionFilter {
+  constructor(
+    @Inject(ERROR_TRACKER) private readonly errorTracker: ErrorTrackerPort,
+  ) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -110,6 +117,7 @@ export class ApiErrorFilter implements ExceptionFilter {
       return;
     }
 
+    this.errorTracker.captureException(exception, { requestId });
     this.send(
       response,
       500,
