@@ -308,6 +308,86 @@ export class InvoiceService {
     return invoice;
   }
 
+  /**
+   * `GET .../billing/usage-vs-plan` (T11) — live, best-effort numbers for
+   * the web-admin overview page, not an invoicing computation: reads
+   * whatever `UsageSummary` rows exist for the period regardless of
+   * `finalisedAt` (unlike `generateForPeriod`, which refuses to bill an
+   * open period). A `features.trialTotalCap` plan (free-trial) caps units
+   * for the trial's whole lifetime, not per calendar month, so it's
+   * compared against the real lifetime `Unit` count instead of this
+   * period's `periodFraction`-scaled slice — the same distinction
+   * `EntitlementService.canMint` and `SubscriptionService.changePlan`'s
+   * downgrade cap check already draw.
+   */
+  async usageVsPlan(
+    tenantId: string,
+    period?: string,
+  ): Promise<{
+    period: string;
+    unitsMinted: number;
+    includedUnits: number;
+    scansRecorded: number;
+    includedScans: number;
+    projectedOverageMinor: number;
+  }> {
+    const sub = await this.prisma.subscription.findUniqueOrThrow({
+      where: { tenantId },
+      include: { plan: true },
+    });
+    const now = this.clock.now();
+    const targetPeriod =
+      period ??
+      `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const { start, end } = monthRangeUtc(targetPeriod);
+    const usage = await this.usageRead.summary(tenantId, targetPeriod);
+    const scansRecorded =
+      (usage.kinds['scan.tier1'] ?? 0) + (usage.kinds['scan.tier2'] ?? 0);
+
+    const features = (sub.plan.features ?? {}) as PlanFeatures;
+    const activeStart =
+      sub.currentPeriodStart > start ? sub.currentPeriodStart : start;
+    const periodFraction = Math.min(
+      1,
+      Math.max(
+        0,
+        (end.getTime() - activeStart.getTime()) /
+          (end.getTime() - start.getTime()),
+      ),
+    );
+    const includedScans = Math.floor(
+      sub.plan.includedScansPerMonth * periodFraction,
+    );
+
+    const unitsMinted = features.trialTotalCap
+      ? await this.prisma.unit.count({ where: { tenantId } })
+      : (usage.kinds['code.minted'] ?? 0);
+    const includedUnits = features.trialTotalCap
+      ? sub.plan.includedUnitsPerYear
+      : Math.floor(sub.plan.includedUnitsPerYear * periodFraction);
+
+    const unitPriceMinor =
+      sub.currency === 'NGN'
+        ? sub.plan.overageUnitPriceNgnMinor
+        : sub.plan.overageUnitPriceGbpMinor;
+    const scanPriceMinor =
+      sub.currency === 'NGN'
+        ? sub.plan.overageScanPriceNgnMinor
+        : sub.plan.overageScanPriceGbpMinor;
+    const projectedOverageMinor =
+      Math.max(0, unitsMinted - includedUnits) * unitPriceMinor +
+      Math.max(0, scansRecorded - includedScans) * scanPriceMinor;
+
+    return {
+      period: targetPeriod,
+      unitsMinted,
+      includedUnits,
+      scansRecorded,
+      includedScans,
+      projectedOverageMinor,
+    };
+  }
+
   async renderPdf(tenantId: string, invoiceId: string): Promise<Buffer> {
     const invoice = await this.prisma.invoice.findFirst({
       where: { id: invoiceId, tenantId },

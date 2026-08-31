@@ -276,6 +276,51 @@ export class PaymentService {
     return updated;
   }
 
+  /** Never returns `authorizationCode` — it's encrypted at rest and callers outside this service have no business decrypting it. */
+  async listPaymentMethods(
+    tenantId: string,
+  ): Promise<Array<Omit<PaymentMethod, 'authorizationCode'>>> {
+    const methods = await this.prisma.paymentMethod.findMany({
+      where: { tenantId, revokedAt: null },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+    });
+    return methods.map(
+      ({ authorizationCode: _authorizationCode, ...rest }) => rest,
+    );
+  }
+
+  /**
+   * Soft-delete (`revokedAt`) — a `Payment` row can still reference this
+   * method's id afterward, so a hard delete would break that history.
+   * Auto-promotes the next-oldest remaining method to default when the
+   * revoked one was it, so recurring dunning charges don't silently stop
+   * having a default to charge.
+   */
+  async revokePaymentMethod(tenantId: string, id: string): Promise<void> {
+    const method = await this.prisma.paymentMethod.findFirst({
+      where: { id, tenantId, revokedAt: null },
+    });
+    if (!method) throw new NotFoundException('payment_method_not_found');
+
+    await this.prisma.paymentMethod.update({
+      where: { id },
+      data: { revokedAt: new Date(), isDefault: false },
+    });
+
+    if (method.isDefault) {
+      const next = await this.prisma.paymentMethod.findFirst({
+        where: { tenantId, revokedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (next) {
+        await this.prisma.paymentMethod.update({
+          where: { id: next.id },
+          data: { isDefault: true },
+        });
+      }
+    }
+  }
+
   private async storePaymentMethod(
     tenantId: string,
     provider: Payment['provider'],
@@ -283,13 +328,30 @@ export class PaymentService {
   ): Promise<string> {
     // authorizationCode is encrypted at rest, so dedup can't be a direct
     // WHERE match — decrypt the (few, per-tenant) existing rows and compare.
+    // A candidate that fails to decrypt (e.g. stored under a since-rotated
+    // BILLING_PAYMENT_METHOD_ENC_KEY) is treated as "not a match" rather
+    // than aborting the whole method — one stale row must not permanently
+    // block every future payment for the tenant. Found live: a leftover
+    // demo PaymentMethod encrypted under an earlier key crashed this
+    // Array.find with "Unsupported state or unable to authenticate data",
+    // failing the BullMQ process-webhook job for a real, unrelated payment.
     const candidates = await this.prisma.paymentMethod.findMany({
       where: { tenantId, revokedAt: null },
     });
-    const existing = candidates.find(
-      (c) =>
-        this.cipher.decrypt(c.authorizationCode) === info.authorizationCode,
-    );
+    const existing = candidates.find((c) => {
+      try {
+        return (
+          this.cipher.decrypt(c.authorizationCode) === info.authorizationCode
+        );
+      } catch (err) {
+        this.logger.warn(
+          `PaymentMethod ${c.id} could not be decrypted during dedup check — skipping it: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        return false;
+      }
+    });
     if (existing) return existing.id;
 
     const hasDefault = candidates.some((c) => c.isDefault);

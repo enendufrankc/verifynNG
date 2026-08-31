@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
@@ -32,6 +33,20 @@ export class TenantBillingController {
     return this.subscriptions.getForTenant(tenantId);
   }
 
+  // Any tenant member (not just owner) — the shared console shell's
+  // restricted/past-due banner (AC5) has to render for every role, and the
+  // full `getSubscription` payload above is owner-only. Deliberately
+  // minimal: only the one field a banner needs, nothing else the full
+  // subscription response carries.
+  @Get('status')
+  @Roles('viewer')
+  async getStatus(
+    @TenantId() tenantId: string,
+  ): Promise<{ status: string | null }> {
+    const sub = await this.subscriptions.getForTenant(tenantId);
+    return { status: sub?.status ?? null };
+  }
+
   @Get('subscription/change-plan-preview')
   @Roles('owner')
   previewChangePlan(
@@ -48,6 +63,32 @@ export class TenantBillingController {
     return this.subscriptions.changePlan(tenantId, body.planCode, {
       force: body.force,
     });
+  }
+
+  @Get('usage-vs-plan')
+  @Roles('owner')
+  getUsageVsPlan(
+    @TenantId() tenantId: string,
+    @Query('period') period?: string,
+  ) {
+    return this.invoices.usageVsPlan(tenantId, period);
+  }
+
+  @Get('payment-methods')
+  @Roles('owner')
+  listPaymentMethods(@TenantId() tenantId: string) {
+    return this.payments.listPaymentMethods(tenantId);
+  }
+
+  @Delete('payment-methods/:id')
+  @Roles('owner')
+  @Audited('billing.payment_method.remove')
+  async removePaymentMethod(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+  ): Promise<{ removed: true }> {
+    await this.payments.revokePaymentMethod(tenantId, id);
+    return { removed: true };
   }
 
   @Get('invoices')

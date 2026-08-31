@@ -295,4 +295,134 @@ describe('PaymentService integration (real Postgres)', () => {
     });
     expect(updatedSecondInvoice.status).toBe('paid');
   });
+
+  describe('listPaymentMethods / revokePaymentMethod (T11)', () => {
+    /** Caller must have already called `payments.initialise(invoiceId)`. */
+    async function payAndStoreMethod(
+      invoiceId: string,
+      authorizationCode: string,
+    ) {
+      const p = await prisma.payment.findFirstOrThrow({
+        where: { invoiceId },
+      });
+      await payments.handleWebhookEvent({
+        type: 'charge.success',
+        reference: p.reference,
+        data: {
+          id: Math.random(),
+          reference: p.reference,
+          status: 'success',
+          amount: 1,
+          currency: 'NGN',
+          authorization: {
+            authorization_code: authorizationCode,
+            last4: '0000',
+            card_type: 'visa',
+            reusable: true,
+          },
+        },
+      });
+    }
+
+    it('lists methods without exposing the encrypted authorizationCode', async () => {
+      const { tenant, invoice } = await makeTenantWithOwnerAndInvoice();
+      await payments.initialise(invoice.id);
+      await payAndStoreMethod(invoice.id, 'AUTH_list1');
+
+      const list = await payments.listPaymentMethods(tenant.id);
+      expect(list).toHaveLength(1);
+      expect(list[0].cardLast4).toBe('0000');
+      expect(list[0].isDefault).toBe(true);
+      expect(list[0]).not.toHaveProperty('authorizationCode');
+    });
+
+    it('revoke() soft-deletes and promotes the next method to default', async () => {
+      const { tenant, invoice } = await makeTenantWithOwnerAndInvoice();
+      await payments.initialise(invoice.id);
+      await payAndStoreMethod(invoice.id, 'AUTH_revoke1');
+      const first = await prisma.paymentMethod.findFirstOrThrow({
+        where: { tenantId: tenant.id },
+      });
+
+      const invoice2 = await prisma.invoice.create({
+        data: {
+          tenantId: tenant.id,
+          number: `INV-TEST3-${Math.random().toString(36).slice(2)}`,
+          status: 'issued',
+          currency: 'NGN',
+          periodStart: new Date(),
+          periodEnd: new Date(),
+          subtotalMinor: 100,
+          taxMinor: 0,
+          totalMinor: 100,
+          attemptCount: 0,
+          usageSnapshot: {},
+        },
+      });
+      await payments.initialise(invoice2.id);
+      await payAndStoreMethod(invoice2.id, 'AUTH_revoke2');
+
+      await payments.revokePaymentMethod(tenant.id, first.id);
+
+      const remaining = await payments.listPaymentMethods(tenant.id);
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).not.toBe(first.id);
+      expect(remaining[0].isDefault).toBe(true); // auto-promoted
+
+      await expect(
+        payments.revokePaymentMethod(tenant.id, first.id),
+      ).rejects.toThrow(/payment_method_not_found/); // already revoked
+    });
+
+    it('a PaymentMethod that fails to decrypt (e.g. a rotated key) does not block a real payment from succeeding', async () => {
+      const { tenant, invoice } = await makeTenantWithOwnerAndInvoice();
+      // Ciphertext shaped like PaymentMethodCipher's own iv:tag:ct format but
+      // undecryptable under this process's key — simulates a stale row left
+      // over from a since-rotated BILLING_PAYMENT_METHOD_ENC_KEY.
+      await prisma.paymentMethod.create({
+        data: {
+          tenantId: tenant.id,
+          provider: 'fake',
+          authorizationCode:
+            'aaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cccccccccccc',
+          cardBrand: 'visa',
+          cardLast4: '0000',
+          isDefault: true,
+        },
+      });
+
+      await payments.initialise(invoice.id);
+      const payment = await prisma.payment.findFirstOrThrow({
+        where: { invoiceId: invoice.id },
+      });
+
+      await payments.handleWebhookEvent({
+        type: 'charge.success',
+        reference: payment.reference,
+        data: {
+          id: Math.random(),
+          reference: payment.reference,
+          status: 'success',
+          amount: invoice.totalMinor,
+          currency: 'NGN',
+          authorization: {
+            authorization_code: 'AUTH_new_after_stale',
+            last4: '4081',
+            card_type: 'visa',
+            reusable: true,
+          },
+        },
+      });
+
+      const updatedPayment = await prisma.payment.findUniqueOrThrow({
+        where: { id: payment.id },
+      });
+      expect(updatedPayment.status).toBe('succeeded'); // didn't crash on the stale row
+
+      const updatedInvoice = await prisma.invoice.findUniqueOrThrow({
+        where: { id: invoice.id },
+      });
+      expect(updatedInvoice.status).toBe('paid');
+    });
+  });
 });

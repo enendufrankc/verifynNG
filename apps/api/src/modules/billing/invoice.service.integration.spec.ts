@@ -238,4 +238,85 @@ describe('InvoiceService integration (real Postgres)', () => {
       invoices.generateForPeriod(tenant.id, '2026-08'),
     ).rejects.toThrow(/invoiced_manually/);
   });
+
+  describe('usageVsPlan (T11)', () => {
+    it('reports zero projected overage when usage is within the plan allowance', async () => {
+      const periodStart = new Date(Date.UTC(2026, 7, 1));
+      const periodEnd = new Date(Date.UTC(2026, 8, 1));
+      const tenantId = await makeTenantOnStarter(periodStart, periodEnd);
+      await seedFinalisedUsage(tenantId, '2026-08', 1_000, 1_000);
+
+      const result = await invoices.usageVsPlan(tenantId, '2026-08');
+      expect(result.unitsMinted).toBe(1_000);
+      expect(result.includedUnits).toBe(10_000); // starter, full month -> periodFraction 1
+      expect(result.scansRecorded).toBe(1_000);
+      expect(result.includedScans).toBe(50_000);
+      expect(result.projectedOverageMinor).toBe(0);
+    });
+
+    it("projects overage cost using the plan's NGN overage prices when usage exceeds the allowance", async () => {
+      const periodStart = new Date(Date.UTC(2026, 7, 1));
+      const periodEnd = new Date(Date.UTC(2026, 8, 1));
+      const tenantId = await makeTenantOnStarter(periodStart, periodEnd);
+      await seedFinalisedUsage(tenantId, '2026-08', 12_000, 60_000);
+
+      const result = await invoices.usageVsPlan(tenantId, '2026-08');
+      // Same numbers as the AC4 generateForPeriod test: 2,000 unit overage @
+      // 800 kobo + 10,000 scan overage @ 50 kobo = 1,600,000 + 500,000.
+      expect(result.projectedOverageMinor).toBe(2_100_000);
+    });
+
+    it('compares a trialTotalCap plan against the lifetime Unit count, not the calendar-month usage slice', async () => {
+      const tenant = await prisma.tenant.create({
+        data: {
+          slug: `inv-trial-${Math.random().toString(36).slice(2)}`,
+          name: 'Trial Test',
+        },
+      });
+      const freeTrial = await prisma.plan.findUniqueOrThrow({
+        where: { code: 'free-trial' },
+      });
+      await prisma.subscription.create({
+        data: {
+          tenantId: tenant.id,
+          planId: freeTrial.id,
+          status: 'trialing',
+          currency: 'NGN',
+          currentPeriodStart: new Date(Date.UTC(2026, 7, 1)),
+          currentPeriodEnd: new Date(Date.UTC(2026, 8, 31)),
+        },
+      });
+      const product = await prisma.product.create({
+        data: { tenantId: tenant.id, sku: `sku-${Math.random()}`, name: 'P' },
+      });
+      const batch = await prisma.batch.create({
+        data: {
+          tenantId: tenant.id,
+          productId: product.id,
+          count: 3,
+          idempotencyKey: `idem-${Math.random()}`,
+          requestedBy: 'test',
+          watermark: 'w',
+          kid: 'k1',
+        },
+      });
+      for (let i = 0; i < 3; i++) {
+        await prisma.unit.create({
+          data: {
+            tenantId: tenant.id,
+            batchId: batch.id,
+            tier1Code: `t1-${batch.id}-${i}`,
+            tier2Hash: `t2-${batch.id}-${i}`,
+            serial: i,
+            productId: product.id,
+          },
+        });
+      }
+
+      const result = await invoices.usageVsPlan(tenant.id, '2026-08');
+      expect(result.unitsMinted).toBe(3); // lifetime Unit count, not usage.kinds['code.minted']
+      expect(result.includedUnits).toBe(500); // free-trial's full lifetime cap, unscaled by periodFraction
+      expect(result.projectedOverageMinor).toBe(0); // free-trial's overage prices are 0
+    });
+  });
 });

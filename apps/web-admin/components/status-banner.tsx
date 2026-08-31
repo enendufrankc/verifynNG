@@ -1,12 +1,15 @@
 'use client';
 
-import { ClockIcon, LockIcon } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangleIcon, ClockIcon, LockIcon } from 'lucide-react';
 
 interface StatusBannerProps {
-  status: 'pending' | 'in_review' | 'suspended' | 'active';
+  status: 'pending' | 'in_review' | 'suspended' | 'restricted' | 'active';
+  /** Only used for `restricted` — links the banner to the unpaid invoice (AC5/E15). */
+  href?: string;
 }
 
-export function StatusBanner({ status }: StatusBannerProps) {
+export function StatusBanner({ status, href }: StatusBannerProps) {
   if (status === 'active') return null;
 
   const config = {
@@ -28,6 +31,17 @@ export function StatusBanner({ status }: StatusBannerProps) {
       text: 'text-v-flag',
       message: 'Console is read-only. Contact support for assistance.',
     },
+    // E15 (billing): a restricted tenant may still be read from and still
+    // pay its way out — unlike `suspended`, only mutations are blocked
+    // (TenantStatusGuard's @AllowWhenSuspended on the pay route), so this
+    // links straight to the unpaid invoice instead of a generic support
+    // message.
+    restricted: {
+      icon: AlertTriangleIcon,
+      bg: 'bg-v-flag-tint',
+      text: 'text-v-flag',
+      message: 'Minting is restricted until the outstanding invoice is paid.',
+    },
   }[status];
 
   if (!config) return null;
@@ -41,6 +55,11 @@ export function StatusBanner({ status }: StatusBannerProps) {
     >
       <Icon className="h-4 w-4 shrink-0" />
       <p className="text-sm font-medium">{config.message}</p>
+      {status === 'restricted' && href && (
+        <Link href={href} className="ml-auto text-sm font-semibold underline">
+          Pay now
+        </Link>
+      )}
     </div>
   );
 }
