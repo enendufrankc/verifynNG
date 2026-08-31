@@ -16,6 +16,14 @@ export const queryKeys = {
   oems: {
     list: (tenantId: string) => ['oems', 'list', tenantId] as const,
   },
+  apiKeys: {
+    list: (tenantId: string) => ['api-keys', 'list', tenantId] as const,
+  },
+  webhooks: {
+    list: (tenantId: string) => ['webhooks', 'list', tenantId] as const,
+    deliveries: (tenantId: string, endpointId: string, status?: string) =>
+      ['webhooks', 'deliveries', tenantId, endpointId, status] as const,
+  },
   batches: {
     list: (tenantId: string) => ['batches', 'list', tenantId] as const,
     detail: (tenantId: string, batchId: string) =>

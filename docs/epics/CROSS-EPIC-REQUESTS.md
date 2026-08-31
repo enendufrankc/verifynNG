@@ -52,6 +52,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E11 Admin Shell
 
+- [ ] Remove or redirect the stale `app/(console)/settings/api-keys/page.tsx` placeholder (with its `SETTINGS_NAV` tab entry in `settings/layout.tsx`) — E16's real API-keys UI now lives at the top-level `app/(console)/api-keys/**` per E16's own Owned paths and the hot-spot rule ("other epics add a route group under `app/(console)/<feature>/`"), linked from a new `nav.config.ts` entry under the `organization` section. The `/settings/api-keys` stub is orphaned dead UI now; only E11 should touch `settings/layout.tsx`.
 - [ ] Chart tokens `--chart-1..6` in `packages/ui` (E12).
 - [ ] Confirm `(platform)`/`(support)` route-group naming with E18/E19 — pick one and document in `nav.config.ts`.
 - [ ] Accept `instrumentation.ts` in web-admin (E17). Same for E09 in web-verify.

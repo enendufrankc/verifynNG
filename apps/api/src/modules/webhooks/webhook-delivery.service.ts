@@ -20,6 +20,7 @@ export interface PublicWebhookDelivery {
   status: WebhookDeliveryStatus;
   attempts: number;
   lastStatusCode: number | null;
+  lastResponse: string | null;
   lastError: string | null;
   nextAttemptAt: Date | null;
   deliveredAt: Date | null;
@@ -33,6 +34,7 @@ function toPublicDelivery(row: {
   status: WebhookDeliveryStatus;
   attempts: number;
   lastStatusCode: number | null;
+  lastResponse: string | null;
   lastError: string | null;
   nextAttemptAt: Date | null;
   deliveredAt: Date | null;
@@ -45,6 +47,7 @@ function toPublicDelivery(row: {
     status: row.status,
     attempts: row.attempts,
     lastStatusCode: row.lastStatusCode,
+    lastResponse: row.lastResponse,
     lastError: row.lastError,
     nextAttemptAt: row.nextAttemptAt,
     deliveredAt: row.deliveredAt,
