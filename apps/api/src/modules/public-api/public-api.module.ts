@@ -10,6 +10,7 @@ import { ApiErrorFilter } from './filters/api-error.filter.js';
 import { ApiVersionInterceptor } from './interceptors/api-version.interceptor.js';
 import { RateLimitInterceptor } from './interceptors/rate-limit.interceptor.js';
 import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor.js';
+import { DeprecationInterceptor } from './interceptors/deprecation.interceptor.js';
 import { MeController } from './controllers/me.controller.js';
 import { PublicBatchesController } from './controllers/batches.controller.js';
 import { PublicUnitsController } from './controllers/units.controller.js';
@@ -34,6 +35,7 @@ import { PUBLIC_API_QUOTA_KIND } from './constants.js';
     ApiVersionInterceptor,
     RateLimitInterceptor,
     IdempotencyInterceptor,
+    DeprecationInterceptor,
   ],
 })
 export class PublicApiModule implements OnModuleInit {

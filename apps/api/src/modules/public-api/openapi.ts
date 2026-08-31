@@ -2,6 +2,14 @@ import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PublicApiModule } from './public-api.module.js';
 import { PUBLIC_API_VERSION } from './constants.js';
+import { DEPRECATIONS } from './deprecations.js';
+
+/** `GET /api/v1/units/:id` (Express, deprecations.ts's key style) → `['get', '/api/v1/units/{id}']` (OpenAPI). */
+function toOpenApiPathKey(routeKey: string): [method: string, path: string] {
+  const [method, expressPath] = routeKey.split(' ');
+  const openApiPath = expressPath.replace(/:([a-zA-Z0-9_]+)/g, '{$1}');
+  return [method.toLowerCase(), openApiPath];
+}
 
 /**
  * Builds the OpenAPI 3.x document for `/api/v1/**` only (via `include`,
@@ -38,7 +46,20 @@ export function buildPublicApiDocument(app: INestApplication) {
     .addTag('reports', 'Consumer fake-reports')
     .build();
 
-  return SwaggerModule.createDocument(app, config, {
+  const document = SwaggerModule.createDocument(app, config, {
     include: [PublicApiModule],
   });
+
+  // Reflects deprecations.ts into the spec (AC9) — no per-route decorator needed.
+  for (const routeKey of Object.keys(DEPRECATIONS)) {
+    const [method, path] = toOpenApiPathKey(routeKey);
+    const operation = (
+      document.paths?.[path] as
+        | Record<string, { deprecated?: boolean }>
+        | undefined
+    )?.[method];
+    if (operation) operation.deprecated = true;
+  }
+
+  return document;
 }

@@ -12,12 +12,14 @@ import { ApiErrorFilter } from '../filters/api-error.filter.js';
 import { ApiVersionInterceptor } from '../interceptors/api-version.interceptor.js';
 import { RateLimitInterceptor } from '../interceptors/rate-limit.interceptor.js';
 import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor.js';
+import { DeprecationInterceptor } from '../interceptors/deprecation.interceptor.js';
 
 /**
  * Composes every cross-cutting concern shared by all `/api/v1/**` controllers:
  * `@Public()` (skips the global JWT guards — see ApiKeyGuard's own doc comment),
- * key + scope auth, per-key rate limiting, the E16 error envelope, and the
- * `ApiVersion` header.
+ * key + scope auth, per-key rate limiting, the E16 error envelope, the
+ * `ApiVersion` header, and Deprecation/Sunset/Link headers for any route
+ * listed in deprecations.ts.
  */
 export function PublicApiController(path: string) {
   return applyDecorators(
@@ -25,7 +27,11 @@ export function PublicApiController(path: string) {
     Public(),
     UseGuards(ApiKeyGuard, ScopesGuard),
     UseFilters(ApiErrorFilter),
-    UseInterceptors(ApiVersionInterceptor, RateLimitInterceptor),
+    UseInterceptors(
+      ApiVersionInterceptor,
+      RateLimitInterceptor,
+      DeprecationInterceptor,
+    ),
   );
 }
 
