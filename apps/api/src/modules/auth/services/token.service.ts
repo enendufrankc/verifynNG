@@ -111,15 +111,15 @@ export class TokenService {
     return payload;
   }
 
-  async issueMfaToken(userId: string): Promise<string> {
+  async issueMfaToken(userId: string, tenantId?: string): Promise<string> {
     const { kid, secret } = this.keyRing.active();
     return this.jwtService.signAsync(
-      { sub: userId, mfa: true, typ: 'mfa' },
+      { sub: userId, mfa: true, typ: 'mfa', tid: tenantId },
       { secret: Buffer.from(secret), expiresIn: '5m', keyid: kid },
     );
   }
 
-  verifyMfaToken(token: string): { userId: string } {
+  verifyMfaToken(token: string): { userId: string; tenantId?: string } {
     const decoded = this.jwtService.decode(token, { complete: true }) as {
       header: { kid?: string };
     } | null;
@@ -137,11 +137,12 @@ export class TokenService {
         sub: string;
         mfa?: boolean;
         typ?: string;
+        tid?: string;
       }>(token, { secret: Buffer.from(secret) });
       if (!payload.mfa || payload.typ !== 'mfa') {
         throw new UnauthorizedException('Not an MFA token');
       }
-      return { userId: payload.sub };
+      return { userId: payload.sub, tenantId: payload.tid };
     } catch (err) {
       if (err instanceof UnauthorizedException) throw err;
       throw new UnauthorizedException('Invalid or expired MFA token');

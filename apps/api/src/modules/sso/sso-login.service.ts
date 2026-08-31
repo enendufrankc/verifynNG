@@ -11,6 +11,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { SsoConfigService } from './sso-config.service';
 import { OidcClientFactory } from './oidc-client-factory';
 import { AccountLinker } from './account-linker';
+import { MfaPolicyService } from './mfa-policy.service';
 
 export type SsoErrorCode =
   | 'sso_not_configured'
@@ -20,7 +21,8 @@ export type SsoErrorCode =
   | 'email_unverified'
   | 'domain_not_allowed'
   | 'jit_disabled'
-  | 'idp_error';
+  | 'idp_error'
+  | 'mfa_enrolment_required';
 
 export class SsoError extends Error {
   constructor(
@@ -53,7 +55,17 @@ export interface CompletedLogin {
   }>;
   activeTenantId: string;
   activeRole: string;
+  mfaGraceUntil?: Date;
 }
+
+/** What `POST auth/sso/complete` hands back — either a finished session, or
+ * (when the tenant's MFA policy applies and the IdP didn't assert MFA for an
+ * already-enrolled user) the same `{mfaRequired, mfaToken}` shape password
+ * login returns, so the client's existing MFA-challenge screen handles it
+ * unchanged. */
+export type SsoCompletionPayload =
+  | CompletedLogin
+  | { mfaRequired: true; mfaToken: string };
 
 const STATE_KEY_PREFIX = 'sso:state:';
 const COMPLETE_KEY_PREFIX = 'sso:complete:';
@@ -77,6 +89,7 @@ export class SsoLoginService {
     private readonly tokenService: TokenService,
     private readonly eventEmitter: EventEmitter2,
     private readonly auditService: AuditService,
+    private readonly mfaPolicyService: MfaPolicyService,
   ) {
     const env = loadEnv();
     this.callbackUrl = env.SSO_CALLBACK_URL;
@@ -236,11 +249,9 @@ export class SsoLoginService {
     const amr: string[] = [`oidc:${stored.provider}`];
     const idpAmr = Array.isArray(claims.amr) ? (claims.amr as string[]) : [];
     const idpAcr = typeof claims.acr === 'string' ? claims.acr : undefined;
-    if (idpAmr.includes('mfa') || idpAmr.includes('hwk') || idpAcr) {
-      amr.push('mfa');
-    }
-
-    const login = await this.completeLogin(result.userId, stored.tenantId, amr);
+    const idpAssertedMfa =
+      idpAmr.includes('mfa') || idpAmr.includes('hwk') || !!idpAcr;
+    if (idpAssertedMfa) amr.push('mfa');
 
     this.eventEmitter.emit('sso.login', {
       tenantId: stored.tenantId,
@@ -262,10 +273,47 @@ export class SsoLoginService {
       },
     });
 
+    // MFA policy composes with SSO by trusting the IdP's amr/acr claim — only
+    // when the IdP did *not* assert MFA do we still enforce our own policy.
+    let mfaGraceUntil: Date | undefined;
+    if (!idpAssertedMfa) {
+      const evaluation = await this.mfaPolicyService.evaluate(
+        result.userId,
+        stored.tenantId,
+        result.role,
+      );
+      if (evaluation.required && !evaluation.inGraceUntil) {
+        // Already enrolled (native mfaEnabled) — same challenge flow password
+        // login uses, just handed off through the same one-time-code channel.
+        const mfaToken = await this.tokenService.issueMfaToken(
+          result.userId,
+          stored.tenantId,
+        );
+        return this.storeCompletion(stored, {
+          mfaRequired: true,
+          mfaToken,
+        });
+      }
+      if (evaluation.required && evaluation.inGraceUntil) {
+        if (new Date() > evaluation.inGraceUntil) {
+          throw new SsoError('mfa_enrolment_required');
+        }
+        mfaGraceUntil = evaluation.inGraceUntil;
+      }
+    }
+
+    const login = await this.completeLogin(result.userId, stored.tenantId, amr);
+    return this.storeCompletion(stored, { ...login, mfaGraceUntil });
+  }
+
+  private async storeCompletion(
+    stored: StoredAuthRequest,
+    payload: SsoCompletionPayload,
+  ): Promise<{ redirectUrl: string }> {
     const code = crypto.randomBytes(24).toString('hex');
     await this.redis.set(
       `${COMPLETE_KEY_PREFIX}${code}`,
-      JSON.stringify(login),
+      JSON.stringify(payload),
       'EX',
       COMPLETE_TTL_SECONDS,
     );
@@ -277,15 +325,18 @@ export class SsoLoginService {
     return { redirectUrl: redirectUrl.href };
   }
 
-  /** Exchanges the one-time code from the callback redirect for real tokens.
-   * Single-use, 60s TTL — never carries tokens in a URL, which browser history,
-   * referrers and access logs would otherwise capture. */
-  async completeExchange(code: string): Promise<CompletedLogin | null> {
+  /** Exchanges the one-time code from the callback redirect for real tokens
+   * (or, if the tenant's MFA policy demands it and the IdP didn't already
+   * assert MFA, a `{ mfaRequired: true, mfaToken }` the client feeds into the
+   * same `/auth/mfa/challenge` flow password login uses). Single-use, 60s
+   * TTL — never carries tokens in a URL, which browser history, referrers
+   * and access logs would otherwise capture. */
+  async completeExchange(code: string): Promise<SsoCompletionPayload | null> {
     const key = `${COMPLETE_KEY_PREFIX}${code}`;
     const raw = await this.redis.get(key);
     if (!raw) return null;
     await this.redis.del(key);
-    return JSON.parse(raw) as CompletedLogin;
+    return JSON.parse(raw) as SsoCompletionPayload;
   }
 
   private async completeLogin(

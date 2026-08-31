@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Inject,
@@ -139,6 +140,20 @@ export class SsoConfigService {
     track('enforceSso', dto.enforceSso ?? false, existing?.enforceSso ?? false);
     if (dto.clientSecret) changes.push('clientSecret');
 
+    if (dto.enforceSso && !existing?.enforceSso) {
+      const unmet = await this.checkEnforceSsoPreconditions(
+        tenantId,
+        actorId,
+        existing,
+      );
+      if (unmet.length > 0) {
+        throw new ConflictException({
+          code: 'enforce_sso_preconditions_unmet',
+          unmet,
+        });
+      }
+    }
+
     const clientSecretEnc = dto.clientSecret
       ? encryptSecret(dto.clientSecret, this.encKey)
       : existing?.clientSecretEnc;
@@ -182,6 +197,50 @@ export class SsoConfigService {
     );
 
     return this.toSafeConfig(saved);
+  }
+
+  /**
+   * Flipping `enforceSso` to true is guarded by preconditions, not just the
+   * switch, because the failure mode — a tenant locking itself out of its
+   * own codes — is exactly what a trust product can't afford.
+   */
+  private async checkEnforceSsoPreconditions(
+    tenantId: string,
+    actorId: string | undefined,
+    existing: TenantSsoConfig | null,
+  ): Promise<string[]> {
+    const unmet: string[] = [];
+
+    const testedRecently =
+      existing?.lastTestResult === 'ok' &&
+      existing.lastTestedAt &&
+      Date.now() - existing.lastTestedAt.getTime() < 24 * 60 * 60 * 1000;
+    if (!testedRecently) {
+      unmet.push('SSO has not been tested successfully in the last 24 hours');
+    }
+
+    if (actorId) {
+      const identity = await this.prisma.ssoIdentity.findFirst({
+        where: { tenantId, userId: actorId },
+      });
+      if (!identity) {
+        unmet.push('the acting owner has not logged in via SSO yet');
+      }
+    } else {
+      unmet.push('the acting owner has not logged in via SSO yet');
+    }
+
+    const owners = await this.prisma.membership.findMany({
+      where: { tenantId, role: 'owner' },
+      include: { user: true },
+    });
+    for (const owner of owners) {
+      if (!owner.user.mfaEnabled) {
+        unmet.push(`owner ${owner.user.email} has no TOTP enrolled`);
+      }
+    }
+
+    return unmet;
   }
 
   async recordTestResult(

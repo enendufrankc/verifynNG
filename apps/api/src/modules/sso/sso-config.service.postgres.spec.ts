@@ -120,7 +120,15 @@ describe('SsoConfigService (integration)', () => {
       clientId: 'x',
       clientSecret: 's',
       allowedDomains: ['a.com'],
-      enforceSso: true,
+      enforceSso: false,
+    });
+    // Flipping enforceSso through upsert() is now gated by preconditions
+    // (SSO tested recently, owner logged in via SSO, all owners have TOTP) —
+    // set it directly here since this test is about disable()'s own
+    // behaviour, not those preconditions (covered separately).
+    await prisma.tenantSsoConfig.update({
+      where: { tenantId: tenant.id },
+      data: { enforceSso: true },
     });
 
     await service.disable(tenant.id, 'owner-4', undefined);
@@ -136,5 +144,86 @@ describe('SsoConfigService (integration)', () => {
   it('get() returns { enabled: false } when nothing is configured', async () => {
     const tenant = await makeTenant('sso-none');
     await expect(service.get(tenant.id)).resolves.toEqual({ enabled: false });
+  });
+
+  describe('enforceSso preconditions', () => {
+    it('409s listing every unmet precondition when nothing has been done yet', async () => {
+      const tenant = await makeTenant('sso-enforce-unmet');
+      const owner = await prisma.user.create({
+        data: { email: 'owner@sso-enforce-unmet.com', displayName: 'Owner' },
+      });
+      await prisma.membership.create({
+        data: { userId: owner.id, tenantId: tenant.id, role: 'owner' },
+      });
+      await service.upsert(tenant.id, owner.id, undefined, {
+        provider: 'fake',
+        clientId: 'x',
+        clientSecret: 's',
+        allowedDomains: ['a.com'],
+      });
+
+      let caught: unknown;
+      try {
+        await service.upsert(tenant.id, owner.id, undefined, {
+          provider: 'fake',
+          clientId: 'x',
+          clientSecret: 's',
+          allowedDomains: ['a.com'],
+          enforceSso: true,
+        });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(Object);
+      const response = (
+        caught as { getResponse: () => { unmet: string[] } }
+      ).getResponse();
+      expect(response.unmet).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('tested successfully'),
+          expect.stringContaining('logged in via SSO'),
+          expect.stringContaining('no TOTP enrolled'),
+        ]),
+      );
+    });
+
+    it('succeeds once the SSO test passed recently, the owner has an SsoIdentity, and every owner has TOTP', async () => {
+      const tenant = await makeTenant('sso-enforce-met');
+      const owner = await prisma.user.create({
+        data: {
+          email: 'owner@sso-enforce-met.com',
+          displayName: 'Owner',
+          mfaEnabled: true,
+        },
+      });
+      await prisma.membership.create({
+        data: { userId: owner.id, tenantId: tenant.id, role: 'owner' },
+      });
+      await service.upsert(tenant.id, owner.id, undefined, {
+        provider: 'fake',
+        clientId: 'x',
+        clientSecret: 's',
+        allowedDomains: ['a.com'],
+      });
+      await service.recordTestResult(tenant.id, true, 'ok');
+      await prisma.ssoIdentity.create({
+        data: {
+          tenantId: tenant.id,
+          userId: owner.id,
+          provider: 'fake',
+          subject: 'owner-sub',
+          email: owner.email,
+        },
+      });
+
+      const result = await service.upsert(tenant.id, owner.id, undefined, {
+        provider: 'fake',
+        clientId: 'x',
+        clientSecret: 's',
+        allowedDomains: ['a.com'],
+        enforceSso: true,
+      });
+      expect(result.enforceSso).toBe(true);
+    });
   });
 });

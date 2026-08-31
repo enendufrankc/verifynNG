@@ -10,6 +10,7 @@ import { InternalController } from './controllers/internal.controller';
 import { SmtpMailer } from './mailer/smtp-mailer.service';
 import { MAILER } from './mailer/mailer.interface';
 import { PrismaClient } from '@prisma/client';
+import { LoginPolicyRegistry } from './login-policy-hook';
 
 @Module({
   // Not EventEmitterModule.forRoot() here — it must be called exactly once
@@ -25,6 +26,7 @@ import { PrismaClient } from '@prisma/client';
     TokenService,
     MfaService,
     ApiClientService,
+    LoginPolicyRegistry,
     PrismaClient,
     { provide: MAILER, useClass: SmtpMailer },
   ],
@@ -34,6 +36,7 @@ import { PrismaClient } from '@prisma/client';
     TokenService,
     MfaService,
     ApiClientService,
+    LoginPolicyRegistry,
   ],
 })
 export class AuthModule implements OnModuleInit {
