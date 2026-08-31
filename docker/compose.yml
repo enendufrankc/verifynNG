@@ -316,6 +316,13 @@ services:
       VERIFY_BASE_URL: http://localhost:3000
       WORKER: 'true'
       WORKER_INLINE: 'false'
+      # ── E16 Public API & Webhooks ── mirrors the api service's block so the
+      # webhooks BullMQ worker behaves the same regardless of which process
+      # ends up consuming the queue.
+      WEBHOOKS_ALLOW_HTTP: 'true'
+      WEBHOOKS_ALLOW_PRIVATE: 'true'
+      WEBHOOKS_BACKOFF_BASE_MS: ${WEBHOOKS_BACKOFF_BASE_MS:-30000}
+      WEBHOOKS_MAX_ATTEMPTS: '10'
     depends_on:
       postgres:
         condition: service_healthy
