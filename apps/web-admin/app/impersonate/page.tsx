@@ -60,7 +60,11 @@ function ImpersonateBootstrap() {
           mode,
           expiresAt,
         });
-        router.replace('/');
+        // Not '/' (the tenant dashboard): a pre-existing, unrelated bug
+        // there ("Functions cannot be passed directly to Client Components"
+        // — see the E18 PR description) 500s it for every tenant, not just
+        // an impersonated one. /batches is a real, working landing page.
+        router.replace('/batches');
       } catch (err) {
         setError(
           err instanceof ApiError
