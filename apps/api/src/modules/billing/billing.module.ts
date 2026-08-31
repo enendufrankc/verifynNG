@@ -12,6 +12,7 @@ import { DunningService } from './dunning.service';
 import { BillingClock } from './billing-clock.service';
 import { TenantBillingController } from './tenant-billing.controller';
 import { BillingWebhooksController } from './billing-webhooks.controller';
+import { PlatformSubscriptionsController } from './platform-subscriptions.controller';
 import { PaystackGateway } from './paystack.gateway';
 import { PAYMENT_GATEWAY_PORT } from './payment-gateway.port';
 import { BillingQueueProcessor } from './jobs/billing-queue.processor';
@@ -34,6 +35,7 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
     PlansController,
     TenantBillingController,
     BillingWebhooksController,
+    PlatformSubscriptionsController,
   ],
   providers: [
     PlanService,

@@ -132,6 +132,52 @@ export interface UsageVsPlan {
   projectedOverageMinor: number;
 }
 
+export interface PlatformSubscriptionRow {
+  subscriptionId: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  planCode: string;
+  planName: string;
+  status: SubscriptionStatus;
+  currency: Currency;
+  mrrMinor: number;
+  nextInvoiceAt: string;
+  overdueMinor: number;
+  overdueInvoiceId: string | null;
+}
+
+/** Platform-support only (`@PlatformRole('support')`) — not tenant-scoped, so no `tenantPath` needed. */
+export function listPlatformSubscriptions(filters: {
+  status?: SubscriptionStatus;
+  planCode?: string;
+  currency?: Currency;
+}) {
+  const query: Record<string, string> = {};
+  if (filters.status) query.status = filters.status;
+  if (filters.planCode) query.planCode = filters.planCode;
+  if (filters.currency) query.currency = filters.currency;
+  return apiClient.get<PlatformSubscriptionRow[]>(
+    '/v1/platform/subscriptions',
+    {
+      query,
+    },
+  );
+}
+
+export function getTenantInvoicesForSupport(tenantId: string) {
+  return apiClient.get<{ invoices: Invoice[]; nextCursor: string | null }>(
+    `/v1/platform/subscriptions/${tenantId}/invoices`,
+  );
+}
+
+export function markInvoicePaidManually(invoiceId: string, reason: string) {
+  return apiClient.post<Invoice>(
+    `/v1/platform/subscriptions/${invoiceId}/mark-paid`,
+    { reason },
+  );
+}
+
 export function listPlans() {
   return apiClient.get<Plan[]>('/v1/billing/plans');
 }

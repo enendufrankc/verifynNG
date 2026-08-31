@@ -228,6 +228,15 @@ export const NAV: NavEntry[] = [
     platformRole: 'support',
     order: 40,
   },
+  {
+    id: 'platform.subscriptions',
+    label: 'Subscriptions',
+    href: '/support/subscriptions',
+    icon: CreditCard,
+    section: 'platform',
+    platformRole: 'support',
+    order: 50,
+  },
 ];
 
 export const NAV_SECTIONS: Record<

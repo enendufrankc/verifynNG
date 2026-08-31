@@ -1,5 +1,11 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Payment, PaymentMethod, PrismaClient } from '@prisma/client';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { Invoice, Payment, PaymentMethod, PrismaClient } from '@prisma/client';
 import { loadEnv } from '@verifynng/config';
 import { EventsService } from '../../common/events.service';
 import { InvoiceService } from './invoice.service';
@@ -185,6 +191,48 @@ export class PaymentService {
       result.failureReason ?? 'charge_failed',
       payment.id,
     );
+  }
+
+  /**
+   * T12: platform-support's "Mark paid (bank transfer)" action — settlement
+   * happened outside any gateway, so there's no webhook to react to. Records
+   * a `Payment` (provider `manual`, already `succeeded`) so the tenant's
+   * payment history stays complete, then goes through the same
+   * `InvoiceService.markPaid` + `payment.succeeded` path a real webhook
+   * would, so `DunningService`'s reactivation-on-payment listener fires the
+   * same way for a restricted tenant settled by bank transfer.
+   */
+  async markPaidManually(invoiceId: string, reason: string): Promise<Invoice> {
+    const invoice = await this.prisma.invoice.findUniqueOrThrow({
+      where: { id: invoiceId },
+    });
+    if (invoice.status === 'paid') return invoice; // idempotent
+    if (invoice.status !== 'issued') {
+      throw new ConflictException('invoice_not_issued');
+    }
+
+    const payment = await this.prisma.payment.create({
+      data: {
+        tenantId: invoice.tenantId,
+        invoiceId: invoice.id,
+        provider: 'manual',
+        reference: `manual_${invoice.id}_${Date.now()}`,
+        status: 'succeeded',
+        amountMinor: invoice.totalMinor,
+        currency: invoice.currency,
+        rawResponse: { reason },
+      },
+    });
+    const updated = await this.invoices.markPaid(invoice.id, payment.id);
+    await this.events.emit('payment.succeeded', {
+      tenantId: invoice.tenantId,
+      invoiceId: invoice.id,
+      paymentId: payment.id,
+      amountMinor: invoice.totalMinor,
+      currency: invoice.currency,
+      provider: 'manual',
+    });
+    return updated;
   }
 
   private async markSucceeded(

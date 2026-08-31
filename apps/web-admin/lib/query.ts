@@ -60,6 +60,10 @@ export const queryKeys = {
       ['billing', 'invoice', tenantId, invoiceId] as const,
     paymentMethods: (tenantId: string) =>
       ['billing', 'payment-methods', tenantId] as const,
+    platformSubscriptions: (filters: string) =>
+      ['billing', 'platform-subscriptions', filters] as const,
+    supportInvoices: (tenantId: string) =>
+      ['billing', 'support-invoices', tenantId] as const,
   },
   analytics: {
     overview: (tenantId: string, range: string) =>
