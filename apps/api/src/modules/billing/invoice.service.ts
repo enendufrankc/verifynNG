@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Invoice, PrismaClient } from '@prisma/client';
+import { Currency, Invoice, PrismaClient } from '@prisma/client';
 import { loadEnv } from '@verifynng/config';
 import { EventsService } from '../../common/events.service';
 import { UsageReadService } from '../metering/usage-read.service';
@@ -133,16 +133,7 @@ export class InvoiceService {
     const taxMinor = Math.round((subtotalMinor * taxRateBps) / 10_000);
     const totalMinor = subtotalMinor + taxMinor;
 
-    const tenant = await this.prisma.tenant.findUniqueOrThrow({
-      where: { id: tenantId },
-      select: { slug: true },
-    });
-    const yyyymm = period.replace('-', '');
-    const seq =
-      (await this.prisma.invoice.count({
-        where: { tenantId, periodStart: start },
-      })) + 1;
-    const number = `INV-${yyyymm}-${tenant.slug}-${seq}`;
+    const number = await this.nextInvoiceNumber(tenantId, start);
 
     return this.prisma.invoice.create({
       data: {
@@ -156,6 +147,98 @@ export class InvoiceService {
         taxMinor,
         totalMinor,
         usageSnapshot: usage as unknown as object,
+        lines: { create: lines.map((l) => ({ ...l, tenantId })) },
+      },
+      include: { lines: true },
+    });
+  }
+
+  /** `INV-<YYYYMM>-<tenantSlug>-<seq>` — shared by regular and proration invoices so the two share one sequence per calendar month, never colliding. */
+  private async nextInvoiceNumber(
+    tenantId: string,
+    periodStart: Date,
+  ): Promise<string> {
+    const tenant = await this.prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    const yyyymm = `${periodStart.getUTCFullYear()}${String(
+      periodStart.getUTCMonth() + 1,
+    ).padStart(2, '0')}`;
+    const seq =
+      (await this.prisma.invoice.count({
+        where: { tenantId, periodStart },
+      })) + 1;
+    return `INV-${yyyymm}-${tenant.slug}-${seq}`;
+  }
+
+  /**
+   * Immediate proration invoice for a mid-period upgrade (T10): a credit
+   * line for the unused fraction of the old plan's fee and a charge line
+   * for the same fraction of the new plan's fee — `SubscriptionService.
+   * changePlan` computes both amounts and only calls this when their net is
+   * positive (a net credit or zero produces no invoice, since this
+   * catalogue doesn't issue standalone refunds).
+   */
+  async generateProration(
+    tenantId: string,
+    params: {
+      currency: Currency;
+      periodStart: Date;
+      periodEnd: Date;
+      oldPlanName: string;
+      newPlanName: string;
+      creditMinor: number;
+      chargeMinor: number;
+    },
+  ): Promise<Invoice> {
+    const lines: Array<{
+      kind: string;
+      description: string;
+      quantity: number;
+      unitPriceMinor: number;
+      amountMinor: number;
+    }> = [];
+    if (params.creditMinor > 0) {
+      lines.push({
+        kind: 'proration_credit',
+        description: `Credit: unused time on ${params.oldPlanName}`,
+        quantity: 1,
+        unitPriceMinor: -params.creditMinor,
+        amountMinor: -params.creditMinor,
+      });
+    }
+    lines.push({
+      kind: 'proration_charge',
+      description: `Charge: remaining time on ${params.newPlanName}`,
+      quantity: 1,
+      unitPriceMinor: params.chargeMinor,
+      amountMinor: params.chargeMinor,
+    });
+
+    const subtotalMinor = lines.reduce((sum, l) => sum + l.amountMinor, 0);
+    const env = loadEnv();
+    const taxRateBps =
+      params.currency === 'NGN'
+        ? env.BILLING_TAX_RATE_BPS_NGN
+        : env.BILLING_TAX_RATE_BPS_GBP;
+    const taxMinor = Math.round((subtotalMinor * taxRateBps) / 10_000);
+    const totalMinor = subtotalMinor + taxMinor;
+
+    const number = await this.nextInvoiceNumber(tenantId, params.periodStart);
+
+    return this.prisma.invoice.create({
+      data: {
+        tenantId,
+        number,
+        status: 'draft',
+        currency: params.currency,
+        periodStart: params.periodStart,
+        periodEnd: params.periodEnd,
+        subtotalMinor,
+        taxMinor,
+        totalMinor,
+        usageSnapshot: {},
         lines: { create: lines.map((l) => ({ ...l, tenantId })) },
       },
       include: { lines: true },

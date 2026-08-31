@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Inject,
@@ -10,9 +11,11 @@ import {
 import type { Response } from 'express';
 import { Roles, TenantId } from '../../common/tenant';
 import { AllowWhenSuspended } from '../../common/tenant-status/decorators';
+import { Audited } from '../audit/audited.decorator';
 import { SubscriptionService } from './subscription.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
+import { ChangePlanDto } from './dto/change-plan.dto';
 
 @Controller('v1/tenants/:tenantId/billing')
 export class TenantBillingController {
@@ -27,6 +30,24 @@ export class TenantBillingController {
   @Roles('owner')
   getSubscription(@TenantId() tenantId: string) {
     return this.subscriptions.getForTenant(tenantId);
+  }
+
+  @Get('subscription/change-plan-preview')
+  @Roles('owner')
+  previewChangePlan(
+    @TenantId() tenantId: string,
+    @Query('planCode') planCode: string,
+  ) {
+    return this.subscriptions.previewChangePlan(tenantId, planCode);
+  }
+
+  @Post('subscription/change')
+  @Roles('owner')
+  @Audited('subscription.change_plan')
+  changePlan(@TenantId() tenantId: string, @Body() body: ChangePlanDto) {
+    return this.subscriptions.changePlan(tenantId, body.planCode, {
+      force: body.force,
+    });
   }
 
   @Get('invoices')
