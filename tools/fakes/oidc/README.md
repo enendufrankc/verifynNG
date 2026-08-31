@@ -17,9 +17,18 @@ browser can't resolve the `fake-oidc` compose hostname).
 
 ## Seeded users
 
-`GET /default/authorize?...` shows a login page (`interactiveLogin: true`)
-where the tester types one of these usernames — no password, the mock server
-issues tokens for any username it has a `requestMappings` entry for:
+`GET /default/authorize?...` shows `login.html` (`interactiveLogin: true` +
+`loginPagePath`), one button per seeded user — no password. Each button is a
+plain `<form method="post">` with hidden `username` and `claims` (a JSON
+string) fields; `LoginRequestHandler` reads both directly off the POST body
+and merges `claims` into the issued ID token verbatim.
+
+(`tokenCallbacks`/`requestMappings` — the mechanism the mock server's own
+`config.json` example uses — matches parameters sent to the **token**
+endpoint, e.g. `scope` or `code`; it has no visibility into what was typed on
+the interactive login page, so it can't key claims off a chosen username. The
+`username`+`claims` login-page POST is the actual, empirically-verified
+mechanism for this — confirmed by decoding the resulting ID token.)
 
 | username                 | claims                                                      | role in seed data            |
 | ------------------------ | ----------------------------------------------------------- | ---------------------------- |
@@ -29,8 +38,8 @@ issues tokens for any username it has a `requestMappings` entry for:
 | `newhire2@ivoryglow.com` | `email_verified: true`, `hd: ivoryglow.com`                 | JIT, used to test JIT-off    |
 | `outsider@gmail.com`     | `email_verified: true`, `hd: gmail.com`                     | domain not allowed           |
 
-To seed another user, add a `requestMappings` entry with a new `match` and
-restart `fake-oidc` (`docker compose restart fake-oidc`) — no code change.
+To seed another user, add a `<form>` block to `login.html` and restart
+`fake-oidc` (`docker compose restart fake-oidc`) — no code change.
 
 ## Claim differences vs. real providers
 

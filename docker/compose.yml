@@ -126,7 +126,7 @@ services:
       JSON_CONFIG_PATH: /config/config.json
       SERVER_PORT: '4104'
     volumes:
-      - ../tools/fakes/oidc/config.json:/config/config.json:ro
+      - ../tools/fakes/oidc:/config:ro
     ports:
       - '${FAKE_OIDC_PORT:-4104}:4104'
     # No healthcheck: the image is a distroless-style JRE build with no
