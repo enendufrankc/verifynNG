@@ -145,7 +145,12 @@ export class WebhookDeliveryProcessor extends WorkerHost {
     await this.webhooksQueue.add(
       'deliver',
       { deliveryId: delivery.id },
-      { jobId: `${delivery.id}:${attempts + 1}`, delay: delayMs },
+      // A jobId containing ':' must split into exactly 3 segments — BullMQ's
+      // legacy repeatable-job ID compatibility check (Job.validateOptions) —
+      // or Queue.add() throws "Custom Id cannot contain :" and the retry is
+      // silently never enqueued. Avoid ':' entirely instead of relying on
+      // that arbitrary rule.
+      { jobId: `${delivery.id}-attempt-${attempts + 1}`, delay: delayMs },
     );
   }
 

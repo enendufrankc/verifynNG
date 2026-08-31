@@ -125,7 +125,12 @@ export class WebhookDeliveryService {
     await this.webhooksQueue.add(
       'deliver',
       { deliveryId: id },
-      { jobId: `${id}:redeliver:${Date.now()}` },
+      // Avoid ':' in the jobId — BullMQ's Job.validateOptions rejects a
+      // custom id containing ':' unless it splits into exactly 3 segments
+      // (legacy repeatable-job compatibility); this format happens to
+      // satisfy that by luck, but see webhook-delivery.processor.ts's retry
+      // path for what happens when it doesn't.
+      { jobId: `${id}-redeliver-${Date.now()}` },
     );
     return { deliveryId: id };
   }
