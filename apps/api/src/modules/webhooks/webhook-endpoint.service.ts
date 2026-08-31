@@ -149,13 +149,7 @@ export class WebhookEndpointService {
         tenantId,
         endpointId: endpoint.id,
         event: 'ping',
-        payload: {
-          id: crypto.randomUUID(),
-          type: 'ping',
-          createdAt: new Date().toISOString(),
-          tenantId,
-          data: {},
-        },
+        payload: {},
       },
     });
 
