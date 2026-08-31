@@ -14,7 +14,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 - [ ] Add role `oem` + `oemId` JWT claim (E05). **Partially done by E05 directly:** `oem` added to `TenantRole` (additive migration on `main`) — `RolesGuard`'s hierarchy map already falls back to treating an unrecognised role as its own singleton allowed-set, so no other E02 file changed. The `oemId` JWT claim was **not** added; E05's `OemScopeGuard` resolves `OemUser` from the DB per request instead (the spec's own documented fallback). Leaving this unchecked since the claim itself is still outstanding if a future epic wants it.
 - [ ] `UsersService.listMembers(tenantId, { roles })` (E14 routing).
 - [ ] `SessionService.issue/revoke` for impersonation sessions; never grants `owner`, max `operator` in write mode (E18).
-- [ ] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20).
+- [ ] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20). **Partially done by E20 directly** (E02's worktree isn't active — flagged on issue #3 first): `Session.amr String[] @default([])` and `Membership.createdVia String?` added in migration `20260831140000_E20_sso_mfa_policy`. The `LoginPolicyHook` interface/token itself is not wired into `AuthService.login` yet — that lands with E20's T5/T7 (enforce-SSO + MFA policy).
 - [ ] E20 owns `app/(auth)/sso/**` inside E02's auth route group.
 
 ## To E03 Tenant Lifecycle

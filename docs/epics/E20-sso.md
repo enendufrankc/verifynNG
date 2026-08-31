@@ -1,14 +1,14 @@
 # E20 — SSO & MFA Policy
 
-| | |
-|---|---|
-| Wave | 3 |
-| Status | in-progress |
-| Owner | Frank Enendu |
-| GitHub Issue | [#21](https://github.com/enendufrankc/verifynNG/issues/21) |
-| Depends on | E02 (identity: `User`, `Membership`, sessions, TOTP MFA, login hooks), E13 (`@Audited`, secrets helper), E11 (settings route group), E15 (`hasFeature('sso')`), E03 (tenant settings) |
-| Unblocks | E18 (auth-lockout runbook references break-glass) |
-| Readiness items | `production-readiness.md` §1 P1 "MFA enforcement option (per-tenant policy)" · §1 P2 "SSO (Google/Microsoft)" · §2 audit log (consumed) |
+|                 |                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 3                                                                                                                                                                                     |
+| Status          | in-progress                                                                                                                                                                           |
+| Owner           | Frank Enendu                                                                                                                                                                          |
+| GitHub Issue    | [#21](https://github.com/enendufrankc/verifynNG/issues/21)                                                                                                                            |
+| Depends on      | E02 (identity: `User`, `Membership`, sessions, TOTP MFA, login hooks), E13 (`@Audited`, secrets helper), E11 (settings route group), E15 (`hasFeature('sso')`), E03 (tenant settings) |
+| Unblocks        | E18 (auth-lockout runbook references break-glass)                                                                                                                                     |
+| Readiness items | `production-readiness.md` §1 P1 "MFA enforcement option (per-tenant policy)" · §1 P2 "SSO (Google/Microsoft)" · §2 audit log (consumed)                                               |
 
 ## Goal
 
@@ -34,6 +34,7 @@ docs/sso-setup-guide.md                                 tenant-facing: Google / 
 ## Interfaces
 
 **Consumes:**
+
 - E02: `User`, `Membership(userId, tenantId, role)`, `SessionService.issue(userId, { tenantId, role, amr: string[] })`, `UserService.findByEmail/create`, `MfaService.isEnrolled(userId)` and `MfaService.challenge(...)`, and E02's login pipeline hooks — **change request to E02**: expose `LoginPolicyHook` interface (`beforePasswordLogin(ctx)`, `afterPrimaryAuth(ctx) → { requireMfa: boolean, reason? }`) registered via a `LOGIN_POLICY_HOOKS` multi-provider token so E20 can (a) block password login for enforce-SSO tenants and (b) demand MFA per policy without E02 knowing about SSO. Also `Session.amr` (authentication methods reference: `pwd`, `otp`, `oidc:google`, `oidc:microsoft`) so guards can require a fresh MFA.
 - E13: `@Audited` on all config routes; `SecretsHelper.encrypt/decrypt` for `clientSecretEnc`; audit viewer shows `sso.*` and `mfa.*` actions.
 - E15: `EntitlementService.hasFeature(tenantId, 'sso')` → 402 `plan_limit` when configuring SSO on a plan without it (growth/enterprise only); MFA policy is available on every plan.
@@ -44,17 +45,19 @@ docs/sso-setup-guide.md                                 tenant-facing: Google / 
 **Exposes:**
 
 Nest providers (module `SsoModule`):
+
 ```ts
-SsoConfigService     // get(tenantId), upsert(tenantId, dto), disable(tenantId), testConnection(tenantId) → discovery ok / error
-OidcClientFactory    // buildClient(config) → openid-client Client using discovery (Google: accounts.google.com; Entra: login.microsoftonline.com/{tenant}/v2.0; fake: FAKE_OIDC_ISSUER)
-SsoLoginService      // startLogin(tenantSlug, { redirectTo }) → authUrl (state+nonce+PKCE in Redis, 10 min); handleCallback(state, code) → { session } | SsoError
-AccountLinker        // resolve(tenantId, claims) → existing Membership by verified email | JIT-provisioned | rejected(domain)
-MfaPolicyService     // get(tenantId), set(tenantId, { requiredRoles: Role[], gracePeriodDays }), evaluate(userId, tenantId, role) → { required, inGraceUntil? }
-EnforceSsoLoginHook  // implements E02 LoginPolicyHook.beforePasswordLogin: throws `sso_required` unless break-glass (owner + valid TOTP) 
-MfaPolicyLoginHook   // implements afterPrimaryAuth: requireMfa when policy says so (also after OIDC login if the IdP did not assert MFA — see Notes)
+SsoConfigService; // get(tenantId), upsert(tenantId, dto), disable(tenantId), testConnection(tenantId) → discovery ok / error
+OidcClientFactory; // buildClient(config) → openid-client Client using discovery (Google: accounts.google.com; Entra: login.microsoftonline.com/{tenant}/v2.0; fake: FAKE_OIDC_ISSUER)
+SsoLoginService; // startLogin(tenantSlug, { redirectTo }) → authUrl (state+nonce+PKCE in Redis, 10 min); handleCallback(state, code) → { session } | SsoError
+AccountLinker; // resolve(tenantId, claims) → existing Membership by verified email | JIT-provisioned | rejected(domain)
+MfaPolicyService; // get(tenantId), set(tenantId, { requiredRoles: Role[], gracePeriodDays }), evaluate(userId, tenantId, role) → { required, inGraceUntil? }
+EnforceSsoLoginHook; // implements E02 LoginPolicyHook.beforePasswordLogin: throws `sso_required` unless break-glass (owner + valid TOTP)
+MfaPolicyLoginHook; // implements afterPrimaryAuth: requireMfa when policy says so (also after OIDC login if the IdP did not assert MFA — see Notes)
 ```
 
 HTTP routes:
+
 ```
 GET   /v1/auth/sso/:tenantSlug/start?redirectTo=        anonymous → 302 to IdP
 GET   /v1/auth/sso/callback                               anonymous → sets refresh cookie, 302 to web-admin (/sso/complete)
@@ -69,6 +72,7 @@ POST  /v1/auth/break-glass/:tenantSlug                     anonymous → passwor
 ```
 
 Domain events:
+
 ```
 sso.login             { tenantId, userId, provider, membershipCreated: boolean, amr: string[], ip }
 sso.login_rejected    { tenantId, provider, emailDomain, reason: 'domain_not_allowed'|'jit_disabled'|'email_unverified'|'state_mismatch' }
@@ -132,7 +136,12 @@ Change request to E02: `Session.amr String[]` and the `LoginPolicyHook` multi-pr
 
 ## Tasks
 
-- [ ] T1 `SsoModule` scaffold + schema block + migration `E20_sso_mfa_policy`; env section `SSO_*` (`SSO_CALLBACK_URL=http://localhost:4000/v1/auth/sso/callback`, `FAKE_OIDC_ISSUER=http://fake-oidc:4104/default`, `FAKE_OIDC_PUBLIC_ISSUER=http://localhost:4104/default`, `SSO_STATE_TTL_SECONDS=600`); `SsoConfigService` + config routes with `hasFeature('sso')` gate, secret encryption, `@Audited`, `sso.config.changed` (field names only).
+- [x] T1 `SsoModule` scaffold + schema block + migration `E20_sso_mfa_policy`; env section `SSO_*` (`SSO_CALLBACK_URL=http://localhost:4000/v1/auth/sso/callback`, `FAKE_OIDC_ISSUER=http://fake-oidc:4104/default`, `FAKE_OIDC_PUBLIC_ISSUER=http://localhost:4104/default`, `SSO_STATE_TTL_SECONDS=600`); `SsoConfigService` + config routes with `hasFeature('sso')` gate, secret encryption, `@Audited`, `sso.config.changed` (field names only).
+      Notes on deviations from the routes listed under "Interfaces" above, made to match the codebase's actual conventions rather than the spec prose:
+  - No controller in this codebase actually mounts under a `v1/` prefix except a couple of E13 routes (`main.ts` sets no global prefix); tenant-scoped routes here are `tenants/:tenantId/sso` and (T7) `tenants/:tenantId/security/mfa-policy`, matching `MembersController`'s `tenants/:tenantId/members`. Anonymous SSO routes (T3) will be under `auth/sso/**`, matching `AuthController`'s `auth/**`.
+  - `TenantContextGuard` 404s (not 403s) a route-param `:tenantId` that doesn't match the caller's own tenant (support/platform roles excepted) — existing, consistent behaviour across every other tenant-scoped controller. AC9's cross-tenant check will observe 404, not 403.
+  - `hasFeature('sso')` gate is a local stub (`SSO_ENTITLEMENT_PORT`, `AllowAllSsoEntitlement`) mirroring E04's `ENTITLEMENT_POLICY` pattern — E15 hasn't shipped `EntitlementService` yet. AC9's plan-gate half is blocked on E15 binding the real policy.
+  - `SecretsHelper.encrypt/decrypt` doesn't exist in E13's `SecretsModule` (only `SecretsPort.get()` and `SecretsKeyRing`) — `clientSecretEnc` uses the same local AES-256-GCM construction E02's `MfaService` already uses for `User.mfaSecret`, keyed by a new `SSO_CLIENT_SECRET_ENC_KEY`.
 - [ ] T2 `OidcClientFactory` with `openid-client` discovery per provider, cached per tenant with invalidation on config change; Google and Entra issuer/URL rules; `fake` provider allowed only outside production (startup assertion). `POST …/sso/test` runs discovery and reports `issuer`, `authorization_endpoint`, and whether `email_verified` is available in scopes.
 - [ ] T3 Login flow: `start` (state + nonce + PKCE verifier in Redis under `sso:state:<state>`; `redirectTo` allow-listed to web-admin origin), `callback` (exchange, ID-token validation via `openid-client`, `email_verified === true` required, `hd`/`tid` cross-check with `allowedDomains` where present), `SsoLoginService` → `AccountLinker` → E02 `SessionService.issue` with `amr: ['oidc:<provider>']`; error redirects to `/sso/error?code=` with human messages. `sso.login` / `sso.login_rejected` events.
 - [ ] T4 `AccountLinker`: (1) `SsoIdentity` by `(tenantId, provider, sub)` → existing user; (2) else `User` by email with an active `Membership` in the tenant → link, create `SsoIdentity`; (3) else if `jitProvisioning` and domain ∈ `allowedDomains` → create `User` (no password) + `Membership(role = jitDefaultRole, createdVia='jit')` + identity; (4) else reject `domain_not_allowed` / `jit_disabled`. Email changes at the IdP do not break the link (sub is the key). Integration tests for each branch and for a user who belongs to two tenants.
@@ -166,9 +175,9 @@ Change request to E02: `Session.amr String[]` and the `LoginPolicyHook` multi-pr
 
 ## Compose services added
 
-| Service | Image | Host port | Notes |
-|---|---|---|---|
-| fake-oidc | ghcr.io/navikt/mock-oauth2-server:2.1.10 | 4104 | `JSON_CONFIG_PATH=/config/config.json` from `tools/fakes/oidc/config.json`; issuer `http://localhost:4104/default`; `api` reaches it as `http://fake-oidc:4104/default` — issuer mismatch handled by `FAKE_OIDC_PUBLIC_ISSUER` (browser) vs `FAKE_OIDC_ISSUER` (server) with `openid-client` `skipIssuerCheck` **only** for `provider = fake` |
+| Service   | Image                                    | Host port | Notes                                                                                                                                                                                                                                                                                                                                         |
+| --------- | ---------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| fake-oidc | ghcr.io/navikt/mock-oauth2-server:2.1.10 | 4104      | `JSON_CONFIG_PATH=/config/config.json` from `tools/fakes/oidc/config.json`; issuer `http://localhost:4104/default`; `api` reaches it as `http://fake-oidc:4104/default` — issuer mismatch handled by `FAKE_OIDC_PUBLIC_ISSUER` (browser) vs `FAKE_OIDC_ISSUER` (server) with `openid-client` `skipIssuerCheck` **only** for `provider = fake` |
 
 `api` env additions: `SSO_CALLBACK_URL`, `SSO_STATE_TTL_SECONDS=600`, `FAKE_OIDC_ISSUER`, `FAKE_OIDC_PUBLIC_ISSUER`, `SSO_DISCOVERY_TIMEOUT_MS=5000`.
 
