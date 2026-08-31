@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import {
   Button,
   FormField,
+  HelpLink,
   Input,
   PageHeader,
   Textarea,
@@ -44,6 +45,7 @@ function HelpForm() {
       <PageHeader
         title="Get help"
         description="Send a message to platform support — we'll reply here and by email."
+        actions={<HelpLink docSlug="console/help" module="help" />}
       />
       <form
         className="space-y-4"

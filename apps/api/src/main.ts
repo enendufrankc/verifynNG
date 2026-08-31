@@ -6,6 +6,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { loadEnv, corsAllowlist } from '@verifynng/config';
 import helmet from 'helmet';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { QuotaService } from './modules/quota/quota.service.js';
 import { AppLogger } from './telemetry/logger';
 
@@ -63,6 +64,22 @@ async function bootstrap() {
       transform: true,
       forbidNonWhitelisted: true,
     }),
+  );
+
+  // E18's docs site (`apps/docs`, /docs/api) links here — see
+  // apps/api/scripts/generate-openapi.mjs for the narrower, committed
+  // E06-only spec; this is the live, whole-API document.
+  SwaggerModule.setup(
+    'api/docs',
+    app,
+    SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder()
+        .setTitle('verifynNG API')
+        .setDescription('The Verify Platform — full HTTP API.')
+        .setVersion('1.0')
+        .build(),
+    ),
   );
 
   // Trust proxy for correct IP extraction

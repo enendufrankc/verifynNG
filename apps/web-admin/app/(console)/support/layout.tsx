@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { notFound } from 'next/navigation';
-import { PageHeader, cn } from '@verifyng/ui';
+import { PageHeader, HelpLink, cn } from '@verifyng/ui';
 import { useAuth } from '@/lib/auth-store';
 
 const SUPPORT_NAV = [
@@ -35,6 +35,7 @@ export default function SupportLayout({
       <PageHeader
         title="Support"
         description="Tenant directory, impersonation and tickets for platform support."
+        actions={<HelpLink docSlug="console/support" module="support" />}
       />
       <div className="border-border flex flex-wrap gap-1 border-b">
         {SUPPORT_NAV.map((item) => {

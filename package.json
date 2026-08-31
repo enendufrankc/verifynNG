@@ -25,6 +25,7 @@
     "test:smoke": "pnpm test:e2e --grep @smoke",
     "test:contract": "vitest run --config tests/vitest.config.ts contracts/",
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
+    "docs:check-links": "node scripts/docs-check-links.mjs",
     "notifications:preview": "pnpm --filter @verifynng/api notifications:preview",
     "prepare": "husky"
   },
