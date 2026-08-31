@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 3 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | Frank Enendu |
 | GitHub Issue | [#21](https://github.com/enendufrankc/verifynNG/issues/21) |
 | Depends on | E02 (identity: `User`, `Membership`, sessions, TOTP MFA, login hooks), E13 (`@Audited`, secrets helper), E11 (settings route group), E15 (`hasFeature('sso')`), E03 (tenant settings) |
 | Unblocks | E18 (auth-lockout runbook references break-glass) |
