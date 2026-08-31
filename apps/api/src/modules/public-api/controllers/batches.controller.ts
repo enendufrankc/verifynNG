@@ -1,17 +1,80 @@
-import { Get, NotFoundException, Param, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { PrismaClient, Prisma } from '@prisma/client';
-import type { Request } from 'express';
-import { PublicApiController } from '../decorators/public-api-controller.decorator.js';
+import type { Request, Response } from 'express';
+import {
+  PublicApiController,
+  Idempotent,
+} from '../decorators/public-api-controller.decorator.js';
 import { Scopes } from '../decorators/scopes.decorator.js';
 import { ListBatchesQueryDto } from '../dto/list-batches-query.dto.js';
 import { ListBatchUnitsQueryDto } from '../dto/list-batch-units-query.dto.js';
+import { CreatePublicBatchDto } from '../dto/create-public-batch.dto.js';
 import { decodeCursor, paginate, parseLimit } from '../pagination.js';
 import { toPublicBatch } from '../mappers/batch.mapper.js';
 import { toPublicUnit } from '../mappers/unit.mapper.js';
+import { MintService } from '../../batches/mint.service.js';
+import { AuditService } from '../../audit/audit.service.js';
 
 @PublicApiController('api/v1/batches')
 export class PublicBatchesController {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly mintService: MintService,
+    private readonly auditService: AuditService,
+  ) {}
+
+  @Post()
+  @HttpCode(202)
+  @Scopes('write:batches')
+  @Idempotent()
+  async create(
+    @Req() req: Request,
+    @Body() dto: CreatePublicBatchDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const apiKey = req.apiKey!;
+    const idempotencyKey = req.headers['idempotency-key'] as string;
+
+    const result = await this.mintService.mint({
+      tenantId: apiKey.tenantId,
+      productId: dto.productId,
+      oemId: dto.oemId,
+      count: dto.count,
+      idempotencyKey,
+      requestedBy: `apikey:${apiKey.keyId}`,
+      note: dto.note,
+    });
+
+    if (!result.existing) {
+      await this.auditService.record({
+        tenantId: apiKey.tenantId,
+        actor: { type: 'apikey', id: apiKey.keyId },
+        action: 'batch.create',
+        target: { type: 'batch', id: result.batch.id },
+        payload: {
+          productId: dto.productId,
+          oemId: dto.oemId,
+          count: dto.count,
+        },
+      });
+    }
+
+    res.setHeader('Location', `/api/v1/batches/${result.batch.id}`);
+    // No public download route exists yet for exports — see docs/epics/E16-public-api-webhooks.md
+    // notes; avoids ExportsService.getSignedUrl()'s side effect of emitting
+    // `manifest.downloaded` for a link nobody has followed yet.
+    return { batch: toPublicBatch(result.batch), exportUrl: null };
+  }
 
   @Get()
   @Scopes('read:batches')

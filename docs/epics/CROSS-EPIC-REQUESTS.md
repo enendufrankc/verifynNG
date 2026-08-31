@@ -30,6 +30,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 - [x] `Batch.expectedShipDate DateTime?` — added by E05 directly (additive migration on `main`), since E04 had already landed and closed. The rest of this line described an interface E04 never actually shipped under those names — E05 instead consumes E04's real `ManifestService.open()` / `ExportsService.getSignedUrl()` and writes `Batch.status` directly via the shared Prisma client (no `BatchService.setStatus` exists); `BatchLifecycleService` is the sole enforcer of the post-mint state machine (E05).
 - [ ] `Batch.isTest` so `vk_test_` keys mint unbilled; E12 skips `isTest` (E16).
+- [x] `LifecycleActor.type` (E07's `unit-lifecycle.service.ts`) widened from `'user' | 'system'` to include `'apikey'`, additive only, matching `AuditActorType` — used by `POST /api/v1/units/:id/{flag,decommission,restore}` (heads-up posted on issue #5) (E16).
 - [ ] `MintService.mintBulk({ skipExports })` for the 50k-unit seed (E21).
 - [ ] `product.updated` event (E10).
 - [ ] Link "Units & recall" from batch detail to E07's unit views (E07).

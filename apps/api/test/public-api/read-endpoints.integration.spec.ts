@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import request from 'supertest';
 import { Test } from '@nestjs/testing';
-import type { INestApplication } from '@nestjs/common';
+import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import {
   createTestDatabase,
@@ -30,6 +30,15 @@ describe('Public API read endpoints (integration)', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    // main.ts's bootstrap() (which sets this up) never runs under
+    // Test.createTestingModule — without it every DTO validation is a no-op.
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    );
     await app.init();
     appPrisma = app.get(PrismaClient);
     apiKeyService = app.get(ApiKeyService);

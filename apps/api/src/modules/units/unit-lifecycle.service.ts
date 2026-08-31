@@ -10,7 +10,10 @@ import { Queue } from 'bullmq';
 import { AuditService } from '../audit/audit.service.js';
 
 export interface LifecycleActor {
-  type: 'user' | 'system';
+  // 'apikey' added by E16 (docs/epics/E16-public-api-webhooks.md) for
+  // POST /api/v1/units/:id/{flag,decommission,restore} — additive only,
+  // matches AuditActorType. See issue #5 for the heads-up comment.
+  type: 'user' | 'system' | 'apikey';
   id?: string;
 }
 

@@ -2,6 +2,8 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { loadEnv } from '@verifynng/config';
 import { ApiKeysModule } from '../api-keys/api-keys.module.js';
 import { EntitlementsModule } from '../entitlements/entitlements.module.js';
+import { BatchesModule } from '../batches/batches.module.js';
+import { UnitsModule } from '../units/units.module.js';
 import { QuotaService } from '../quota/quota.service.js';
 import { ScopesGuard } from './guards/scopes.guard.js';
 import { ApiErrorFilter } from './filters/api-error.filter.js';
@@ -16,7 +18,7 @@ import { PublicReportsController } from './controllers/reports.controller.js';
 import { PUBLIC_API_QUOTA_KIND } from './constants.js';
 
 @Module({
-  imports: [ApiKeysModule, EntitlementsModule],
+  imports: [ApiKeysModule, EntitlementsModule, BatchesModule, UnitsModule],
   controllers: [
     MeController,
     PublicBatchesController,
