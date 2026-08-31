@@ -226,6 +226,18 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E16 Public API & Webhooks ────────────────────────────────────
+const e16Schema = z.object({
+  PUBLIC_API_DEFAULT_RPM: z.coerce.number().default(120),
+  PUBLIC_API_MAX_KEYS_DEFAULT: z.coerce.number().default(10),
+  // dev/compose only — must stay false in any real deployment.
+  WEBHOOKS_ALLOW_HTTP: z.coerce.boolean().default(false),
+  WEBHOOKS_ALLOW_PRIVATE: z.coerce.boolean().default(false),
+  WEBHOOKS_BACKOFF_BASE_MS: z.coerce.number().default(30000),
+  WEBHOOKS_MAX_ATTEMPTS: z.coerce.number().default(10),
+  WEBHOOK_SINK_URL: z.string().default('http://webhook-sink:4105'),
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -240,6 +252,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e16Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.
