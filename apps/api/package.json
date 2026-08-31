@@ -14,7 +14,9 @@
     "mint-bench": "tsx scripts/mint-bench.ts",
     "jobs:run": "tsx scripts/jobs-run.ts",
     "openapi:generate": "node scripts/generate-openapi.mjs",
-    "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code -- openapi/verify.v1.json"
+    "openapi:check": "node scripts/generate-openapi.mjs && git diff --exit-code -- openapi/verify.v1.json",
+    "public-api:openapi:generate": "node scripts/generate-public-api-openapi.mjs",
+    "public-api:openapi:check": "node scripts/generate-public-api-openapi.mjs && git diff --exit-code -- ../../packages/sdk/openapi.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.879.0",
@@ -41,6 +43,8 @@
     "@react-email/components": "^1.0.12",
     "@react-email/ui": "^6.9.3",
     "@react-pdf/renderer": "^4.9.0",
+    "@scalar/nestjs-api-reference": "^1.2.17",
+
     "@verifynng/config": "workspace:*",
     "@verifynng/core": "workspace:*",
     "@verifynng/db": "workspace:*",
@@ -54,6 +58,7 @@
     "helmet": "^8.3.0",
     "ioredis": "5.7.0",
     "nodemailer": "^9.0.6",
+
     "openid-client": "^6.8.7",
     "otplib": "^13.5.0",
     "pino": "^10.3.1",

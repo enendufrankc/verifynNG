@@ -19,6 +19,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E03 Tenant Lifecycle
 
+- [ ] **Bug, affects every epic's integration tests:** `TenantStatusGuard` (`apps/api/src/common/tenant-status/tenant-status.guard.ts`) queries `policyDocument`/`policyAcceptance` via `import { prisma } from '@verifynng/db'` — the shared singleton bound to the default schema at import time, not the per-test isolated schema (same class of bug as `MintService`, documented against E16's T5/T9). `PolicyDocument` has no `tenantId` (policies are intentionally global), so this isn't just reading the wrong schema for tenant data — it reads whatever's actually seeded into the shared local Postgres. `docker/compose.yml`'s `db-migrate` service runs `prisma db seed` on **every** `docker compose up`, which seeds 5 `PolicyDocument` rows (`packages/db/prisma/seed/policies.ts` + `seed.ts`) — after that, `decidePolicyAcceptance()` starts rejecting every `owner`-authenticated non-GET request in every integration test suite with 403 `policy_acceptance_required`, because `createTwoTenants()`'s fixture users never have matching `PolicyAcceptance` rows. Reproduce: `docker compose up`, then `pnpm --filter @verifynng/api test` — dozens of unrelated integration tests fail. Workaround used while investigating this for E16: `DELETE FROM "PolicyDocument";` on the local Postgres before running `pnpm test`. Given `docker compose up` before `pnpm test` is literally AGENTS.md's own verification sequence, this needs a real fix — either read via the `PrismaClient` class token like every other guard, or special-case global tables.
 - [ ] Tenant status `restricted` (writes blocked, verify open) + `setRestricted/clearRestricted` (E15). Reconcile with existing `suspended` semantics — one guard, two reasons.
 - [ ] `GET /v1/tenants/:slug/public-profile` (E09).
 - [ ] `TenantDomain` model + `GET /v1/tenants/by-domain/:host` + `tenant.branding.updated` event (E10).
@@ -30,6 +31,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 - [x] `Batch.expectedShipDate DateTime?` — added by E05 directly (additive migration on `main`), since E04 had already landed and closed. The rest of this line described an interface E04 never actually shipped under those names — E05 instead consumes E04's real `ManifestService.open()` / `ExportsService.getSignedUrl()` and writes `Batch.status` directly via the shared Prisma client (no `BatchService.setStatus` exists); `BatchLifecycleService` is the sole enforcer of the post-mint state machine (E05).
 - [ ] `Batch.isTest` so `vk_test_` keys mint unbilled; E12 skips `isTest` (E16).
+- [x] `LifecycleActor.type` (E07's `unit-lifecycle.service.ts`) widened from `'user' | 'system'` to include `'apikey'`, additive only, matching `AuditActorType` — used by `POST /api/v1/units/:id/{flag,decommission,restore}` (heads-up posted on issue #5) (E16).
 - [ ] `MintService.mintBulk({ skipExports })` for the 50k-unit seed (E21).
 - [ ] `product.updated` event (E10).
 - [ ] Link "Units & recall" from batch detail to E07's unit views (E07).
@@ -51,6 +53,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E11 Admin Shell
 
+- [ ] Remove or redirect the stale `app/(console)/settings/api-keys/page.tsx` placeholder (with its `SETTINGS_NAV` tab entry in `settings/layout.tsx`) — E16's real API-keys UI now lives at the top-level `app/(console)/api-keys/**` per E16's own Owned paths and the hot-spot rule ("other epics add a route group under `app/(console)/<feature>/`"), linked from a new `nav.config.ts` entry under the `organization` section. The `/settings/api-keys` stub is orphaned dead UI now; only E11 should touch `settings/layout.tsx`.
 - [ ] Chart tokens `--chart-1..6` in `packages/ui` (E12).
 - [ ] Confirm `(platform)`/`(support)` route-group naming with E18/E19 — pick one and document in `nav.config.ts`.
 - [ ] Accept `instrumentation.ts` in web-admin (E17). Same for E09 in web-verify.

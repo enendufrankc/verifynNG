@@ -226,6 +226,25 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E16 Public API & Webhooks ────────────────────────────────────
+const e16Schema = z.object({
+  PUBLIC_API_DEFAULT_RPM: z.coerce.number().default(120),
+  PUBLIC_API_MAX_KEYS_DEFAULT: z.coerce.number().default(10),
+  // dev/compose only — must stay false in any real deployment.
+  WEBHOOKS_ALLOW_HTTP: z.coerce.boolean().default(false),
+  WEBHOOKS_ALLOW_PRIVATE: z.coerce.boolean().default(false),
+  WEBHOOKS_BACKOFF_BASE_MS: z.coerce.number().default(30000),
+  WEBHOOKS_MAX_ATTEMPTS: z.coerce.number().default(10),
+  WEBHOOK_SINK_URL: z.string().default('http://webhook-sink:4105'),
+  // AES-256-GCM key encrypting WebhookEndpoint.secretEnc at rest — same
+  // [iv(12)|tag(16)|ciphertext] layout as E04's MANIFEST_ENC_KEY, own
+  // dedicated key rather than reusing another epic's.
+  WEBHOOK_SECRET_ENC_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/)
+    .default('fedcba9876543210'.repeat(4)),
+});
+
 // ── E20 SSO & MFA Policy ─────────────────────────────────────────
 const e20Schema = z.object({
   // No `v1/` prefix — see the routing-convention note in E20-sso.md's T1
@@ -261,6 +280,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e16Schema)
   .merge(e20Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;

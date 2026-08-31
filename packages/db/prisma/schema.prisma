@@ -391,15 +391,15 @@ model ScanEvent {
 // ─── E02 Identity & Access models ──────────────────────────────────
 
 model Membership {
-  id          String     @id @default(cuid())
-  userId      String
-  tenantId    String
-  role        TenantRole
-  createdVia  String? // E20: 'invite' | 'jit' — null for pre-existing memberships
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  userId     String
+  tenantId   String
+  role       TenantRole
+  createdVia String? // E20: 'invite' | 'jit' — null for pre-existing memberships
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tenantId])
   @@index([tenantId, role])
@@ -1240,6 +1240,80 @@ model UnitStateTransition {
 
 // ── end E07 models ────────────────────────────────────────────
 
+// ── E16 Public API & Webhooks ───────────────────────────────────
+// tenantId fields below are plain scalars (no @relation to Tenant), matching
+// IpBlock/UsageEvent above — avoids adding a back-relation field to the
+// E02/E03-owned Tenant model.
+
+enum WebhookEndpointStatus {
+  active
+  disabled
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  delivering
+  succeeded
+  failed
+  dead
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  prefix      String    @unique // "vk_live_3f9a" — first 12 chars, safe to display
+  hash        String    @unique // SHA-256 of full key; raw key never stored
+  mode        String // live | test — test keys hit the same API but writes are tagged Batch.isTest = true (E04 field request, pending)
+  scopes      String[]
+  createdById String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId, revokedAt])
+}
+
+model WebhookEndpoint {
+  id            String                @id @default(cuid())
+  tenantId      String
+  url           String // https required outside compose; http allowed when WEBHOOKS_ALLOW_HTTP=true
+  secretEnc     String // AEAD-encrypted via WebhookSigner's key ring helper; decrypted only inside WebhookSigner
+  events        String[] // subset of catalogue, or ["*"]
+  status        WebhookEndpointStatus @default(active)
+  description   String?
+  failureStreak Int                   @default(0) // auto-disable at 50 consecutive dead deliveries
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId, status])
+}
+
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  tenantId       String
+  endpointId     String
+  event          String
+  payload        Json
+  attempts       Int                   @default(0)
+  status         WebhookDeliveryStatus @default(pending)
+  nextAttemptAt  DateTime?
+  lastStatusCode Int?
+  lastResponse   String? // first 2 KB of body
+  lastError      String?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, endpointId, createdAt])
+  @@index([status, nextAttemptAt])
+}
+
+// ── end E16 models ───────────────────────────────────────────────
 // ── E20 SSO & MFA Policy ─────────────────────────────────────────
 enum SsoProvider {
   google
@@ -1295,4 +1369,5 @@ model TenantMfaPolicy {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
+
 // ── end E20 models ────────────────────────────────────────────

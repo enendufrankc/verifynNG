@@ -42,6 +42,12 @@ function normalizeErrorBody(body: ApiErrorBody): {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+/** A void-returning handler (e.g. most DELETE routes) sends a 200/204 with no body — `res.json()` throws on that. */
+async function parseJsonBody<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
+}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -116,7 +122,7 @@ async function request<T>(
           normalized.payload,
         );
       }
-      return (await retry.json()) as T;
+      return parseJsonBody<T>(retry);
     }
     throw new ApiError(401, 'SESSION_EXPIRED', 'Session expired');
   }
@@ -131,8 +137,7 @@ async function request<T>(
       normalized.payload,
     );
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  return parseJsonBody<T>(res);
 }
 
 export const apiClient = {

@@ -37,6 +37,10 @@ import { RetentionModule } from './modules/retention/retention.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
 import { UnitsModule } from './modules/units/units.module';
 import { AnomalyModule } from './modules/anomaly/anomaly.module';
+import { EntitlementsModule } from './modules/entitlements/entitlements.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { SsoModule } from './modules/sso/sso.module';
 
 @Module({
@@ -86,6 +90,10 @@ import { SsoModule } from './modules/sso/sso.module';
     IncidentsModule,
     UnitsModule,
     AnomalyModule,
+    EntitlementsModule,
+    ApiKeysModule,
+    PublicApiModule,
+    WebhooksModule,
     SsoModule,
   ],
   providers: [
