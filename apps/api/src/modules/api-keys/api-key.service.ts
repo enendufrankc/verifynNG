@@ -23,6 +23,7 @@ export interface VerifiedApiKey {
   tenantId: string;
   scopes: string[];
   mode: ApiKeyMode;
+  prefix: string;
 }
 
 /** Fields safe to return to the console — never `hash`. */
@@ -137,6 +138,7 @@ export class ApiKeyService {
       tenantId: record.tenantId,
       scopes: record.scopes,
       mode: record.mode as ApiKeyMode,
+      prefix: record.prefix,
     };
   }
 

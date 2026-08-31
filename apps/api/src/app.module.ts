@@ -39,6 +39,7 @@ import { UnitsModule } from './modules/units/units.module';
 import { AnomalyModule } from './modules/anomaly/anomaly.module';
 import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { ApiKeysModule } from './modules/api-keys/api-keys.module';
     AnomalyModule,
     EntitlementsModule,
     ApiKeysModule,
+    PublicApiModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

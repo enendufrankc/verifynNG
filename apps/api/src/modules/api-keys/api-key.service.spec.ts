@@ -81,6 +81,7 @@ describe('ApiKeyService (integration)', () => {
       tenantId,
       scopes: ['read:batches'],
       mode: 'live',
+      prefix: key.slice(0, 12),
     });
 
     const tampered = key.slice(0, -1) + (key.at(-1) === 'a' ? 'b' : 'a');
