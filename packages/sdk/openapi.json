@@ -1,0 +1,1628 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/me": {
+      "get": {
+        "operationId": "MeController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Introspect the authenticated API key",
+        "tags": ["meta"]
+      }
+    },
+    "/api/v1/batches": {
+      "post": {
+        "description": "Idempotent on Idempotency-Key: a repeated key with the same body replays the original 202; a repeated key with a different body 409s.",
+        "operationId": "PublicBatchesController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Any client-generated unique string, e.g. a UUID.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePublicBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Batch minting started (or already exists for this key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateBatchResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing Idempotency-Key header, or invalid body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "productId/oemId does not exist for this tenant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency-Key reused with a different body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Mint a new batch of units",
+        "tags": ["batches"]
+      },
+      "get": {
+        "operationId": "PublicBatchesController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "minting",
+                "minted",
+                "delivered",
+                "printed",
+                "shipped",
+                "closed",
+                "failed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchesPageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "List batches for the authenticated tenant",
+        "tags": ["batches"]
+      }
+    },
+    "/api/v1/batches/{id}": {
+      "get": {
+        "operationId": "PublicBatchesController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another tenant — never 403.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get a single batch",
+        "tags": ["batches"]
+      }
+    },
+    "/api/v1/batches/{id}/units": {
+      "get": {
+        "operationId": "PublicBatchesController_units",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "flagged", "decommissioned"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitsPageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "List the units minted into a batch",
+        "tags": ["batches"]
+      }
+    },
+    "/api/v1/units/{id}": {
+      "get": {
+        "operationId": "PublicUnitsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another tenant — never 403.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get a single unit (tier-2 code never returned)",
+        "tags": ["units"]
+      }
+    },
+    "/api/v1/units/{id}/flag": {
+      "post": {
+        "operationId": "PublicUnitsController_flag",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another tenant — never 403.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Unit is not in a state this transition allows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Flag a unit as suspicious",
+        "tags": ["units"]
+      }
+    },
+    "/api/v1/units/{id}/decommission": {
+      "post": {
+        "operationId": "PublicUnitsController_decommission",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another tenant — never 403.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Unit is not in a state this transition allows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Decommission a unit (confirmed counterfeit, recalled, etc.)",
+        "tags": ["units"]
+      }
+    },
+    "/api/v1/units/{id}/restore": {
+      "post": {
+        "operationId": "PublicUnitsController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagReasonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another tenant — never 403.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Unit is not in a state this transition allows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Restore a flagged or decommissioned unit to active",
+        "tags": ["units"]
+      }
+    },
+    "/api/v1/scans": {
+      "get": {
+        "operationId": "PublicScansController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "batchId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "verdict",
+            "required": false,
+            "in": "query",
+            "description": "authentic | suspicious | flagged | unknown-tier2",
+            "schema": {
+              "example": "suspicious",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanEventsPageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "List scan events for the authenticated tenant",
+        "tags": ["scans"]
+      }
+    },
+    "/api/v1/reports": {
+      "get": {
+        "operationId": "PublicReportsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["new", "triaged", "investigating", "closed"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportsPageDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "List consumer fake-reports for the authenticated tenant",
+        "tags": ["reports"]
+      }
+    },
+    "/api/v1/reports/{id}": {
+      "get": {
+        "operationId": "PublicReportsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, malformed, revoked, or expired API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The key's scopes don't cover this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or belongs to another tenant — never 403.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Per-key rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "summary": "Get a single report",
+        "tags": ["reports"]
+      }
+    }
+  },
+  "info": {
+    "title": "verifynNG Public API",
+    "description": "Integrate minting, unit lifecycle and scan data into your own systems. Every route requires `Authorization: Bearer vk_live_…` or `vk_test_…`. Errors use a single envelope — see the \"error\" schema below. Deprecation policy: docs/public-api-deprecation-policy.md.",
+    "version": "2026-09-01",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "meta",
+      "description": "Key introspection"
+    },
+    {
+      "name": "batches",
+      "description": "Minting and batch lookup"
+    },
+    {
+      "name": "units",
+      "description": "Unit lookup and lifecycle actions"
+    },
+    {
+      "name": "scans",
+      "description": "Verification scan history"
+    },
+    {
+      "name": "reports",
+      "description": "Consumer fake-reports"
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Local compose"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "scheme": "bearer",
+        "bearerFormat": "vk_live_… / vk_test_…",
+        "type": "http",
+        "description": "An API key created in the console under Developers → API keys."
+      }
+    },
+    "schemas": {
+      "ErrorDetailDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "issue": {
+            "type": "string"
+          }
+        },
+        "required": ["issue"]
+      },
+      "ErrorBodyDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "not_found",
+              "validation",
+              "unauthorized",
+              "forbidden",
+              "rate_limited",
+              "conflict",
+              "idempotency_mismatch",
+              "plan_limit",
+              "internal"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "docs": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetailDto"
+            }
+          }
+        },
+        "required": ["type", "message", "docs"]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBodyDto"
+          }
+        },
+        "required": ["error"]
+      },
+      "RateLimitDto": {
+        "type": "object",
+        "properties": {
+          "perMinute": {
+            "type": "number"
+          }
+        },
+        "required": ["perMinute"]
+      },
+      "MeResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "example": "vk_live_3f9a"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rateLimit": {
+            "$ref": "#/components/schemas/RateLimitDto"
+          }
+        },
+        "required": ["tenantId", "keyPrefix", "scopes", "rateLimit"]
+      },
+      "CreatePublicBatchDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "oemId": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": ["productId", "oemId", "count"]
+      },
+      "BatchResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "oemId": {
+            "type": "string",
+            "nullable": true
+          },
+          "count": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "minting",
+              "minted",
+              "delivered",
+              "printed",
+              "shipped",
+              "closed",
+              "failed"
+            ]
+          },
+          "mintedCount": {
+            "type": "number"
+          },
+          "watermark": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "expectedShipDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "mintedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "exportsReadyAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "productId",
+          "oemId",
+          "count",
+          "status",
+          "mintedCount",
+          "watermark",
+          "kid",
+          "note",
+          "expectedShipDate",
+          "mintedAt",
+          "exportsReadyAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateBatchResponseDto": {
+        "type": "object",
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/BatchResponseDto"
+          },
+          "exportUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["batch", "exportUrl"]
+      },
+      "BatchesPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchResponseDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["data", "nextCursor"]
+      },
+      "UnitResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "batchId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "tier1Code": {
+            "type": "string"
+          },
+          "tier2HashRedacted": {
+            "type": "string",
+            "description": "First 8 hex chars of the tier-2 hash — never the full value."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "flagged", "decommissioned"]
+          },
+          "serial": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "batchId",
+          "productId",
+          "tier1Code",
+          "tier2HashRedacted",
+          "state",
+          "serial",
+          "createdAt"
+        ]
+      },
+      "UnitsPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnitResponseDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["data", "nextCursor"]
+      },
+      "FlagReasonDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why this action is being taken."
+          }
+        },
+        "required": ["reason"]
+      },
+      "ScanEventResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "nullable": true
+          },
+          "batchId": {
+            "type": "string",
+            "nullable": true
+          },
+          "productId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["tier1", "tier2"]
+          },
+          "verdict": {
+            "type": "string",
+            "description": "Free-text verdict, e.g. authentic | suspicious | flagged | unknown-tier2."
+          },
+          "source": {
+            "type": "string",
+            "enum": ["qr", "manual", "sms", "api"]
+          },
+          "codeRedacted": {
+            "type": "string"
+          },
+          "geoCountry": {
+            "type": "string",
+            "nullable": true
+          },
+          "geoCity": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "unitId",
+          "batchId",
+          "productId",
+          "tier",
+          "verdict",
+          "source",
+          "codeRedacted",
+          "geoCountry",
+          "geoCity",
+          "createdAt"
+        ]
+      },
+      "ScanEventsPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScanEventResponseDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["data", "nextCursor"]
+      },
+      "ReportResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "scanEventId": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitId": {
+            "type": "string",
+            "nullable": true
+          },
+          "batchId": {
+            "type": "string",
+            "nullable": true
+          },
+          "productId": {
+            "type": "string",
+            "nullable": true
+          },
+          "verdictAtReport": {
+            "type": "string"
+          },
+          "sellerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sellerLocation": {
+            "type": "string",
+            "nullable": true
+          },
+          "purchaseChannel": {
+            "type": "string",
+            "enum": [
+              "open_market",
+              "street_vendor",
+              "online_marketplace",
+              "social_media",
+              "pharmacy",
+              "supermarket",
+              "brand_store",
+              "other"
+            ]
+          },
+          "purchaseDate": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": ["new", "triaged", "investigating", "closed"]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": ["confirmed_counterfeit", "legit", "insufficient"],
+            "nullable": true
+          },
+          "assignedToId": {
+            "type": "string",
+            "nullable": true
+          },
+          "locale": {
+            "type": "string",
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "reference",
+          "scanEventId",
+          "unitId",
+          "batchId",
+          "productId",
+          "verdictAtReport",
+          "sellerName",
+          "sellerLocation",
+          "purchaseChannel",
+          "purchaseDate",
+          "description",
+          "status",
+          "outcome",
+          "assignedToId",
+          "locale",
+          "closedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReportsPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportResponseDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["data", "nextCursor"]
+      }
+    }
+  }
+}

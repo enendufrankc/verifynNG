@@ -9,6 +9,13 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PrismaClient, Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import {
@@ -16,15 +23,26 @@ import {
   Idempotent,
 } from '../decorators/public-api-controller.decorator.js';
 import { Scopes } from '../decorators/scopes.decorator.js';
+import { ApiPublicCommonResponses } from '../decorators/api-common-responses.decorator.js';
 import { ListBatchesQueryDto } from '../dto/list-batches-query.dto.js';
 import { ListBatchUnitsQueryDto } from '../dto/list-batch-units-query.dto.js';
 import { CreatePublicBatchDto } from '../dto/create-public-batch.dto.js';
+import {
+  BatchResponseDto,
+  BatchesPageDto,
+  CreateBatchResponseDto,
+} from '../dto/responses/batch.response.dto.js';
+import { UnitsPageDto } from '../dto/responses/unit.response.dto.js';
+import { ErrorResponseDto } from '../dto/responses/error.response.dto.js';
 import { decodeCursor, paginate, parseLimit } from '../pagination.js';
 import { toPublicBatch } from '../mappers/batch.mapper.js';
 import { toPublicUnit } from '../mappers/unit.mapper.js';
 import { MintService } from '../../batches/mint.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 
+@ApiTags('batches')
+@ApiBearerAuth('apiKey')
+@ApiPublicCommonResponses()
 @PublicApiController('api/v1/batches')
 export class PublicBatchesController {
   constructor(
@@ -37,6 +55,37 @@ export class PublicBatchesController {
   @HttpCode(202)
   @Scopes('write:batches')
   @Idempotent()
+  @ApiOperation({
+    summary: 'Mint a new batch of units',
+    description:
+      'Idempotent on Idempotency-Key: a repeated key with the same body ' +
+      'replays the original 202; a repeated key with a different body 409s.',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Any client-generated unique string, e.g. a UUID.',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Batch minting started (or already exists for this key).',
+    type: CreateBatchResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing Idempotency-Key header, or invalid body.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 402,
+    description: 'productId/oemId does not exist for this tenant.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Idempotency-Key reused with a different body.',
+    type: ErrorResponseDto,
+  })
   async create(
     @Req() req: Request,
     @Body() dto: CreatePublicBatchDto,
@@ -78,6 +127,8 @@ export class PublicBatchesController {
 
   @Get()
   @Scopes('read:batches')
+  @ApiOperation({ summary: 'List batches for the authenticated tenant' })
+  @ApiResponse({ status: 200, type: BatchesPageDto })
   async list(@Req() req: Request, @Query() query: ListBatchesQueryDto) {
     const tenantId = req.apiKey!.tenantId;
     const decoded = query.cursor ? decodeCursor(query.cursor) : null;
@@ -109,6 +160,13 @@ export class PublicBatchesController {
 
   @Get(':id')
   @Scopes('read:batches')
+  @ApiOperation({ summary: 'Get a single batch' })
+  @ApiResponse({ status: 200, type: BatchResponseDto })
+  @ApiResponse({
+    status: 404,
+    description: 'Not found, or belongs to another tenant — never 403.',
+    type: ErrorResponseDto,
+  })
   async get(@Req() req: Request, @Param('id') id: string) {
     const tenantId = req.apiKey!.tenantId;
     const batch = await this.prisma.batch.findFirst({
@@ -120,6 +178,9 @@ export class PublicBatchesController {
 
   @Get(':id/units')
   @Scopes('read:units')
+  @ApiOperation({ summary: 'List the units minted into a batch' })
+  @ApiResponse({ status: 200, type: UnitsPageDto })
+  @ApiResponse({ status: 404, type: ErrorResponseDto })
   async units(
     @Req() req: Request,
     @Param('id') id: string,

@@ -15,6 +15,7 @@ import { PublicBatchesController } from './controllers/batches.controller.js';
 import { PublicUnitsController } from './controllers/units.controller.js';
 import { PublicScansController } from './controllers/scans.controller.js';
 import { PublicReportsController } from './controllers/reports.controller.js';
+import { DocsController } from './controllers/docs.controller.js';
 import { PUBLIC_API_QUOTA_KIND } from './constants.js';
 
 @Module({
@@ -25,6 +26,7 @@ import { PUBLIC_API_QUOTA_KIND } from './constants.js';
     PublicUnitsController,
     PublicScansController,
     PublicReportsController,
+    DocsController,
   ],
   providers: [
     ScopesGuard,

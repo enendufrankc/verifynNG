@@ -1,18 +1,31 @@
 import { Get, Query, Req } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PrismaClient, Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { PublicApiController } from '../decorators/public-api-controller.decorator.js';
 import { Scopes } from '../decorators/scopes.decorator.js';
+import { ApiPublicCommonResponses } from '../decorators/api-common-responses.decorator.js';
 import { ListScansQueryDto } from '../dto/list-scans-query.dto.js';
+import { ScanEventsPageDto } from '../dto/responses/scan-event.response.dto.js';
 import { decodeCursor, paginate, parseLimit } from '../pagination.js';
 import { toPublicScanEvent } from '../mappers/scan-event.mapper.js';
 
+@ApiTags('scans')
+@ApiBearerAuth('apiKey')
+@ApiPublicCommonResponses()
 @PublicApiController('api/v1/scans')
 export class PublicScansController {
   constructor(private readonly prisma: PrismaClient) {}
 
   @Get()
   @Scopes('read:scans')
+  @ApiOperation({ summary: 'List scan events for the authenticated tenant' })
+  @ApiResponse({ status: 200, type: ScanEventsPageDto })
   async list(@Req() req: Request, @Query() query: ListScansQueryDto) {
     const tenantId = req.apiKey!.tenantId;
     const decoded = query.cursor ? decodeCursor(query.cursor) : null;

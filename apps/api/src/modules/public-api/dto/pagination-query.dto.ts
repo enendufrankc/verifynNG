@@ -1,4 +1,5 @@
 import { IsNumberString, IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * `limit` stays a string here and is parsed + clamped by `parseLimit()` in
@@ -8,10 +9,12 @@ import { IsNumberString, IsOptional, IsString } from 'class-validator';
  * apply to `@Query()` DTOs (query values arrive untransformed).
  */
 export class PaginationQueryDto {
+  @ApiPropertyOptional({ description: 'Opaque cursor from a previous page.' })
   @IsOptional()
   @IsString()
   cursor?: string;
 
+  @ApiPropertyOptional({ minimum: 1, maximum: 200, default: 50 })
   @IsOptional()
   @IsNumberString()
   limit?: string;

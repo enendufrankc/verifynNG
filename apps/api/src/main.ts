@@ -8,6 +8,7 @@ import { loadEnv, corsAllowlist } from '@verifynng/config';
 import helmet from 'helmet';
 import { QuotaService } from './modules/quota/quota.service.js';
 import { AppLogger } from './telemetry/logger';
+import { setPublicApiApp } from './modules/public-api/app-holder.js';
 
 // Bootstrap OTel before Nest — must be first
 startOtel();
@@ -24,6 +25,7 @@ async function bootstrap() {
     bufferLogs: true,
   });
   app.useLogger(app.get(AppLogger));
+  setPublicApiApp(app);
 
   // Security headers (E13). CSP is handled by the Next apps; the API serves no HTML.
   app.use(
