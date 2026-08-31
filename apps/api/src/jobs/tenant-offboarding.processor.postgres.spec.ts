@@ -5,6 +5,7 @@ import {
   prisma,
 } from '@verifynng/db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TenantOffboardingProcessor } from './tenant-offboarding.processor';
 import { TenantS3Service } from '../modules/tenants/s3.service';
 import { TenantEventBus } from '../modules/tenants/tenant-events';
@@ -16,7 +17,7 @@ describe('TenantOffboardingProcessor.runDelete with Postgres and MinIO', () => {
   const storage = new TenantS3Service({
     get: (key: string, fallback?: unknown) => process.env[key] ?? fallback,
   } as never);
-  const events = new TenantEventBus();
+  const events = new TenantEventBus(new EventEmitter2());
   const processor = new TenantOffboardingProcessor(
     storage,
     events,
