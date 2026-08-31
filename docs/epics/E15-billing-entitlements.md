@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 3 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | Frank Enendu (@enendufrankc) |
 | GitHub Issue | [#16](https://github.com/enendufrankc/verifynNG/issues/16) |
 | Depends on | E12 (usage meters), E03 (tenant status), E14 (mailer + templates), E04 (`EntitlementPolicy` interface), E11 (admin shell), E13 (`@Audited`) |
 | Unblocks | E18 (plan/usage in tenant directory), E21 (invoice fixtures) |
