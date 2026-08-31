@@ -110,6 +110,11 @@ export class MintService {
           error: 'entitlement',
           reason: entitlement.reason,
           upgradeHint: entitlement.upgradeHint,
+          ...(entitlement.code !== undefined ? { code: entitlement.code } : {}),
+          ...(entitlement.limit !== undefined
+            ? { limit: entitlement.limit }
+            : {}),
+          ...(entitlement.used !== undefined ? { used: entitlement.used } : {}),
         },
         402,
       );

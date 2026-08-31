@@ -3,6 +3,7 @@ import { loadEnv } from '@verifynng/config';
 import { PlansController } from './plans.controller';
 import { PlanService } from './plan.service';
 import { SubscriptionService } from './subscription.service';
+import { EntitlementService } from './entitlement.service';
 import { BillingPeriodRollProcessor } from './jobs/period-roll.processor';
 import { BillingPeriodRollScheduler } from './jobs/period-roll.scheduler';
 import { BullMQModule } from '../../jobs/bullmq.module';
@@ -22,9 +23,10 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
   providers: [
     PlanService,
     SubscriptionService,
+    EntitlementService,
     BillingPeriodRollScheduler,
     ...(workerInline ? [BillingPeriodRollProcessor] : []),
   ],
-  exports: [PlanService, SubscriptionService],
+  exports: [PlanService, SubscriptionService, EntitlementService],
 })
 export class BillingModule {}

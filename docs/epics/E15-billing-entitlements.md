@@ -1,13 +1,13 @@
 # E15 — Billing & Entitlements
 
-| | |
-|---|---|
-| Wave | 3 |
-| Status | in-progress |
-| Owner | Frank Enendu (@enendufrankc) |
-| GitHub Issue | [#16](https://github.com/enendufrankc/verifynNG/issues/16) |
-| Depends on | E12 (usage meters), E03 (tenant status), E14 (mailer + templates), E04 (`EntitlementPolicy` interface), E11 (admin shell), E13 (`@Audited`) |
-| Unblocks | E18 (plan/usage in tenant directory), E21 (invoice fixtures) |
+|                 |                                                                                                                                                                                                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 3                                                                                                                                                                                                                           |
+| Status          | in-progress                                                                                                                                                                                                                 |
+| Owner           | Frank Enendu (@enendufrankc)                                                                                                                                                                                                |
+| GitHub Issue    | [#16](https://github.com/enendufrankc/verifynNG/issues/16)                                                                                                                                                                  |
+| Depends on      | E12 (usage meters), E03 (tenant status), E14 (mailer + templates), E04 (`EntitlementPolicy` interface), E11 (admin shell), E13 (`@Audited`)                                                                                 |
+| Unblocks        | E18 (plan/usage in tenant directory), E21 (invoice fixtures)                                                                                                                                                                |
 | Readiness items | `production-readiness.md` §7 all rows (pricing model, payment gateway, plans/trials/upgrades, metering separated from pricing, invoicing/dunning, entitlement enforcement) · §8 suspension/reactivation ("restricted mode") |
 
 ## Goal
@@ -35,6 +35,7 @@ docs/billing-pricing-and-proration.md
 ## Interfaces
 
 **Consumes:**
+
 - E12: `UsageSummary` (per tenant, per period: `unitsMinted`, `scansRecorded`, `apiCalls`), `GET /tenants/:id/usage`, event `usage.summarised` (end-of-period rollup). E15 reads meters, never writes them.
 - E03: `Tenant.status`, `TenantService.setRestricted(tenantId, reason)` / `clearRestricted(tenantId)` — **change request to E03**: E03's guard must treat a new `Tenant.status = restricted` (or an equivalent `restrictedReason` field) the same as `suspended` for write paths but keep `/v1/verify/**` open. E15 drives this state; E03 owns the enum and guard.
 - E04: `EntitlementPolicy` interface (`assertCanMint(tenantId, count)`, `hasFeature(tenantId, feature)`); E15 provides `PlanEntitlementPolicy` and E04 binds it via the `ENTITLEMENT_POLICY` token, replacing the allow-all default. Event `batch.minted` (to refresh the cached units-this-year counter).
@@ -46,28 +47,64 @@ docs/billing-pricing-and-proration.md
 **Exposes:**
 
 Nest providers (module `BillingModule`):
+
 ```ts
-PlanService            // list(), getByCode(code), seed()
-SubscriptionService    // getForTenant(id), startTrial(id), changePlan(id, planCode, {effective:'now'|'period_end'}), cancel(id), transition(id, status)
-EntitlementService     // implements EntitlementPolicy: assertCanMint, hasFeature, limitsFor(tenantId): PlanLimits
-InvoiceService         // generateForPeriod(tenantId, period), issue(invoiceId), markPaid(invoiceId, paymentId), renderPdf(invoiceId): Buffer
-PaymentService         // initialise(invoiceId) → { checkoutUrl }, verify(reference), handleWebhook(rawBody, signature), chargeAuthorisation(invoiceId)
-DunningService         // BullMQ processor: schedule retries (T+1, T+3, T+7 days), send reminders, restrict on exhaustion, reactivate on payment
-PaymentGatewayPort     // interface — see below
-PaystackGateway, FakePayGateway   // adapters; chosen by env PAYMENT_GATEWAY=paystack|fake
+PlanService; // list(), getByCode(code), seed()
+SubscriptionService; // getForTenant(id), startTrial(id), changePlan(id, planCode, {effective:'now'|'period_end'}), cancel(id), transition(id, status)
+EntitlementService; // implements EntitlementPolicy: assertCanMint, hasFeature, limitsFor(tenantId): PlanLimits
+InvoiceService; // generateForPeriod(tenantId, period), issue(invoiceId), markPaid(invoiceId, paymentId), renderPdf(invoiceId): Buffer
+PaymentService; // initialise(invoiceId) → { checkoutUrl }, verify(reference), handleWebhook(rawBody, signature), chargeAuthorisation(invoiceId)
+DunningService; // BullMQ processor: schedule retries (T+1, T+3, T+7 days), send reminders, restrict on exhaustion, reactivate on payment
+PaymentGatewayPort; // interface — see below
+(PaystackGateway, FakePayGateway); // adapters; chosen by env PAYMENT_GATEWAY=paystack|fake
 ```
 
 ```ts
 interface PaymentGatewayPort {
-  initialiseTransaction(i: { reference: string; amountMinor: number; currency: 'NGN'|'GBP'; email: string; callbackUrl: string; metadata: Record<string,string> }): Promise<{ checkoutUrl: string; providerRef: string }>;
-  verifyTransaction(reference: string): Promise<{ status: 'success'|'failed'|'pending'; amountMinor: number; currency: string; authorizationCode?: string; cardLast4?: string; cardBrand?: string }>;
-  chargeAuthorisation(i: { authorizationCode: string; email: string; amountMinor: number; currency: 'NGN'|'GBP'; reference: string }): Promise<{ status: 'success'|'failed'; providerRef: string; failureReason?: string }>;
-  verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean;   // Paystack: HMAC-SHA512 of body with secret key, header x-paystack-signature
-  parseWebhook(rawBody: Buffer): { type: 'charge.success'|'charge.failed'|'invoice.payment_failed'|string; reference: string; data: unknown };
+  initialiseTransaction(i: {
+    reference: string;
+    amountMinor: number;
+    currency: 'NGN' | 'GBP';
+    email: string;
+    callbackUrl: string;
+    metadata: Record<string, string>;
+  }): Promise<{ checkoutUrl: string; providerRef: string }>;
+  verifyTransaction(
+    reference: string,
+  ): Promise<{
+    status: 'success' | 'failed' | 'pending';
+    amountMinor: number;
+    currency: string;
+    authorizationCode?: string;
+    cardLast4?: string;
+    cardBrand?: string;
+  }>;
+  chargeAuthorisation(i: {
+    authorizationCode: string;
+    email: string;
+    amountMinor: number;
+    currency: 'NGN' | 'GBP';
+    reference: string;
+  }): Promise<{
+    status: 'success' | 'failed';
+    providerRef: string;
+    failureReason?: string;
+  }>;
+  verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean; // Paystack: HMAC-SHA512 of body with secret key, header x-paystack-signature
+  parseWebhook(rawBody: Buffer): {
+    type:
+      | 'charge.success'
+      | 'charge.failed'
+      | 'invoice.payment_failed'
+      | string;
+    reference: string;
+    data: unknown;
+  };
 }
 ```
 
 HTTP routes (internal, JWT):
+
 ```
 GET    /v1/billing/plans                                  public list of plans (any authenticated user)
 GET    /v1/tenants/:tenantId/billing/subscription          owner
@@ -86,6 +123,7 @@ POST   /v1/platform/subscriptions/:id/mark-paid             support  manual sett
 ```
 
 Domain events (Nest `EventEmitter`):
+
 ```
 subscription.changed     { tenantId, subscriptionId, fromPlanCode, toPlanCode, fromStatus, toStatus, effectiveAt }
 invoice.issued           { tenantId, invoiceId, number, currency, totalMinor, dueAt }
@@ -230,20 +268,20 @@ model GatewayWebhookEvent {
 
 Plan seed (`packages/db/prisma/seed/plans.ts`, run by `pnpm db:seed`):
 
-| code | NGN/month | GBP/month | included units | included scans/month | notes |
-|---|---|---|---|---|---|
-| free-trial | 0 | 0 | 500 total | 5,000 | 30-day trial; `trialTotalCap`; no public API |
-| starter | ₦45,000 | £25 | 10,000/yr | 50,000 | overage ₦8 / 0.4p per unit, ₦0.5 / 0.03p per scan |
-| growth | ₦180,000 | £100 | 100,000/yr | 500,000 | public API, webhooks, custom pages |
-| enterprise | 0 (custom) | 0 (custom) | unlimited | unlimited | SSO, `customPricing`; invoices created by support with manual lines |
+| code       | NGN/month  | GBP/month  | included units | included scans/month | notes                                                               |
+| ---------- | ---------- | ---------- | -------------- | -------------------- | ------------------------------------------------------------------- |
+| free-trial | 0          | 0          | 500 total      | 5,000                | 30-day trial; `trialTotalCap`; no public API                        |
+| starter    | ₦45,000    | £25        | 10,000/yr      | 50,000               | overage ₦8 / 0.4p per unit, ₦0.5 / 0.03p per scan                   |
+| growth     | ₦180,000   | £100       | 100,000/yr     | 500,000              | public API, webhooks, custom pages                                  |
+| enterprise | 0 (custom) | 0 (custom) | unlimited      | unlimited            | SSO, `customPricing`; invoices created by support with manual lines |
 
 Amounts are placeholders agreed with product; changing them is a seed edit + `SEED_VERSION` bump, not a code change.
 
 ## Tasks
 
-- [ ] T1 Module scaffold + schema: `BillingModule`, Prisma block above, migration `E15_billing`, plan seed, `PlanService`, `GET /v1/billing/plans`. Env section `BILLING_*` in `packages/config` (`PAYMENT_GATEWAY=fake`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`, `FAKE_PAY_URL=http://fake-pay:4102`, `BILLING_TAX_RATE_BPS_NGN=0`, `BILLING_TAX_RATE_BPS_GBP=0`).
-- [ ] T2 `SubscriptionService` state machine: `trialing → active | restricted(trial_expired)`, `active → past_due → active | restricted`, `* → cancelled`. Listens to E03 `tenant.activated` to `startTrial()`; currency from `Tenant.country`. Nightly BullMQ cron `billing.period-roll` advances periods and expires trials. Unit tests for every transition; illegal transitions throw `IllegalSubscriptionTransition`.
-- [ ] T3 `EntitlementService implements EntitlementPolicy`: `assertCanMint` checks units minted in the current subscription year (Redis counter refreshed from `batch.minted`, backfilled from `Unit` count on cold start) against `includedUnitsPerYear` for trial (hard cap) or `features.hardCap` for paid plans (default: overage allowed, soft warning); `hasFeature` reads `Plan.features`; `limitsFor()` returns `apiRateLimitPerMin`, `maxApiKeys` for E13/E16. Registered against E04's `ENTITLEMENT_POLICY` token. Throws `EntitlementExceeded` → HTTP 402 with `{ code:'plan_limit', limit, used, upgradeUrl }`.
+- [x] T1 Module scaffold + schema: `BillingModule`, Prisma block above, migration `E15_billing`, plan seed, `PlanService`, `GET /v1/billing/plans`. Env section `BILLING_*` in `packages/config` (`PAYMENT_GATEWAY=fake`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`, `FAKE_PAY_URL=http://fake-pay:4102`, `BILLING_TAX_RATE_BPS_NGN=0`, `BILLING_TAX_RATE_BPS_GBP=0`).
+- [x] T2 `SubscriptionService` state machine: `trialing → active | restricted(trial_expired)`, `active → past_due → active | restricted`, `* → cancelled`. Listens to E03's `tenant.verified` (the real event E03 fires on activation — see Notes; the doc's original `tenant.activated` name doesn't exist) to `startTrial()`; currency from `Tenant.country`. Nightly BullMQ cron `billing.period-roll` advances periods and expires trials — registered inline only under `WORKER_INLINE=true` for now (compose's `api-worker` wiring is a follow-up, see PR #72). Unit/integration tests for every transition; illegal transitions throw `IllegalSubscriptionTransition`.
+- [x] T3 `EntitlementService implements EntitlementPolicy`: real interface is `canMint(ctx): Promise<EntitlementCheck>` (apps/api/src/modules/batches/entitlement.policy.ts), not the doc's original `assertCanMint`/throwing sketch — E04 already computes `existingUnitsThisYear` synchronously per mint call (`Unit` count), so no separate Redis counter is needed. Checks it against `includedUnitsPerYear` when `features.trialTotalCap` or `features.hardCap` is set (paid plans default: overage allowed, no cap); `hasFeature` reads `Plan.features`; `limitsFor()` returns `apiRateLimitPerMin`, `maxApiKeys` for E13/E16. Registered against E04's `ENTITLEMENT_POLICY` token in `BatchesModule` (E04 file, pre-agreed in CROSS-EPIC-REQUESTS.md). `EntitlementCheck` extended (additive) with `code`/`limit`/`used` so `MintService`'s existing 402 carries them — see AC2.
 - [ ] T4 `InvoiceService.generateForPeriod`: pulls E12 `UsageSummary`, prices `plan_fee` + `unit_overage` (max(0, minted − included·periodFraction)) + `scan_overage`, freezes `usageSnapshot`, assigns `number`, `issue()` sets `dueAt = +7d`, emits `invoice.issued`, sends `invoice.issued` mail with PDF attached. Cron `billing.invoice-run` on `currentPeriodEnd`. Integration test with a seeded `UsageSummary` asserts exact line amounts.
 - [ ] T5 Invoice PDF: `renderPdf()` with `pdfkit` (tenant legal name, address from E03 settings, lines, totals, currency formatting for NGN/GBP, payment instructions). Route `…/invoices/:id.pdf`. Golden-file test comparing extracted text.
 - [ ] T6 `PaymentGatewayPort` + `PaystackGateway`: initialise (`/transaction/initialize`), verify (`/transaction/verify/:ref`), charge authorisation (`/transaction/charge_authorization`), HMAC-SHA512 webhook signature check, `parseWebhook`. Recorded HTTP fixtures (nock) for tests; no live calls in CI. `POST /v1/billing/webhooks/paystack` uses `rawBody`, rejects bad signatures with 401, dedupes via `GatewayWebhookEvent.id`, acks 200 within 5s and processes on a BullMQ job.
@@ -258,15 +296,15 @@ Amounts are placeholders agreed with product; changing them is a seed edit + `SE
 
 ## Acceptance criteria
 
-- [ ] AC1 `docker compose up`, `pnpm db:seed` → `curl localhost:4000/v1/billing/plans -H "Authorization: Bearer $TOKEN"` returns the four plans with NGN and GBP prices in minor units; tenant `ivoryglow` has `Subscription.status = trialing`, `trialEndsAt` 30 days out.
-- [ ] AC2 Trial cap: as `ivoryglow` owner, mint batches totalling 500 units (E04 `POST /v1/tenants/ivoryglow/batches`), then mint 1 more → HTTP 402 `{ code:'plan_limit', limit:500, used:500 }`; `GET /v1/verify/<any existing code>` still returns a verdict.
-- [ ] AC3 Upgrade + pay: in web-admin `http://localhost:3001/billing/change-plan` choose **starter**, see the proration preview, confirm → redirected to `http://localhost:4102/checkout/<ref>`; click **Pay** → back in web-admin within 5s the plan card shows *Starter · active*, `GET …/billing/invoices` shows the proration invoice `paid`, and Mailpit (`http://localhost:8025`) has an `invoice.paid` email. Minting the 501st unit now succeeds.
+- [x] AC1 `docker compose up`, `pnpm db:seed` → `curl localhost:4000/v1/billing/plans -H "Authorization: Bearer $TOKEN"` returns the four plans with NGN and GBP prices in minor units; tenant `ivoryglow` has `Subscription.status = trialing`, `trialEndsAt` 30 days out. Verified (evidence on issue #16).
+- [x] AC2 Trial cap: as `ivoryglow` owner, mint batches totalling 500 units (E04 `POST /tenants/ivoryglow/batches` — note, no `/v1` prefix on E04's real route, unlike this doc's original guess), then mint 1 more → HTTP 402. Verified shape: `{ statusCode:402, timestamp, message: { error:'entitlement', reason, upgradeHint:'/billing/change-plan', code:'plan_limit', limit:500, used:500 } }` — the `message` nesting is E17's `GlobalExceptionFilter` wrapping every `HttpException` (see CROSS-EPIC-REQUESTS.md's E17 section; same envelope E06/E09 already had to work around), not something E15 controls. `GET /v1/verify/<any existing code>` still returns a verdict (verified: `{"verdict":"ok",...}` 200).
+- [ ] AC3 Upgrade + pay: in web-admin `http://localhost:3001/billing/change-plan` choose **starter**, see the proration preview, confirm → redirected to `http://localhost:4102/checkout/<ref>`; click **Pay** → back in web-admin within 5s the plan card shows _Starter · active_, `GET …/billing/invoices` shows the proration invoice `paid`, and Mailpit (`http://localhost:8025`) has an `invoice.paid` email. Minting the 501st unit now succeeds.
 - [ ] AC4 Invoice run: `pnpm --filter api cli billing:run-invoices --tenant ivoryglow --period 2026-08` (uses E21 seeded usage: 12,000 units, 60,000 scans on starter) produces an invoice with lines `plan_fee 4,500,000`, `unit_overage 2,000 × 800 = 1,600,000`, `scan_overage 10,000 × 50 = 500,000`, total `6,600,000` kobo; `GET …/invoices/<id>.pdf` downloads a PDF whose text contains `₦66,000.00`.
 - [ ] AC5 Dunning to restricted: with `BILLING_CLOCK_SKEW_SECONDS` compressing days to seconds and a default card whose authorization ends `-FAIL`, issue an invoice → three `payment.failed` events, three `invoice.failed` emails in Mailpit, then `Subscription.status = restricted`, `Tenant` in restricted mode: `POST …/batches` → 403 from E03's guard, `GET /v1/verify/<code>` → 200. Web-admin shows the red restricted banner on every console page.
-- [ ] AC6 Reactivation: from the banner click *Pay now* → fake checkout → **Pay** → within 5s `Subscription.status = active`, banner gone, minting works, `subscription.reactivated` in the audit log (`http://localhost:3001/audit` filtered by `billing`).
+- [ ] AC6 Reactivation: from the banner click _Pay now_ → fake checkout → **Pay** → within 5s `Subscription.status = active`, banner gone, minting works, `subscription.reactivated` in the audit log (`http://localhost:3001/audit` filtered by `billing`).
 - [ ] AC7 Webhook security: `curl -X POST localhost:4000/v1/billing/webhooks/paystack -d '{}' -H 'x-paystack-signature: bad'` → 401; replaying a captured valid webhook twice → second returns 200 but creates no second `Payment` (check `SELECT count(*) FROM "Payment" WHERE reference = …` = 1).
 - [ ] AC8 Role gate: logged in as `operator` (E21 seed user), `http://localhost:3001/billing` shows the owner-only empty state and `GET …/billing/subscription` returns 403.
-- [ ] AC9 Support view: as `support`, `http://localhost:3001/subscriptions` lists all three seeded tenants with plan/status; *Mark paid* with reason on an issued invoice flips it to `paid` and the audit entry carries `reason`.
+- [ ] AC9 Support view: as `support`, `http://localhost:3001/subscriptions` lists all three seeded tenants with plan/status; _Mark paid_ with reason on an issued invoice flips it to `paid` and the audit entry carries `reason`.
 
 ## Testing
 
@@ -279,9 +317,9 @@ Amounts are placeholders agreed with product; changing them is a seed edit + `SE
 
 None new. `fake-pay` (port 4102, already declared by E00) gets its real implementation here:
 
-| Service | Image | Host port | Env |
-|---|---|---|---|
-| fake-pay | tools/fakes/pay | 4102 | `FAKE_PAY_SECRET=fake_sk_test`, `FAKE_PAY_WEBHOOK_URL=http://api:4000/v1/billing/webhooks/paystack` |
+| Service  | Image           | Host port | Env                                                                                                 |
+| -------- | --------------- | --------- | --------------------------------------------------------------------------------------------------- |
+| fake-pay | tools/fakes/pay | 4102      | `FAKE_PAY_SECRET=fake_sk_test`, `FAKE_PAY_WEBHOOK_URL=http://api:4000/v1/billing/webhooks/paystack` |
 
 `api` gets `PAYMENT_GATEWAY=fake`, `PAYSTACK_BASE_URL=http://fake-pay:4102`, `PAYSTACK_SECRET_KEY=fake_sk_test`.
 
