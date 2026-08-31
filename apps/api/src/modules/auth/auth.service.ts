@@ -2,18 +2,35 @@ import crypto from 'node:crypto';
 import {
   Injectable,
   ConflictException,
+  ForbiddenException,
   UnauthorizedException,
   NotFoundException,
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaClient, type User } from '@prisma/client';
+import { PrismaClient, type Membership, type User } from '@prisma/client';
 import { hashForStorage } from '@verifynng/core';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
 import { MfaService } from './services/mfa.service';
 import { MAILER, type Mailer } from './mailer/mailer.interface';
-import { toSafeUser } from './utils/safe-user';
+import { toSafeUser, type SafeUser } from './utils/safe-user';
+import { LoginPolicyRegistry } from './login-policy-hook';
+
+export interface CompleteLoginResult {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: SafeUser;
+  memberships: Array<{
+    tenantId: string;
+    tenantName: string;
+    tenantSlug: string;
+    role: string;
+  }>;
+  activeTenantId: string | null;
+  activeRole: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -24,6 +41,7 @@ export class AuthService {
     private mfaService: MfaService,
     private eventEmitter: EventEmitter2,
     @Inject(MAILER) private mailer: Mailer,
+    private loginPolicyRegistry: LoginPolicyRegistry,
   ) {}
 
   // ── Registration ─────────────────────────────────────────
@@ -53,9 +71,31 @@ export class AuthService {
   async login(
     email: string,
     password: string,
+    tenantSlug?: string,
     userAgent?: string,
     ip?: string,
-  ) {
+  ): Promise<
+    | { mfaRequired: true; mfaToken: string }
+    | (CompleteLoginResult & { mfaGraceUntil?: Date })
+  > {
+    // Hooks (E20: EnforceSsoLoginHook) only have a specific tenant to
+    // evaluate against when the caller resolves one — a bare email+password
+    // login with no `tenant` keeps its pre-E20 behaviour untouched.
+    let tenantId: string | undefined;
+    if (tenantSlug) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { slug: tenantSlug },
+      });
+      tenantId = tenant?.id;
+      if (tenantId) {
+        for (const hook of this.loginPolicyRegistry.getHooks()) {
+          if (hook.beforePasswordLogin) {
+            await hook.beforePasswordLogin({ tenantId, tenantSlug });
+          }
+        }
+      }
+    }
+
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');
@@ -81,13 +121,51 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if MFA required
-    if (user.mfaEnabled) {
-      const mfaToken = await this.tokenService.issueMfaToken(user.id);
-      return { mfaRequired: true, mfaToken };
+    let membership: Membership | null = null;
+    if (tenantId) {
+      membership = await this.prisma.membership.findUnique({
+        where: { userId_tenantId: { userId: user.id, tenantId } },
+      });
+      // A tenant was named but this user has no membership there — same
+      // response as any other invalid attempt, no enumeration.
+      if (!membership) throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.completeLogin(user, userAgent, ip);
+    let policyResult:
+      | { requireMfa: boolean; reason?: string; graceUntil?: Date }
+      | undefined;
+    if (tenantId && membership) {
+      for (const hook of this.loginPolicyRegistry.getHooks()) {
+        if (!hook.afterPrimaryAuth) continue;
+        const result = await hook.afterPrimaryAuth({
+          userId: user.id,
+          tenantId,
+          role: membership.role,
+        });
+        if (result.requireMfa || result.reason) {
+          policyResult = result;
+          break;
+        }
+      }
+    }
+
+    // Native `mfaEnabled` is the only trigger for "challenge now" — a hook's
+    // `requireMfa: true` for a not-yet-enrolled user surfaces as `reason`
+    // (grace / enrolment_required) below instead, since there's no secret to
+    // challenge against yet.
+    if (user.mfaEnabled) {
+      const mfaToken = await this.tokenService.issueMfaToken(user.id, tenantId);
+      return { mfaRequired: true, mfaToken };
+    }
+    if (policyResult?.reason === 'enrolment_required') {
+      throw new ForbiddenException({ code: 'mfa_enrolment_required' });
+    }
+
+    const result = await this.completeLogin(user, tenantId, userAgent, ip);
+    if (policyResult?.reason === 'grace' && policyResult.graceUntil) {
+      return { ...result, mfaGraceUntil: policyResult.graceUntil };
+    }
+    return result;
   }
 
   private async handleFailedLogin(user: User, ip?: string) {
@@ -113,10 +191,11 @@ export class AuthService {
 
   private async completeLogin(
     user: User,
+    preferredTenantId?: string,
     userAgent?: string,
     ip?: string,
     mfaUsed = false,
-  ) {
+  ): Promise<CompleteLoginResult> {
     // Reset failed login count
     await this.prisma.user.update({
       where: { id: user.id },
@@ -130,6 +209,7 @@ export class AuthService {
     // Determine tenant context
     const { memberships, activeMembership } = await this.getMemberships(
       user.id,
+      preferredTenantId,
     );
     const tenantId = activeMembership?.tenantId ?? '';
     const role = activeMembership?.role ?? 'viewer';
@@ -175,7 +255,7 @@ export class AuthService {
   }
 
   /** Shared by completeLogin and refresh so both repopulate the same client state. */
-  private async getMemberships(userId: string) {
+  private async getMemberships(userId: string, preferredTenantId?: string) {
     const rows = await this.prisma.membership.findMany({
       where: { userId },
       include: { tenant: true },
@@ -186,7 +266,10 @@ export class AuthService {
       tenantSlug: m.tenant.slug,
       role: m.role,
     }));
-    return { memberships, activeMembership: rows[0] };
+    const activeMembership = preferredTenantId
+      ? (rows.find((m) => m.tenantId === preferredTenantId) ?? rows[0])
+      : rows[0];
+    return { memberships, activeMembership };
   }
 
   private truncateIp(ip: string): string {
@@ -228,6 +311,7 @@ export class AuthService {
     });
     const { memberships, activeMembership } = await this.getMemberships(
       user.id,
+      session.tenantId ?? undefined,
     );
 
     return {
@@ -405,7 +489,7 @@ export class AuthService {
     userAgent?: string,
     ip?: string,
   ) {
-    const { userId } = this.tokenService.verifyMfaToken(mfaToken);
+    const { userId, tenantId } = this.tokenService.verifyMfaToken(mfaToken);
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.mfaEnabled) {
       throw new UnauthorizedException('MFA not enabled');
@@ -438,7 +522,7 @@ export class AuthService {
       throw new UnauthorizedException('Code or recovery code required');
     }
 
-    return this.completeLogin(user, userAgent, ip, true);
+    return this.completeLogin(user, tenantId, userAgent, ip, true);
   }
 
   async mfaRecoveryCodesRotate(userId: string, code: string) {

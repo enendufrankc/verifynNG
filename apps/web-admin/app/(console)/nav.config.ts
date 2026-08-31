@@ -19,6 +19,8 @@ import {
   Trash2,
   Download,
   FileStackIcon,
+  KeyRound,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
@@ -167,6 +169,22 @@ export const NAV: NavEntry[] = [
     icon: Settings,
     section: 'organization',
     order: 40,
+  },
+  {
+    id: 'organization.apiKeys',
+    label: 'API keys',
+    href: '/api-keys',
+    icon: KeyRound,
+    section: 'organization',
+    order: 45,
+  },
+  {
+    id: 'organization.webhooks',
+    label: 'Webhooks',
+    href: '/webhooks',
+    icon: Webhook,
+    section: 'organization',
+    order: 46,
   },
   {
     id: 'organization.legal',

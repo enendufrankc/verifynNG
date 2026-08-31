@@ -38,6 +38,11 @@ import { IncidentsModule } from './modules/incidents/incidents.module';
 import { UnitsModule } from './modules/units/units.module';
 import { AnomalyModule } from './modules/anomaly/anomaly.module';
 import { ProductPagesModule } from './modules/product-pages/product-pages.module';
+import { EntitlementsModule } from './modules/entitlements/entitlements.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { SsoModule } from './modules/sso/sso.module';
 
 @Module({
   imports: [
@@ -87,6 +92,11 @@ import { ProductPagesModule } from './modules/product-pages/product-pages.module
     UnitsModule,
     AnomalyModule,
     ProductPagesModule,
+    EntitlementsModule,
+    ApiKeysModule,
+    PublicApiModule,
+    WebhooksModule,
+    SsoModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

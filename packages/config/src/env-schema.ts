@@ -246,6 +246,46 @@ const e10Schema = z.object({
   PAGES_MAX_UPLOAD_MB: z.coerce.number().default(10),
 });
 
+// ── E16 Public API & Webhooks ────────────────────────────────────
+const e16Schema = z.object({
+  PUBLIC_API_DEFAULT_RPM: z.coerce.number().default(120),
+  PUBLIC_API_MAX_KEYS_DEFAULT: z.coerce.number().default(10),
+  // dev/compose only — must stay false in any real deployment.
+  WEBHOOKS_ALLOW_HTTP: z.coerce.boolean().default(false),
+  WEBHOOKS_ALLOW_PRIVATE: z.coerce.boolean().default(false),
+  WEBHOOKS_BACKOFF_BASE_MS: z.coerce.number().default(30000),
+  WEBHOOKS_MAX_ATTEMPTS: z.coerce.number().default(10),
+  WEBHOOK_SINK_URL: z.string().default('http://webhook-sink:4105'),
+  // AES-256-GCM key encrypting WebhookEndpoint.secretEnc at rest — same
+  // [iv(12)|tag(16)|ciphertext] layout as E04's MANIFEST_ENC_KEY, own
+  // dedicated key rather than reusing another epic's.
+  WEBHOOK_SECRET_ENC_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/)
+    .default('fedcba9876543210'.repeat(4)),
+});
+
+// ── E20 SSO & MFA Policy ─────────────────────────────────────────
+const e20Schema = z.object({
+  // No `v1/` prefix — see the routing-convention note in E20-sso.md's T1
+  // checklist entry (this codebase doesn't actually use one).
+  SSO_CALLBACK_URL: z
+    .string()
+    .default('http://localhost:4000/auth/sso/callback'),
+  SSO_STATE_TTL_SECONDS: z.coerce.number().default(600),
+  SSO_DISCOVERY_TIMEOUT_MS: z.coerce.number().default(5000),
+  // `api` reaches the fake IdP over the compose network; a browser on the
+  // host redirected to it needs the host-published URL instead — same
+  // internal/public split as S3_ENDPOINT/S3_PUBLIC_ENDPOINT above.
+  FAKE_OIDC_ISSUER: z.string().default('http://fake-oidc:4104/default'),
+  FAKE_OIDC_PUBLIC_ISSUER: z.string().default('http://localhost:4104/default'),
+  SSO_CLIENT_SECRET_ENC_KEY: z
+    .string()
+    .default(
+      '0000000000000000000000000000000000000000000000000000000000000000',
+    ), // 64 hex chars = 32 bytes (aes-256-gcm key)
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -261,6 +301,8 @@ export const envSchema = e02Schema
   .merge(e19Schema)
   .merge(e07Schema)
   .merge(e10Schema)
+  .merge(e16Schema)
+  .merge(e20Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.
@@ -274,6 +316,12 @@ export const envSchema = e02Schema
       ctx.addIssue({
         code: 'custom',
         path: ['MFA_ENC_KEY'],
+        message: 'dev default key not allowed in production',
+      });
+    if (env.SSO_CLIENT_SECRET_ENC_KEY === ZERO_KEY)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SSO_CLIENT_SECRET_ENC_KEY'],
         message: 'dev default key not allowed in production',
       });
     if (

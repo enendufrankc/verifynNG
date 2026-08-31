@@ -120,6 +120,32 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── E16 Public API & Webhooks ──
+  webhook-sink:
+    build:
+      context: ../tools/fakes/webhook-sink
+      dockerfile: Dockerfile
+    ports:
+      - '${WEBHOOK_SINK_PORT:-4105}:4105'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4105/health']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  fake-oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      JSON_CONFIG_PATH: /config/config.json
+      SERVER_PORT: '4104'
+    volumes:
+      - ../tools/fakes/oidc:/config:ro
+    ports:
+      - '${FAKE_OIDC_PORT:-4104}:4104'
+    # No healthcheck: the image is a distroless-style JRE build with no
+    # shell, wget, or curl to probe with (confirmed — `docker exec sh` fails
+    # with "executable file not found"). `api` depends on `service_started`
+    # only; it's a fast-starting JVM process and nothing needs it at boot.
+
   # ── Application services ──────────────────────────────────
   db-migrate:
     build:
@@ -230,8 +256,16 @@ services:
       FAKE_GEO_KEY: vk_70b02ab6_70b02ab67319f58d15520e558280b06417d84a5211f18f464dfa6d5e7e844d88
       APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
       # ── E06 Verification & Scan Events ──
-      RATE_LIMIT_IP_PER_MIN: '20'
-      RATE_LIMIT_CODE_PER_MIN: '10'
+      # 120, not 20: every browser-driven e2e spec shares this IP, across both web-verify
+      # projects, run by Playwright's default worker parallelism (several spec files hitting
+      # verify concurrently) — 120 comfortably covers that legitimate traffic.
+      # tests/e2e/verify-rate-limited.spec.ts deliberately exhausts this same budget to prove
+      # the limiter degrades cleanly; it runs in its own `web-verify-rate-limit` Playwright
+      # project, ordered (via `dependencies`) strictly after web-verify-desktop and
+      # web-verify-mobile finish, so it can never race or poison their legitimate traffic.
+      # Override per-worktree via docker/.env for a stricter value when testing the limiter itself.
+      RATE_LIMIT_IP_PER_MIN: ${RATE_LIMIT_IP_PER_MIN:-120}
+      RATE_LIMIT_CODE_PER_MIN: ${RATE_LIMIT_CODE_PER_MIN:-10}
       RATE_LIMIT_TENANT_DEFAULT_PER_MIN: '600'
       ENUMERATION_INVALID_THRESHOLD: '15'
       ENUMERATION_WINDOW_SEC: '300'
@@ -250,6 +284,21 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E16 Public API & Webhooks ──
+      PUBLIC_API_DEFAULT_RPM: '120'
+      PUBLIC_API_MAX_KEYS_DEFAULT: '10'
+      # dev/compose only — production must leave both false (schema default).
+      WEBHOOKS_ALLOW_HTTP: 'true'
+      WEBHOOKS_ALLOW_PRIVATE: 'true'
+      WEBHOOKS_BACKOFF_BASE_MS: ${WEBHOOKS_BACKOFF_BASE_MS:-30000}
+      WEBHOOKS_MAX_ATTEMPTS: '10'
+      # ── E20 SSO & MFA Policy ──
+      SSO_CALLBACK_URL: http://localhost:${API_HOST_PORT:-4000}/auth/sso/callback
+      SSO_STATE_TTL_SECONDS: '600'
+      SSO_DISCOVERY_TIMEOUT_MS: '5000'
+      FAKE_OIDC_ISSUER: http://fake-oidc:4104/default
+      FAKE_OIDC_PUBLIC_ISSUER: http://localhost:${FAKE_OIDC_PORT:-4104}/default
+      SSO_CLIENT_SECRET_ENC_KEY: bbccddee11223344bbccddee11223344bbccddee11223344bbccddee11223344
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
@@ -263,6 +312,8 @@ services:
         condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
+      fake-oidc:
+        condition: service_started
     healthcheck:
       test:
         ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:4000/ready']
@@ -300,6 +351,13 @@ services:
       VERIFY_BASE_URL: http://localhost:3000
       WORKER: 'true'
       WORKER_INLINE: 'false'
+      # ── E16 Public API & Webhooks ── mirrors the api service's block so the
+      # webhooks BullMQ worker behaves the same regardless of which process
+      # ends up consuming the queue.
+      WEBHOOKS_ALLOW_HTTP: 'true'
+      WEBHOOKS_ALLOW_PRIVATE: 'true'
+      WEBHOOKS_BACKOFF_BASE_MS: ${WEBHOOKS_BACKOFF_BASE_MS:-30000}
+      WEBHOOKS_MAX_ATTEMPTS: '10'
     depends_on:
       postgres:
         condition: service_healthy

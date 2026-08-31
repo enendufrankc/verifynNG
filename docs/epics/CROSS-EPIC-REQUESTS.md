@@ -14,11 +14,12 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 - [ ] Add role `oem` + `oemId` JWT claim (E05). **Partially done by E05 directly:** `oem` added to `TenantRole` (additive migration on `main`) — `RolesGuard`'s hierarchy map already falls back to treating an unrecognised role as its own singleton allowed-set, so no other E02 file changed. The `oemId` JWT claim was **not** added; E05's `OemScopeGuard` resolves `OemUser` from the DB per request instead (the spec's own documented fallback). Leaving this unchecked since the claim itself is still outstanding if a future epic wants it.
 - [ ] `UsersService.listMembers(tenantId, { roles })` (E14 routing).
 - [ ] `SessionService.issue/revoke` for impersonation sessions; never grants `owner`, max `operator` in write mode (E18).
-- [ ] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20).
+- [x] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20). **Done by E20 directly** (E02's worktree isn't active — flagged on issue #3 first): `Session.amr`/`Membership.createdVia` added in migration `20260831140000_E20_sso_mfa_policy`; `LoginPolicyRegistry` (a registration singleton, not a DI-resolved array — Nest has no Angular-style `multi: true`) wired into `AuthService.login`/`mfaChallenge` in `apps/api/src/modules/auth/login-policy-hook.ts`. Also added `LoginDto.tenant?: string` and tenant-scoped `AuthService.login`, since no tenant selection existed at all before (picked `memberships[0]` unconditionally) and both `EnforceSsoLoginHook` and `MfaPolicyLoginHook` need to evaluate a specific tenant. `TokenService`'s MFA token also carries an optional `tid` claim so tenant selection survives the two-step MFA challenge. See E20-sso.md's T5 checklist entry for the full list.
 - [ ] E20 owns `app/(auth)/sso/**` inside E02's auth route group.
 
 ## To E03 Tenant Lifecycle
 
+- [ ] **Bug, affects every epic's integration tests:** `TenantStatusGuard` (`apps/api/src/common/tenant-status/tenant-status.guard.ts`) queries `policyDocument`/`policyAcceptance` via `import { prisma } from '@verifynng/db'` — the shared singleton bound to the default schema at import time, not the per-test isolated schema (same class of bug as `MintService`, documented against E16's T5/T9). `PolicyDocument` has no `tenantId` (policies are intentionally global), so this isn't just reading the wrong schema for tenant data — it reads whatever's actually seeded into the shared local Postgres. `docker/compose.yml`'s `db-migrate` service runs `prisma db seed` on **every** `docker compose up`, which seeds 5 `PolicyDocument` rows (`packages/db/prisma/seed/policies.ts` + `seed.ts`) — after that, `decidePolicyAcceptance()` starts rejecting every `owner`-authenticated non-GET request in every integration test suite with 403 `policy_acceptance_required`, because `createTwoTenants()`'s fixture users never have matching `PolicyAcceptance` rows. Reproduce: `docker compose up`, then `pnpm --filter @verifynng/api test` — dozens of unrelated integration tests fail. Workaround used while investigating this for E16: `DELETE FROM "PolicyDocument";` on the local Postgres before running `pnpm test`. Given `docker compose up` before `pnpm test` is literally AGENTS.md's own verification sequence, this needs a real fix — either read via the `PrismaClient` class token like every other guard, or special-case global tables.
 - [ ] Tenant status `restricted` (writes blocked, verify open) + `setRestricted/clearRestricted` (E15). Reconcile with existing `suspended` semantics — one guard, two reasons.
 - [ ] `GET /v1/tenants/:slug/public-profile` (E09).
 - [ ] `TenantDomain` model + `GET /v1/tenants/by-domain/:host` + `tenant.branding.updated` event (E10).
@@ -30,6 +31,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 - [x] `Batch.expectedShipDate DateTime?` — added by E05 directly (additive migration on `main`), since E04 had already landed and closed. The rest of this line described an interface E04 never actually shipped under those names — E05 instead consumes E04's real `ManifestService.open()` / `ExportsService.getSignedUrl()` and writes `Batch.status` directly via the shared Prisma client (no `BatchService.setStatus` exists); `BatchLifecycleService` is the sole enforcer of the post-mint state machine (E05).
 - [ ] `Batch.isTest` so `vk_test_` keys mint unbilled; E12 skips `isTest` (E16).
+- [x] `LifecycleActor.type` (E07's `unit-lifecycle.service.ts`) widened from `'user' | 'system'` to include `'apikey'`, additive only, matching `AuditActorType` — used by `POST /api/v1/units/:id/{flag,decommission,restore}` (heads-up posted on issue #5) (E16).
 - [ ] `MintService.mintBulk({ skipExports })` for the 50k-unit seed (E21).
 - [ ] `product.updated` event (E10).
 - [ ] Link "Units & recall" from batch detail to E07's unit views (E07).
@@ -56,6 +58,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E11 Admin Shell
 
+- [ ] Remove or redirect the stale `app/(console)/settings/api-keys/page.tsx` placeholder (with its `SETTINGS_NAV` tab entry in `settings/layout.tsx`) — E16's real API-keys UI now lives at the top-level `app/(console)/api-keys/**` per E16's own Owned paths and the hot-spot rule ("other epics add a route group under `app/(console)/<feature>/`"), linked from a new `nav.config.ts` entry under the `organization` section. The `/settings/api-keys` stub is orphaned dead UI now; only E11 should touch `settings/layout.tsx`.
 - [ ] Chart tokens `--chart-1..6` in `packages/ui` (E12).
 - [ ] Confirm `(platform)`/`(support)` route-group naming with E18/E19 — pick one and document in `nav.config.ts`.
 - [ ] Accept `instrumentation.ts` in web-admin (E17). Same for E09 in web-verify.
@@ -68,7 +71,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E14 Notifications
 
-- [ ] Templates requested: `report.consumer_ack`, `report.consumer_update` (E08) · `subscription.restricted`, `subscription.reactivated`, `trial.ending` (E15) · `webhook.dead_lettered` (E16) · `ticket.*`, `impersonation.started` (E18) · `ops.alert` (E17) · `dsar.verify|ready|erased`, `legal.reaccept` (E19) · `anomaly.alert` data contract supplied by E07.
+- [ ] Templates requested: `report.consumer_ack`, `report.consumer_update` (E08) · `subscription.restricted`, `subscription.reactivated`, `trial.ending` (E15) · `webhook.dead_lettered` (E16) · `ticket.*`, `impersonation.started` (E18) · `ops.alert` (E17) · `dsar.verify|ready|erased`, `legal.reaccept` (E19) · `anomaly.alert` data contract supplied by E07 · `sso.enabled`, `mfa.policy.enforced`, `auth.break_glass_alert` (E20 — until these exist, `TemplateId` has no member for them so `NotificationService.send()` can't be called; E20 emits `sso.config.changed`/`mfa.policy.changed`/`auth.break_glass` domain events instead and leaves the email step for whoever adds the templates).
 - [ ] `mail.inbound` event from Mailpit/Resend inbound (E18).
 - [ ] Marketing-vs-transactional gate via `ConsentService.has(subject, 'marketing')` (E19).
 

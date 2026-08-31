@@ -72,6 +72,33 @@ export interface MintedBatch {
  * to get those back for an already-minted batch (never returned by any
  * other route; read via the dev-only manifest-reveal route).
  */
+async function waitForBatchMinted(
+  request: APIRequestContext,
+  tenantId: string,
+  authHeaders: Record<string, string>,
+  batchId: string,
+  timeoutMs = 20_000,
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const current = await request
+      .get(`${API_BASE}/tenants/${tenantId}/batches/${batchId}`, {
+        headers: authHeaders,
+      })
+      .then((r) => r.json());
+    if (current.status === 'minted') return;
+    if (current.status === 'failed') {
+      throw new Error(
+        `mintTestBatch: batch ${batchId} failed to mint: ${current.failedReason ?? 'unknown reason'}`,
+      );
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(
+    `mintTestBatch: batch ${batchId} did not reach 'minted' within ${timeoutMs}ms`,
+  );
+}
+
 export async function mintTestBatch(
   request: APIRequestContext,
   count: number,
@@ -108,6 +135,14 @@ export async function mintTestBatch(
       },
     })
     .then((r) => r.json());
+
+  // MintService mints via a BullMQ job (api-worker); batches under MINT_SYNC_MAX
+  // (5000, `count` here is always far below that) mint inline before the POST
+  // resolves, but that's an internal sizing detail, not a contract — reading
+  // units or navigating to a unit's page before the batch is truly `minted`
+  // would otherwise race the worker (unit rows/detail data aren't there yet:
+  // "Couldn't load this unit"). Poll for real completion rather than assume it.
+  await waitForBatchMinted(request, tenantId, authHeaders, batch.id);
 
   await setBatchStatus(request, batch.id, 'shipped');
 
