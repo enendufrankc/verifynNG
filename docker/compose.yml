@@ -120,6 +120,19 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── E16 Public API & Webhooks ──
+  webhook-sink:
+    build:
+      context: ../tools/fakes/webhook-sink
+      dockerfile: Dockerfile
+    ports:
+      - '${WEBHOOK_SINK_PORT:-4105}:4105'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4105/health']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # ── Application services ──────────────────────────────────
   db-migrate:
     build:
