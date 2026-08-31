@@ -1,8 +1,17 @@
-import { Controller, Get, Inject, Param, Query, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { Roles, TenantId } from '../../common/tenant';
 import { SubscriptionService } from './subscription.service';
 import { InvoiceService } from './invoice.service';
+import { PaymentService } from './payment.service';
 
 @Controller('v1/tenants/:tenantId/billing')
 export class TenantBillingController {
@@ -10,6 +19,7 @@ export class TenantBillingController {
     @Inject(SubscriptionService)
     private readonly subscriptions: SubscriptionService,
     @Inject(InvoiceService) private readonly invoices: InvoiceService,
+    @Inject(PaymentService) private readonly payments: PaymentService,
   ) {}
 
   @Get('subscription')
@@ -54,5 +64,17 @@ export class TenantBillingController {
   @Roles('owner')
   getInvoice(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.invoices.getForTenant(tenantId, id);
+  }
+
+  @Post('invoices/:id/pay')
+  @Roles('owner')
+  async payInvoice(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+  ): Promise<{ checkoutUrl: string }> {
+    // getForTenant 404s if the invoice isn't this tenant's — payments.initialise
+    // itself doesn't take a tenantId, so this is the tenant-scoping check.
+    await this.invoices.getForTenant(tenantId, id);
+    return this.payments.initialise(id);
   }
 }

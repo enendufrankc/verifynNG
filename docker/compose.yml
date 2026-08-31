@@ -263,6 +263,7 @@ services:
       BILLING_TAX_RATE_BPS_GBP: '0'
       BILLING_DUNNING_SCHEDULE_DAYS: '1,3,7'
       BILLING_CLOCK_SKEW_SECONDS: '0'
+      BILLING_PAYMENT_METHOD_ENC_KEY: 48dedaff69303776b73be2b402894ed937b6d90fd521675785c1df44bd7bbd09
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a

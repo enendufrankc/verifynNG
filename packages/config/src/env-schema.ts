@@ -238,6 +238,14 @@ const e15Schema = z.object({
   BILLING_TAX_RATE_BPS_GBP: z.coerce.number().default(0),
   BILLING_DUNNING_SCHEDULE_DAYS: z.string().default('1,3,7'),
   BILLING_CLOCK_SKEW_SECONDS: z.coerce.number().default(0),
+  // AES-256-GCM key for PaymentMethod.authorizationCode at rest (see
+  // schema.prisma's comment on that field). No shared encryption helper
+  // exists in this codebase to reuse (checked apps/api/src/modules/
+  // secrets/ — SecretsPort is for reading config secrets, SecretsKeyRing
+  // hands back raw HMAC key material for E01's verify-code signing, not
+  // AES) — mirrors MFA_ENC_KEY's own dedicated-key pattern instead of
+  // reusing a key meant for a different cryptographic purpose.
+  BILLING_PAYMENT_METHOD_ENC_KEY: z.string().default('0'.repeat(64)), // 64 hex chars = 32 bytes (aes-256-gcm key)
 });
 
 const ZERO_KEY = '0'.repeat(64);
@@ -268,6 +276,12 @@ export const envSchema = e02Schema
       ctx.addIssue({
         code: 'custom',
         path: ['MFA_ENC_KEY'],
+        message: 'dev default key not allowed in production',
+      });
+    if (env.BILLING_PAYMENT_METHOD_ENC_KEY === ZERO_KEY)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BILLING_PAYMENT_METHOD_ENC_KEY'],
         message: 'dev default key not allowed in production',
       });
     if (

@@ -6,6 +6,8 @@ import { PlanService } from './plan.service';
 import { SubscriptionService } from './subscription.service';
 import { EntitlementService } from './entitlement.service';
 import { InvoiceService } from './invoice.service';
+import { PaymentService } from './payment.service';
+import { PaymentMethodCipher } from './payment-method.cipher';
 import { TenantBillingController } from './tenant-billing.controller';
 import { BillingWebhooksController } from './billing-webhooks.controller';
 import { PaystackGateway } from './paystack.gateway';
@@ -36,6 +38,8 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
     SubscriptionService,
     EntitlementService,
     InvoiceService,
+    PaymentService,
+    PaymentMethodCipher,
     BillingPeriodRollScheduler,
     ...(workerInline ? [BillingQueueProcessor] : []),
     {
@@ -62,6 +66,7 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
     SubscriptionService,
     EntitlementService,
     InvoiceService,
+    PaymentService,
     PAYMENT_GATEWAY_PORT,
   ],
 })

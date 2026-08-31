@@ -3,6 +3,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import { SubscriptionService } from '../subscription.service';
+import { PaymentService } from '../payment.service';
 
 /**
  * Single consumer for the 'billing' queue — BullMQ (and @nestjs/bullmq)
@@ -19,6 +20,7 @@ export class BillingQueueProcessor extends WorkerHost {
   constructor(
     private readonly subscriptions: SubscriptionService,
     @Inject('PRISMA') private readonly prisma: PrismaClient,
+    @Inject(PaymentService) private readonly payments: PaymentService,
   ) {
     super();
   }
@@ -36,11 +38,24 @@ export class BillingQueueProcessor extends WorkerHost {
     }
   }
 
-  // T6 scope: marks the event processed so idempotency/observability work
-  // end-to-end (BillingWebhooksController dedupes on this row existing).
-  // T8's PaymentService.handleWebhook takes over the actual charge.success/
-  // charge.failed -> Payment/Invoice side effects.
   private async processWebhook(eventId: string): Promise<void> {
+    const event = await this.prisma.gatewayWebhookEvent.findUnique({
+      where: { id: eventId },
+    });
+    if (!event) {
+      this.logger.warn(
+        `process-webhook: no GatewayWebhookEvent for ${eventId}`,
+      );
+      return;
+    }
+    // rawBody is the full original payload ({event, data}), not just the
+    // `data` sub-object — see BillingWebhooksController's gatewayWebhookEvent.create.
+    const body = event.rawBody as { data?: unknown };
+    await this.payments.handleWebhookEvent({
+      type: event.type,
+      reference: event.reference ?? '',
+      data: body?.data,
+    });
     await this.prisma.gatewayWebhookEvent.update({
       where: { id: eventId },
       data: { processedAt: new Date() },

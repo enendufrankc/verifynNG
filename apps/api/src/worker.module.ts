@@ -17,6 +17,8 @@ import { SweepSchedulerService } from './modules/anomaly/consumers/sweep-schedul
 import { UnitLifecycleService } from './modules/units/unit-lifecycle.service';
 import { RecallProcessor } from './modules/units/recall.processor';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { BillingQueueProcessor } from './modules/billing/jobs/billing-queue.processor';
 
 /**
  * Runtime module for queue consumers.
@@ -47,6 +49,11 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     DatabaseModule,
     AuditModule,
     NotificationsModule,
+    // BillingModule's own WORKER_INLINE gate is false here too (same env
+    // as `api`), so it doesn't self-register BillingQueueProcessor — it's
+    // added directly below, same pattern as MintProcessor/
+    // BatchExportsProcessor bypassing BatchesModule's own gate.
+    BillingModule,
   ],
   providers: [
     ManifestService,
@@ -58,6 +65,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     SweepSchedulerService,
     UnitLifecycleService,
     RecallProcessor,
+    BillingQueueProcessor,
   ],
 })
 export class WorkerModule {}
