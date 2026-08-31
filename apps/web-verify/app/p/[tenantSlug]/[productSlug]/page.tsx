@@ -1,30 +1,35 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
 import { loadEnv } from '@verifynng/config';
 import { getTenantPublicProfile } from '@/lib/api';
-import { resolveLocale, LocaleProvider } from '@/lib/i18n';
+import { DEFAULT_LOCALE, LocaleProvider } from '@/lib/i18n';
 import { TenantThemeProvider } from '@/components/tenant/ThemeProvider';
 import { PageBeacon } from '@/components/analytics/PageBeacon';
 import { ProductPageView } from '@/components/product-page/ProductPageView';
 import { pageThemeStyle } from '@/lib/product-page/theme';
-import {
-  getPublishedPage,
-  getSitemapEntries,
-} from '@/lib/product-page/page-fetcher';
+import { getPublishedPage } from '@/lib/product-page/page-fetcher';
 
-export const revalidate = 300; // safety net — publish/rollback/unpublish revalidate on-demand (T5)
+// Not `revalidate`/`generateStaticParams` — E09's root layout.tsx calls
+// headers() (already flagged as an unresolved FYI to E17 in
+// CROSS-EPIC-REQUESTS.md), which forces every nested route dynamic. A child
+// page that still declares generateStaticParams/revalidate under that root
+// hard-errors with DYNAMIC_SERVER_USAGE instead of silently downgrading
+// (confirmed against a live docker compose up build — bisected down to a
+// bare page with zero dynamic calls of its own). Every route in this app
+// is already `ƒ Dynamic` for the same reason (see AGENTS.md/E09 sections of
+// CROSS-EPIC-REQUESTS.md), so this matches existing behaviour rather than
+// diverging from it. Freshness instead comes from the API's
+// `Cache-Control: public, s-maxage=300, stale-while-revalidate=86400` (T3)
+// plus T5's on-demand revalidatePath/revalidateTag call on publish/rollback/
+// unpublish. True Next.js ISR (and AC1's `x-nextjs-cache: HIT`) needs a
+// change request to E09: give `/p/**` its own root layout (Next.js
+// "multiple root layouts") so it isn't nested under one that calls
+// headers().
 export const dynamicParams = true;
 
 interface PageProps {
   params: Promise<{ tenantSlug: string; productSlug: string }>;
-}
-
-export async function generateStaticParams() {
-  const env = loadEnv();
-  const tenantSlug = env.NEXT_PUBLIC_DEFAULT_TENANT;
-  const entries = await getSitemapEntries(tenantSlug);
-  return entries.map((entry) => ({ tenantSlug, productSlug: entry.slug }));
 }
 
 export async function generateMetadata({
@@ -85,8 +90,7 @@ export default async function ProductPage({ params }: PageProps) {
 
   const { blocks, theme, seo } = result.data;
   const profile = await getTenantPublicProfile(tenantSlug);
-  const h = await headers();
-  const locale = resolveLocale(undefined, h.get('accept-language'));
+  const locale = DEFAULT_LOCALE;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -104,7 +108,12 @@ export default async function ProductPage({ params }: PageProps) {
     <TenantThemeProvider profile={profile}>
       <LocaleProvider locale={locale}>
         <div style={pageThemeStyle(profile, theme)} className="contents">
-          <PageBeacon tenantSlug={tenantSlug} locale={locale} />
+          {/* PageBeacon uses useSearchParams() with no Suspense boundary of
+              its own — wrap it so a future re-enabling of ISR here doesn't
+              regress on that too. */}
+          <Suspense fallback={null}>
+            <PageBeacon tenantSlug={tenantSlug} locale={locale} />
+          </Suspense>
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

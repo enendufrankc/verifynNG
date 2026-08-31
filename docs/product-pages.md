@@ -82,3 +82,24 @@ that to a 404 with the same themed "no longer available" message
 (`not-found.tsx` in the same route segment). Getting the literal 410 onto
 the browser response requires a middleware-level change (a change request to
 E09, which owns `middleware.ts`) — not done in this epic.
+
+## Known platform limitation: no real ISR yet
+
+`/p/[tenantSlug]/[productSlug]/page.tsx` ships as a plain dynamic
+(SSR-per-request) route, not the static/ISR page T6 specifies
+(`generateStaticParams` + `revalidate = 300`). E09's root `layout.tsx` calls
+`headers()` for locale detection, which forces every nested route dynamic;
+a child route that still declares `generateStaticParams`/`revalidate` under
+that root hard-errors with `DYNAMIC_SERVER_USAGE` instead of silently
+downgrading (confirmed against a live `docker compose up` build — bisected
+down to a page with zero dynamic calls of its own). See the change request
+to E09 in `CROSS-EPIC-REQUESTS.md`. Until that lands, freshness comes from
+the API's `Cache-Control: public, s-maxage=300, stale-while-revalidate=86400`
+(T3) and T5's on-demand `revalidatePath`/`revalidateTag` call on publish/
+rollback/unpublish — AC1's `x-nextjs-cache: HIT` check will not pass until
+`/p/**` gets its own root layout outside the locale-detecting one.
+
+The draft preview (used by the page-builder's live-preview iframe) lives on
+its own route, `/p/[tenantSlug]/[productSlug]/preview/page.tsx`
+(`force-dynamic`, reads `?token=`) — it was never a candidate for ISR (a
+draft must never be cached), so it's unaffected by the above.

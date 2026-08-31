@@ -177,6 +177,11 @@ services:
       MINT_MAX_COUNT: '1000000'
       MANIFEST_ENC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       VERIFY_BASE_URL: http://localhost:3000
+      # ── E10 Product Pages ──
+      # Container-internal — PageRevalidator's POST /p/revalidate call.
+      # Never the browser-facing PAGES_PUBLIC_BASE_URL (defaulted, unused
+      # here): `localhost` inside this container never reaches web-verify's.
+      WEB_VERIFY_INTERNAL_URL: http://web-verify:3000
       WORKER: 'false'
       # false: the dedicated api-worker service below consumes queues instead.
       # Both containers running BullMQ workers on the same queues races two
@@ -328,6 +333,10 @@ services:
       NEXT_PUBLIC_MINIO_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}
       NEXT_PUBLIC_DEFAULT_TENANT: ivoryglow
       HOSTNAME: 0.0.0.0
+      # ── E10 Product Pages ── browser-facing origin for canonical URLs,
+      # sitemap <loc>, and JSON-LD (never used for container-to-container
+      # calls — see WEB_VERIFY_INTERNAL_URL on the api service).
+      PAGES_PUBLIC_BASE_URL: http://localhost:${WEB_VERIFY_PORT:-3000}
     depends_on:
       api:
         condition: service_healthy
@@ -346,6 +355,9 @@ services:
         # Baked into the client bundle — must be reachable from the host
         # browser, unlike the runtime value below (container-internal only).
         NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
+        # E10's page-builder preview iframe (client-side) needs the
+        # browser-reachable web-verify origin.
+        NEXT_PUBLIC_VERIFY_URL: http://localhost:${WEB_VERIFY_PORT:-3000}
     ports:
       - '${WEB_ADMIN_PORT:-3001}:3001'
     environment:

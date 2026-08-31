@@ -63,7 +63,7 @@ describe('ProductPagesService integration (real Postgres)', () => {
         // Deliberately unreachable — PageRevalidator swallows failures, so
         // these tests exercise the "revalidate call attempted, didn't blow
         // up the write" path without needing web-verify running.
-        PAGES_PUBLIC_BASE_URL: 'http://127.0.0.1:1',
+        WEB_VERIFY_INTERNAL_URL: 'http://127.0.0.1:1',
       }),
     );
     return new ProductPagesService(prisma, events, revalidator, entitlement);

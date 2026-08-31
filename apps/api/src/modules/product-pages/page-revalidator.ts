@@ -23,7 +23,9 @@ export class PageRevalidator {
 
   async revalidate(target: RevalidateTarget): Promise<void> {
     const secret = this.config.get<string>('PAGE_REVALIDATE_SECRET')!;
-    const baseUrl = this.config.get<string>('PAGES_PUBLIC_BASE_URL')!;
+    // Container-internal address — never PAGES_PUBLIC_BASE_URL, which is the
+    // browser-facing origin and unreachable from inside another container.
+    const baseUrl = this.config.get<string>('WEB_VERIFY_INTERNAL_URL')!;
     const ts = Date.now();
     const sig = createHmac('sha256', secret)
       .update(`${target.tenantSlug}.${target.productSlug}.${ts}`)

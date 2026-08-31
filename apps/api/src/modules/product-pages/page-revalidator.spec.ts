@@ -8,7 +8,7 @@ function newRevalidator(): PageRevalidator {
   return new PageRevalidator(
     new ConfigService({
       PAGE_REVALIDATE_SECRET: SECRET,
-      PAGES_PUBLIC_BASE_URL: 'http://web-verify.test',
+      WEB_VERIFY_INTERNAL_URL: 'http://web-verify.test',
     }),
   );
 }

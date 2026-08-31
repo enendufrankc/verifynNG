@@ -49,6 +49,10 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 - [ ] Expose `CaptchaPort` for E18's public support form.
 - [ ] Call `ConsentService.record()` for contact consent; expose `Report.referenceNumber` + `contactEmail` lookup for DSAR (E19).
 
+## To E09 Consumer Verify Web
+
+- [ ] `apps/web-verify/app/layout.tsx` (root) calls `headers()` (Accept-Language locale detection, T11). Any child route that also declares `generateStaticParams`/`revalidate` — not just opts into dynamic rendering, actually tries to be static/ISR — hard-errors with `DYNAMIC_SERVER_USAGE` instead of silently downgrading to dynamic (confirmed against a live `docker compose up` build, bisected down to a page with zero dynamic calls of its own). This is the same root cause already flagged as an FYI to E17 for `/status` losing static optimization; it blocks E10's `/p/[tenantSlug]/[productSlug]` from ever getting real Next.js ISR (and the `x-nextjs-cache: HIT` header AC1 checks for) — it currently ships as a plain dynamic (SSR-per-request) route instead, relying on the API's `Cache-Control` header and on-demand `revalidatePath`/`revalidateTag` for freshness. Fix likely needs Next.js "multiple root layouts" (a route group with its own root layout that doesn't call `headers()`) for `/p/**` (and possibly `/status`) to sit outside the locale-detecting root layout (E10, E17).
+
 ## To E11 Admin Shell
 
 - [ ] Chart tokens `--chart-1..6` in `packages/ui` (E12).
