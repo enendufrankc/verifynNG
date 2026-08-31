@@ -12,8 +12,10 @@ export function RichTextForm({
     <FormField
       label="Markdown"
       description="Basic formatting only — script/iframe/on* are stripped on render."
+      htmlFor="rich-text-md"
     >
       <Textarea
+        id="rich-text-md"
         rows={10}
         value={block.md}
         onChange={(e) => onChange({ ...block, md: e.target.value })}

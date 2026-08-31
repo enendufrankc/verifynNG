@@ -13,6 +13,7 @@ export function FaqForm({
       {block.items.map((item, i) => (
         <div key={i} className="border-border space-y-2 rounded-md border p-2">
           <Input
+            aria-label="Question"
             value={item.q}
             placeholder="Question"
             onChange={(e) => {
@@ -22,6 +23,7 @@ export function FaqForm({
             }}
           />
           <Textarea
+            aria-label="Answer"
             rows={2}
             value={item.a}
             placeholder="Answer"

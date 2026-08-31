@@ -10,8 +10,9 @@ export function HowToUseForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })
@@ -25,6 +26,7 @@ export function HowToUseForm({
             className="border-border space-y-2 rounded-md border p-2"
           >
             <Input
+              aria-label="Step title"
               value={step.title}
               placeholder="Step title"
               onChange={(e) => {
@@ -34,6 +36,7 @@ export function HowToUseForm({
               }}
             />
             <Textarea
+              aria-label="Step body"
               rows={2}
               value={step.body}
               placeholder="Step body"

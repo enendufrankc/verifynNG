@@ -88,6 +88,7 @@ export async function ProductPageTier1Renderer(props: Tier1ProductSlotProps) {
       {hero && (
         <HeroBlock
           block={{ ...hero, ctaPrimary: undefined, ctaSecondary: undefined }}
+          headingLevel="h2"
         />
       )}
       {batchInfo && <BatchInfoBlock block={batchInfo} context={batchContext} />}

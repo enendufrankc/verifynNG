@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-const ADMIN_BASE = process.env.ADMIN_BASE_URL ?? 'http://localhost:3001';
+const ADMIN_BASE = `http://localhost:${process.env.WEB_ADMIN_PORT ?? '3001'}`;
 
 /**
  * Navigate to a path in the admin console.

@@ -10,8 +10,9 @@ export function BatchInfoForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })

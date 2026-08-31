@@ -10,16 +10,18 @@ export function VerificationEducationForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })
           }
         />
       </FormField>
-      <FormField label="Body">
+      <FormField label="Body" htmlFor="ve-body">
         <Textarea
+          id="ve-body"
           rows={3}
           value={block.body ?? ''}
           onChange={(e) =>

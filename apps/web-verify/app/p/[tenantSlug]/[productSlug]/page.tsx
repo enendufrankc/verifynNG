@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: PageProps) {
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           />
-          <ProductPageView profile={profile} blocks={blocks} locale={locale} />
+          <ProductPageView profile={profile} blocks={blocks} />
         </div>
       </LocaleProvider>
     </TenantThemeProvider>

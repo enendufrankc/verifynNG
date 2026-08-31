@@ -148,8 +148,9 @@ export function PageEditor({ page: initialPage }: { page: ProductPage }) {
         />
         <div className="border-border space-y-2 rounded-md border p-3">
           <p className="text-sm font-semibold">Theme override</p>
-          <FormField label="Primary colour">
+          <FormField label="Primary colour" htmlFor="theme-primary-colour">
             <Input
+              id="theme-primary-colour"
               value={theme.palette?.primary ?? ''}
               onChange={(e) =>
                 setTheme({
@@ -165,16 +166,18 @@ export function PageEditor({ page: initialPage }: { page: ProductPage }) {
         </div>
         <div className="border-border space-y-2 rounded-md border p-3">
           <p className="text-sm font-semibold">SEO</p>
-          <FormField label="Title">
+          <FormField label="Title" htmlFor="seo-title">
             <Input
+              id="seo-title"
               value={seo.title ?? ''}
               onChange={(e) =>
                 setSeo({ ...seo, title: e.target.value || undefined })
               }
             />
           </FormField>
-          <FormField label="Description">
+          <FormField label="Description" htmlFor="seo-description">
             <Textarea
+              id="seo-description"
               rows={2}
               value={seo.description ?? ''}
               onChange={(e) =>
@@ -196,8 +199,9 @@ export function PageEditor({ page: initialPage }: { page: ProductPage }) {
           <p className="text-fg-muted text-sm">Select a block to edit it.</p>
         )}
         <div className="border-border mt-6 space-y-2 border-t pt-4">
-          <FormField label="Change note">
+          <FormField label="Change note" htmlFor="change-note">
             <Input
+              id="change-note"
               value={changeNote}
               onChange={(e) => setChangeNote(e.target.value)}
             />

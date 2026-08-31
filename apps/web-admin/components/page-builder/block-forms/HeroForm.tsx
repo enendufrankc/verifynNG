@@ -13,22 +13,25 @@ export function HeroForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Eyebrow">
+      <FormField label="Eyebrow" htmlFor="hero-eyebrow">
         <Input
+          id="hero-eyebrow"
           value={block.eyebrow ?? ''}
           onChange={(e) =>
             onChange({ ...block, eyebrow: e.target.value || undefined })
           }
         />
       </FormField>
-      <FormField label="Title" required>
+      <FormField label="Title" required htmlFor="hero-title">
         <Input
+          id="hero-title"
           value={block.title}
           onChange={(e) => onChange({ ...block, title: e.target.value })}
         />
       </FormField>
-      <FormField label="Subtitle">
+      <FormField label="Subtitle" htmlFor="hero-subtitle">
         <Input
+          id="hero-subtitle"
           value={block.subtitle ?? ''}
           onChange={(e) =>
             onChange({ ...block, subtitle: e.target.value || undefined })
@@ -46,6 +49,7 @@ export function HeroForm({
           {(block.stats ?? []).map((stat, i) => (
             <div key={i} className="flex gap-2">
               <Input
+                aria-label="Stat value"
                 value={stat.value}
                 placeholder="10k+"
                 onChange={(e) => {
@@ -55,6 +59,7 @@ export function HeroForm({
                 }}
               />
               <Input
+                aria-label="Stat label"
                 value={stat.label}
                 placeholder="verified scans"
                 onChange={(e) => {
@@ -95,8 +100,9 @@ export function HeroForm({
           )}
         </div>
       </FormField>
-      <FormField label="Primary CTA label">
+      <FormField label="Primary CTA label" htmlFor="hero-cta-label">
         <Input
+          id="hero-cta-label"
           value={block.ctaPrimary?.label ?? ''}
           onChange={(e) =>
             onChange({
@@ -111,8 +117,9 @@ export function HeroForm({
           }
         />
       </FormField>
-      <FormField label="Primary CTA link">
+      <FormField label="Primary CTA link" htmlFor="hero-cta-href">
         <Input
+          id="hero-cta-href"
           value={block.ctaPrimary?.href ?? ''}
           onChange={(e) =>
             onChange({

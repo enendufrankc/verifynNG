@@ -35,7 +35,7 @@ export default async function ProductPagePreview({
     <TenantThemeProvider profile={profile}>
       <LocaleProvider locale={locale}>
         <div style={pageThemeStyle(profile, theme)} className="contents">
-          <ProductPageView profile={profile} blocks={blocks} locale={locale} />
+          <ProductPageView profile={profile} blocks={blocks} />
         </div>
       </LocaleProvider>
     </TenantThemeProvider>

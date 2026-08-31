@@ -1,20 +1,21 @@
 import type { Block } from '@verifynng/page-schema';
 import type { TenantPublicProfile } from '@/lib/api';
-import { TenantFooter } from '@/components/tenant/TenantFooter';
-import { type Locale } from '@/lib/i18n';
 import { BlockRenderer } from './BlockRenderer';
 import type { BatchContext } from './blocks/BatchInfoBlock';
 
-/** Full standalone page (T6): topbar, the tenant's ordered blocks, footer. */
+/**
+ * Full standalone page (T6): topbar + the tenant's ordered blocks. The root
+ * layout already renders the single page <main> landmark and the tenant
+ * footer for every route (same as /v/[code] and /verify) — a second
+ * <main>/<TenantFooter> here would duplicate both landmarks.
+ */
 export function ProductPageView({
   profile,
   blocks,
-  locale,
   batchContext,
 }: {
   profile: TenantPublicProfile;
   blocks: Block[];
-  locale: Locale;
   batchContext?: BatchContext;
 }) {
   return (
@@ -29,7 +30,7 @@ export function ProductPageView({
         )}
       </header>
 
-      <main className="flex-1">
+      <div className="flex-1">
         {blocks.map((block) => (
           <BlockRenderer
             key={block.id}
@@ -37,9 +38,7 @@ export function ProductPageView({
             batchContext={batchContext}
           />
         ))}
-      </main>
-
-      <TenantFooter profile={profile} locale={locale} />
+      </div>
     </div>
   );
 }

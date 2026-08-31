@@ -1,7 +1,15 @@
 import type { HeroBlock as HeroBlockType } from '@verifynng/page-schema';
 import { MediaImage } from '../MediaImage';
 
-export function HeroBlock({ block }: { block: HeroBlockType }) {
+export function HeroBlock({
+  block,
+  headingLevel: Heading = 'h1',
+}: {
+  block: HeroBlockType;
+  /** The tier-1 compact renderer embeds this inside a page that already has
+   * its own verdict <h1> — pass 'h2' there to keep one h1 per page. */
+  headingLevel?: 'h1' | 'h2';
+}) {
   return (
     <section className="bg-brand-ink px-s5 pt-s10 pb-s16 text-center text-white">
       {block.eyebrow && (
@@ -9,9 +17,9 @@ export function HeroBlock({ block }: { block: HeroBlockType }) {
           {block.eyebrow}
         </p>
       )}
-      <h1 className="mx-auto max-w-2xl [font-family:var(--font-display,var(--font-sans))] text-4xl leading-tight sm:text-5xl">
+      <Heading className="mx-auto max-w-2xl [font-family:var(--font-display,var(--font-sans))] text-4xl leading-tight sm:text-5xl">
         {block.title}
-      </h1>
+      </Heading>
       {block.subtitle && (
         <p className="mt-s3 mx-auto max-w-xl text-white/80">{block.subtitle}</p>
       )}

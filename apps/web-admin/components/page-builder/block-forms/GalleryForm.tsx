@@ -16,8 +16,9 @@ export function GalleryForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })
@@ -38,6 +39,7 @@ export function GalleryForm({
               }}
             />
             <Input
+              aria-label={`Photo ${i + 1} caption`}
               value={item.caption ?? ''}
               placeholder="Caption"
               onChange={(e) => {

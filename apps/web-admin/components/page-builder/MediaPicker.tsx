@@ -20,6 +20,7 @@ export function MediaPicker({
   const [alt, setAlt] = useState(media?.alt ?? '');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const altFieldId = `media-alt-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
 
   async function handleFile(file: File) {
     if (!alt.trim()) {
@@ -48,8 +49,9 @@ export function MediaPicker({
           className="h-24 w-24 rounded object-cover"
         />
       )}
-      <FormField label="Alt text" required>
+      <FormField label="Alt text" required htmlFor={altFieldId}>
         <Input
+          id={altFieldId}
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
           placeholder="Describe the image"

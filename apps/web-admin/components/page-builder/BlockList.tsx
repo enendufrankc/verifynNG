@@ -63,7 +63,13 @@ function SortableRow({
         {block.type}
       </button>
       {!AUTO_BLOCK_TYPES.has(block.type) && (
-        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label={`Remove ${block.type} block`}
+          onClick={onRemove}
+        >
           <TrashIcon className="h-4 w-4" />
         </Button>
       )}

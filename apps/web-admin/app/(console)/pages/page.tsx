@@ -168,8 +168,9 @@ export default function ProductPagesListPage() {
             <DialogTitle>Create a product page</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <FormField label="Product" required>
+            <FormField label="Product" required htmlFor="create-page-product">
               <select
+                id="create-page-product"
                 className="border-border w-full rounded-md border px-3 py-2 text-sm"
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
@@ -186,8 +187,13 @@ export default function ProductPagesListPage() {
               label="URL slug"
               required
               description="e.g. turmeric-curcumin"
+              htmlFor="create-page-slug"
             >
-              <Input value={slug} onChange={(e) => setSlug(e.target.value)} />
+              <Input
+                id="create-page-slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+              />
             </FormField>
           </div>
           <DialogFooter>

@@ -10,8 +10,9 @@ export function TrademarkForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })
@@ -25,6 +26,7 @@ export function TrademarkForm({
             className="border-border grid grid-cols-2 gap-2 rounded-md border p-2"
           >
             <Input
+              aria-label="Mark name"
               value={mark.name}
               placeholder="Mark name"
               onChange={(e) => {
@@ -34,6 +36,7 @@ export function TrademarkForm({
               }}
             />
             <Input
+              aria-label="Registration number"
               value={mark.number}
               placeholder="Registration number"
               onChange={(e) => {
@@ -43,6 +46,7 @@ export function TrademarkForm({
               }}
             />
             <Input
+              aria-label="Class"
               value={mark.class}
               placeholder="Class"
               onChange={(e) => {
@@ -52,6 +56,7 @@ export function TrademarkForm({
               }}
             />
             <Input
+              aria-label="Jurisdiction"
               value={mark.jurisdiction}
               placeholder="Jurisdiction"
               onChange={(e) => {

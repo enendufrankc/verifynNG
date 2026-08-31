@@ -10,8 +10,9 @@ export function RegistrationForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })
@@ -22,6 +23,7 @@ export function RegistrationForm({
         {block.items.map((item, i) => (
           <div key={i} className="flex gap-2">
             <Input
+              aria-label="Row label"
               value={item.label}
               placeholder="Label"
               onChange={(e) => {
@@ -31,6 +33,7 @@ export function RegistrationForm({
               }}
             />
             <Input
+              aria-label="Row value"
               value={item.value}
               placeholder="Value"
               onChange={(e) => {
@@ -68,8 +71,13 @@ export function RegistrationForm({
           Add row
         </Button>
       </div>
-      <FormField label="Cautions" description="One per line">
+      <FormField
+        label="Cautions"
+        description="One per line"
+        htmlFor="registration-cautions"
+      >
         <Textarea
+          id="registration-cautions"
           rows={4}
           value={(block.cautions ?? []).join('\n')}
           onChange={(e) =>

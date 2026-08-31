@@ -18,6 +18,7 @@ export function LinksForm({
           className="border-border grid grid-cols-4 gap-2 rounded-md border p-2"
         >
           <Input
+            aria-label="Link label"
             value={item.label}
             placeholder="Label"
             onChange={(e) => {
@@ -27,6 +28,7 @@ export function LinksForm({
             }}
           />
           <Input
+            aria-label="Link URL"
             value={item.href}
             placeholder="https://…"
             onChange={(e) => {
@@ -36,6 +38,7 @@ export function LinksForm({
             }}
           />
           <select
+            aria-label="Link type"
             className="border-border rounded-md border px-2 text-sm"
             value={item.kind}
             onChange={(e) => {

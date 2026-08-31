@@ -10,8 +10,9 @@ export function IngredientsForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Heading">
+      <FormField label="Heading" htmlFor="block-heading">
         <Input
+          id="block-heading"
           value={block.heading ?? ''}
           onChange={(e) =>
             onChange({ ...block, heading: e.target.value || undefined })
@@ -25,6 +26,7 @@ export function IngredientsForm({
             className="border-border grid grid-cols-4 gap-2 rounded-md border p-2"
           >
             <Input
+              aria-label="Ingredient name"
               value={item.name}
               placeholder="Name"
               onChange={(e) => {
@@ -34,6 +36,7 @@ export function IngredientsForm({
               }}
             />
             <Input
+              aria-label="Ingredient role"
               value={item.role}
               placeholder="Role"
               onChange={(e) => {
@@ -43,6 +46,7 @@ export function IngredientsForm({
               }}
             />
             <Input
+              aria-label="Ingredient percent"
               type="number"
               value={item.percent ?? ''}
               placeholder="%"

@@ -10,16 +10,18 @@ export function StoryForm({
 }) {
   return (
     <div className="space-y-4">
-      <FormField label="Kicker">
+      <FormField label="Kicker" htmlFor="story-kicker">
         <Input
+          id="story-kicker"
           value={block.kicker ?? ''}
           onChange={(e) =>
             onChange({ ...block, kicker: e.target.value || undefined })
           }
         />
       </FormField>
-      <FormField label="Heading" required>
+      <FormField label="Heading" required htmlFor="story-heading">
         <Input
+          id="story-heading"
           value={block.heading}
           onChange={(e) => onChange({ ...block, heading: e.target.value })}
         />
@@ -29,6 +31,7 @@ export function StoryForm({
           {block.paragraphs.map((p, i) => (
             <div key={i} className="flex gap-2">
               <Textarea
+                aria-label={`Paragraph ${i + 1}`}
                 rows={3}
                 value={p}
                 onChange={(e) => {
@@ -64,8 +67,9 @@ export function StoryForm({
           </Button>
         </div>
       </FormField>
-      <FormField label="Attribution">
+      <FormField label="Attribution" htmlFor="story-attribution">
         <Input
+          id="story-attribution"
           value={block.attribution ?? ''}
           onChange={(e) =>
             onChange({ ...block, attribution: e.target.value || undefined })
