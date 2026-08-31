@@ -117,6 +117,9 @@ model Tenant {
   manifestDeliveries    ManifestDelivery[] // E05
   printReceipts         PrintReceipt[] // E05
   shipments             Shipment[] // E05
+  ssoConfig             TenantSsoConfig? // E20
+  ssoIdentities         SsoIdentity[] // E20
+  mfaPolicy             TenantMfaPolicy? // E20
 }
 
 model User {
@@ -144,6 +147,9 @@ model User {
   // ─── E05 ────────────────────────────────────────────────────
   oemUser             OemUser?
   // ─── end E05 ────────────────────────────────────────────────
+  // ─── E20 ────────────────────────────────────────────────────
+  ssoIdentities       SsoIdentity[]
+  // ─── end E20 ────────────────────────────────────────────────
 
   @@index([tenantId])
 }
@@ -385,14 +391,15 @@ model ScanEvent {
 // ─── E02 Identity & Access models ──────────────────────────────────
 
 model Membership {
-  id        String     @id @default(cuid())
-  userId    String
-  tenantId  String
-  role      TenantRole
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  userId     String
+  tenantId   String
+  role       TenantRole
+  createdVia String? // E20: 'invite' | 'jit' — null for pre-existing memberships
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tenantId])
   @@index([tenantId, role])
@@ -406,6 +413,7 @@ model Session {
   familyId         String // stable across rotations; reuse of superseded hash revokes the family
   userAgent        String?
   ipPrefix         String? // /24 or /48 truncated per E19
+  amr              String[]  @default([]) // E20: authentication methods reference — pwd, otp, oidc:<provider>, break_glass
   createdAt        DateTime  @default(now())
   lastSeenAt       DateTime  @default(now())
   expiresAt        DateTime
@@ -1306,3 +1314,60 @@ model WebhookDelivery {
 }
 
 // ── end E16 models ───────────────────────────────────────────────
+// ── E20 SSO & MFA Policy ─────────────────────────────────────────
+enum SsoProvider {
+  google
+  microsoft
+  fake // only honoured when NODE_ENV !== "production"
+}
+
+model TenantSsoConfig {
+  id              String      @id @default(cuid())
+  tenantId        String      @unique
+  provider        SsoProvider
+  clientId        String
+  clientSecretEnc String // AES-256-GCM, SSO_CLIENT_SECRET_ENC_KEY; never returned by the API
+  issuer          String? // required for fake/generic; Entra: tenant-specific issuer; Google: fixed
+  allowedDomains  String[] // lowercase; empty = link-only, no JIT
+  jitProvisioning Boolean     @default(false)
+  jitDefaultRole  String      @default("viewer") // viewer | operator (never owner)
+  enforceSso      Boolean     @default(false)
+  enabled         Boolean     @default(true)
+  lastTestedAt    DateTime?
+  lastTestResult  String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model SsoIdentity {
+  id          String      @id @default(cuid())
+  tenantId    String
+  userId      String
+  provider    SsoProvider
+  subject     String // IdP `sub` — the stable link, not email
+  email       String
+  lastLoginAt DateTime?
+  createdAt   DateTime    @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, subject])
+  @@index([tenantId, userId])
+}
+
+model TenantMfaPolicy {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  requiredRoles   String[] // subset of owner|operator|viewer
+  gracePeriodDays Int      @default(7)
+  enforcedFrom    DateTime // set when the policy first becomes non-empty
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ── end E20 models ────────────────────────────────────────────

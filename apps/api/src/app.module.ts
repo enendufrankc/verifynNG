@@ -41,6 +41,7 @@ import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { SsoModule } from './modules/sso/sso.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ApiKeysModule,
     PublicApiModule,
     WebhooksModule,
+    SsoModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

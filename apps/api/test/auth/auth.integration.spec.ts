@@ -12,6 +12,7 @@ import { AuthService } from '../../src/modules/auth/auth.service';
 import { PasswordService } from '../../src/modules/auth/services/password.service';
 import { TokenService } from '../../src/modules/auth/services/token.service';
 import { MfaService } from '../../src/modules/auth/services/mfa.service';
+import { LoginPolicyRegistry } from '../../src/modules/auth/login-policy-hook';
 import type {
   Mailer,
   MailMessage,
@@ -51,6 +52,7 @@ describe('AuthService (integration)', () => {
       new MfaService(),
       new EventEmitter2(),
       mailer,
+      new LoginPolicyRegistry(),
     );
   });
 
@@ -81,6 +83,7 @@ describe('AuthService (integration)', () => {
     const loginResult = await authService.login(
       email,
       PASSWORD,
+      undefined,
       'UA/1',
       '203.0.113.1',
     );

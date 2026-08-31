@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 3 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | @enendufrankc |
 | GitHub Issue | [#11](https://github.com/enendufrankc/verifynNG/issues/11) |
 | Depends on | E09 (web-verify app, `Tier1ProductSlot`, `TenantThemeProvider`, `registerTier1Renderer`), E04 (Product/Batch, product media), E11 (admin shell, tokens, `apiClient`, react-hook-form/zod conventions), E03 (tenant branding placeholders, public profile), E02 (`@TenantId()`, `@Roles()`), E13 (`@Audited`), E19 (`/legal/**` footer links reused), E12 (`POST /v1/events/page` beacon via E09) |
 | Unblocks | E16 (public API may expose product pages later), E15 (page builder is a plan-gated feature — entitlement hook) |

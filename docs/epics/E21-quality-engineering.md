@@ -1,13 +1,13 @@
 # E21 — Quality Engineering
 
-| | |
-|---|---|
-| Wave | 1 → 3 (cross-cutting; starts with wave 1, owns the CI matrix to the end) |
-| Status | in-progress |
-| Owner | frank.enendu |
-| GitHub Issue | [#22](https://github.com/enendufrankc/verifynNG/issues/22) |
-| Depends on | E00 (test tooling, `createTestDatabase()`, CI skeleton); consumes every feature epic as it lands |
-| Unblocks | every epic's demo (realistic seed), E15/E16/E18/E20 acceptance flows, release gate |
+|                 |                                                                                                                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 1 → 3 (cross-cutting; starts with wave 1, owns the CI matrix to the end)                                                                                                                                                                                                        |
+| Status          | in-progress                                                                                                                                                                                                                                                                     |
+| Owner           | frank.enendu                                                                                                                                                                                                                                                                    |
+| GitHub Issue    | [#22](https://github.com/enendufrankc/verifynNG/issues/22)                                                                                                                                                                                                                      |
+| Depends on      | E00 (test tooling, `createTestDatabase()`, CI skeleton); consumes every feature epic as it lands                                                                                                                                                                                |
+| Unblocks        | every epic's demo (realistic seed), E15/E16/E18/E20 acceptance flows, release gate                                                                                                                                                                                              |
 | Readiness items | `production-readiness.md` §11 all rows (engine test suite is E01's; E21 owns isolation + lifecycle integration tests, load testing, chaos/failover drills) · §2 "cross-tenant isolation tests in CI" · §4 CI/CD gates · §4 backups + restore drills (runs E18's script nightly) |
 
 ## Goal
@@ -37,6 +37,7 @@ docs/quality/**                             testing strategy, flaky policy, rele
 ## Interfaces
 
 **Consumes:**
+
 - E00: `createTestDatabase()`, Vitest workspace, Playwright config, `ci.yml` job names, compose service contract.
 - E01: `generateCode`, `hashForStorage`, `StaticKeyRing`, fixture codes — the seed mints real codes so any seeded code verifies.
 - E02: `asTenant(tenantId, role)` request helper, `expectIsolated()` assertion, seeded auth users; `@TenantId()` decorator metadata (the matrix reflects on it).
@@ -49,6 +50,7 @@ docs/quality/**                             testing strategy, flaky policy, rele
 - E13: `@Audited` metadata (matrix asserts every mutating tenant route is audited — a second discovery check).
 
 **Exposes:**
+
 - `pnpm db:seed:realistic [--scale 0.1|1|10] [--seed 42]` — deterministic; writes `packages/db/prisma/seed/realistic/manifest.json` with well-known ids (tenants, one unit per scenario, api keys, users) that E2E and demos import.
 - `@verifyng/db/testing`: `seededRng(seed)`, `factories` (`tenant()`, `user()`, `product()`, `batch()`, `unit()`, `scanEvent()`), `isolationMatrix({ app, seeds })`.
 - `tests/e2e/fixtures`: `loginAs(role, tenant?)`, `loginViaSso()` (from E20), `mintBatch({ count })`, `scanCode(code, { ip?, ua? })`, `openConsole(path)`, `expectAudit(action)`, `mailpit.waitFor(subject)`, `webhookSink.waitFor(event)`, `payOnFakeCheckout()`.
@@ -62,27 +64,27 @@ None owned. The realistic seed writes only to other epics' models through their 
 
 Realistic dataset (scale 1):
 
-| Entity | Count | Shape |
-|---|---|---|
-| Tenants | 3 | `ivoryglow` (NG, growth, active, SSO fake), `acme` (GB, starter, GBP, one failed invoice → `past_due`), `nkem-naturals` (NG, free-trial, 480/500 units used) |
-| Users/Memberships | 9 + support | roles as above; one user in two tenants |
-| Products | 20 | 8 / 7 / 5 with real GTIN check digits; IVORY GLOW's 3 real SKUs from `legacy/cli.js` |
-| OEMs | 5 | NG, CN, GB |
-| Batches | 60 | sizes log-normal (median 600, max 5,000), dates over 18 months, statuses minted/printed/shipped, 2 never-shipped (dead-code scenario) |
-| Units | 50,000 | via `MintService`; ~4% flagged/decommissioned in `ivoryglow` |
-| ScanEvents | 500,000 | 88% tier-1, 12% tier-2; time: diurnal curve on Africa/Lagos + Europe/London, weekly seasonality, one launch spike day (×12); geo: 70% NG (Lagos 45%, Abuja, Kano, Port Harcourt, Ibadan, Onitsha), 15% GB, 10% GH/KE/ZA, 5% other, with IPs drawn from documented test ranges per city (fake-geo maps them); UA mix 80% mobile; invalid-code probes 2% |
-| Planted anomalies | 1 of each per tenant | geo dispersion (one tier-2 in Lagos, Accra, Nairobi in 6 days), velocity/enumeration (one IP, 900 probes in 10 min), mass duplication (one tier-2 scanned 60× across 5 cities), pre-reveal (tier-2 scanned 3 days before batch `shippedAt`), dead-code batch scans (12 scans on a never-shipped batch) — ids listed in `manifest.json` |
-| Reports | 40 | statuses across the E08 machine, 5 linked to planted anomalies |
-| Usage summaries | 3 × 6 months | consistent with the scan/unit counts above |
-| Invoices/Payments | 18 | `ivoryglow` all paid, `acme` last one failed 2×, `nkem` none |
-| Tickets | 15 | across channels/statuses |
-| API keys / webhooks | 2 keys + 1 endpoint per paid tenant | endpoint → `webhook-sink` |
+| Entity              | Count                               | Shape                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tenants             | 3                                   | `ivoryglow` (NG, growth, active, SSO fake), `acme` (GB, starter, GBP, one failed invoice → `past_due`), `nkem-naturals` (NG, free-trial, 480/500 units used)                                                                                                                                                                                           |
+| Users/Memberships   | 9 + support                         | roles as above; one user in two tenants                                                                                                                                                                                                                                                                                                                |
+| Products            | 20                                  | 8 / 7 / 5 with real GTIN check digits; IVORY GLOW's 3 real SKUs from `legacy/cli.js`                                                                                                                                                                                                                                                                   |
+| OEMs                | 5                                   | NG, CN, GB                                                                                                                                                                                                                                                                                                                                             |
+| Batches             | 60                                  | sizes log-normal (median 600, max 5,000), dates over 18 months, statuses minted/printed/shipped, 2 never-shipped (dead-code scenario)                                                                                                                                                                                                                  |
+| Units               | 50,000                              | via `MintService`; ~4% flagged/decommissioned in `ivoryglow`                                                                                                                                                                                                                                                                                           |
+| ScanEvents          | 500,000                             | 88% tier-1, 12% tier-2; time: diurnal curve on Africa/Lagos + Europe/London, weekly seasonality, one launch spike day (×12); geo: 70% NG (Lagos 45%, Abuja, Kano, Port Harcourt, Ibadan, Onitsha), 15% GB, 10% GH/KE/ZA, 5% other, with IPs drawn from documented test ranges per city (fake-geo maps them); UA mix 80% mobile; invalid-code probes 2% |
+| Planted anomalies   | 1 of each per tenant                | geo dispersion (one tier-2 in Lagos, Accra, Nairobi in 6 days), velocity/enumeration (one IP, 900 probes in 10 min), mass duplication (one tier-2 scanned 60× across 5 cities), pre-reveal (tier-2 scanned 3 days before batch `shippedAt`), dead-code batch scans (12 scans on a never-shipped batch) — ids listed in `manifest.json`                 |
+| Reports             | 40                                  | statuses across the E08 machine, 5 linked to planted anomalies                                                                                                                                                                                                                                                                                         |
+| Usage summaries     | 3 × 6 months                        | consistent with the scan/unit counts above                                                                                                                                                                                                                                                                                                             |
+| Invoices/Payments   | 18                                  | `ivoryglow` all paid, `acme` last one failed 2×, `nkem` none                                                                                                                                                                                                                                                                                           |
+| Tickets             | 15                                  | across channels/statuses                                                                                                                                                                                                                                                                                                                               |
+| API keys / webhooks | 2 keys + 1 endpoint per paid tenant | endpoint → `webhook-sink`                                                                                                                                                                                                                                                                                                                              |
 
 Privacy rule: every email is under `.test`, `.local` or `example.com`; names from a fixed synthetic list; IPs from TEST-NET-1/2/3 and documented ranges only; no real person, address or card appears. Enforced by `pnpm seed:lint` (regex scan of the seed output for real TLD emails, Nigerian phone patterns, PAN-like numbers).
 
 ## Tasks
 
-- [ ] T1 Strategy doc `docs/quality/testing-strategy.md`: pyramid per package, what each layer may mock (nothing we own), naming (`*.spec.ts` unit, `*.int.ts` integration, `*.e2e.ts`), where tests live, how to run each locally; coverage thresholds table (`core` 100/100, `api` modules 85 lines / 80 branches, `web-*` 70 lines, `sdk` 90) wired into `vitest.workspace.ts` so a drop fails CI.
+- [x] T1 Strategy doc `docs/quality/testing-strategy.md`: pyramid per package, what each layer may mock (nothing we own), naming (`*.spec.ts` unit, `*.int.ts` integration, `*.e2e.ts`), where tests live, how to run each locally; coverage thresholds table (`core` 100/100, `api` modules 85 lines / 80 branches, `web-*` 70 lines, `sdk` 90) wired into `vitest.workspace.ts` so a drop fails CI.
 - [ ] T2 `@verifyng/db/testing`: `seededRng` (mulberry32 → deterministic), factories building valid objects through E01 for codes, `withTenant()` helper; adopt in E00's example integration test.
 - [ ] T3 Realistic seed — structure: `packages/db/prisma/seed/realistic/index.ts` with `--scale`, `--seed`, stage ordering (tenants → users → catalog → batches/units → scans → anomalies → reports → usage → billing → support → api/webhooks), per-stage timing log, `manifest.json` writer, idempotent (drops and recreates the three tenants only); `pnpm db:seed:realistic`. Runs in < 3 minutes at scale 1 on a laptop (bulk `COPY` via `pg-copy-streams` for scans).
 - [ ] T4 Realistic seed — distributions + anomaly planting per the table above; unit tests assert determinism (two runs, same seed → identical `manifest.json` and row counts) and that each planted scenario triggers exactly its E07 rule when `pnpm --filter api cli anomalies:run` executes.
@@ -95,14 +97,14 @@ Privacy rule: every email is under `.test`, `.local` or `example.com`; names fro
 - [ ] T11 Load tests `tools/load`: `verify.js` (500 rps for 5 min, 90% tier-1 / 10% tier-2 from a 20k-code sample exported by the seed, 3% invalid, thresholds `http_req_duration{p(95)}<300ms`, `http_req_failed<0.1%`, `checks>99.9%`), `mint.js` (100k units across 20 batch requests, threshold total < 10 min and zero 5xx), `public-api.js` (mixed reads at plan rate-limit, asserts 429s are exactly the excess), `enumeration.js` (attack traffic; asserts E06 blocks within 30s and legitimate traffic p95 unaffected); compose profile `load` adds `k6` container with `--out json` → `tools/load/results/`; `pnpm load:verify` etc.; `docs/quality/load-baselines.md` records dated results + machine spec; nightly job fails on threshold breach.
 - [ ] T12 Chaos-lite `tests/chaos`: while `verify.js` runs at 100 rps: `docker compose kill redis` → assert `/health/ready` flips to 503 within 5s, verify keeps returning verdicts (rate limiting degrades to fail-open with a logged warning per E06's decision) or returns a documented 503 with `Retry-After` — whichever E06/E17 specify; `docker compose start redis` → ready within 15s, BullMQ jobs resume (a webhook delivery queued during the outage lands). Same for `postgres`: verify returns 503 (never a false "unknown/counterfeit" verdict — this is the critical assertion), recovers, no duplicate scan events. Written as a Vitest suite shelling out to compose; nightly.
 - [ ] T13 Mutation testing: `stryker.config.mjs` for `packages/core` (threshold: break < 95% mutation score) and `apps/api/src/modules/verification/verdict/**` (break < 85%); incremental mode cached in CI; nightly; report artifact; surviving mutants triaged into issues on E01/E06.
-- [ ] T14 Flaky policy + tooling: `docs/quality/flaky-tests.md` (a test that fails then passes on retry is flaky; quarantine within 24h via `test.fixme` + issue with `flaky` label; owner has 7 days; quarantined tests run in a non-blocking nightly job and are listed in the release gate); Playwright `retries: 1` on CI only with a reporter that posts retried tests to the job summary; Vitest `retry: 0`.
+- [x] T14 Flaky policy + tooling: `docs/quality/flaky-tests.md` (a test that fails then passes on retry is flaky; quarantine within 24h via `test.fixme` + issue with `flaky` label; owner has 7 days; quarantined tests run in a non-blocking nightly job and are listed in the release gate); Playwright `retries: 1` on CI only with a reporter that posts retried tests to the job summary; Vitest `retry: 0`.
 - [ ] T15 CI matrix: extend E00 `ci.yml` (agreed one-line includes) with `isolation-matrix`, `openapi-check`, `seed-lint`, `test:smoke`; `nightly.yml` (02:00 UTC): full seed, `e2e-full`, `visual`, `contract`, `load`, `chaos`, `mutation`, `restore-drill` (E18 scripts), each uploading artifacts and posting a summary; concurrency and timeouts; runner sizing notes.
 - [ ] T16 Release gate: `release-gate.yml` (manual dispatch with tag) runs the nightly set on the tag plus `pnpm audit --prod`, secret scan, `docker compose config`, license check, and renders `docs/quality/release-checklist.md` into a job summary with pass/fail per row (all nightly jobs green in last 24h, no open `flaky` older than 7 days, no P0/P1 issues open, coverage not decreased, load baselines within 10% of last release, restore drill < 15 min, changelog present, deprecations announced). Green gate produces a `release-<tag>.md` artifact.
 
 ## Acceptance criteria
 
 - [ ] AC1 `docker compose up -d && pnpm db:seed:realistic --seed 42` finishes in < 3 min and prints the counts table (3 tenants, 20 products, 60 batches, 50,000 units, 500,000 scans, 15 anomalies, 40 reports, 18 invoices, 15 tickets); running it again with `--seed 42` yields a byte-identical `manifest.json`; `pnpm seed:lint` passes.
-- [ ] AC2 Every planted anomaly fires: `pnpm --filter api cli anomalies:run --tenant ivoryglow` then `http://localhost:3001/anomalies` shows exactly 5 anomalies whose `unitId`/`batchId` match `manifest.json.anomalies.ivoryglow`; scanning `manifest.json.units.ivoryglow.massDuplicated` at `http://localhost:3000/v/<code>` shows the *suspicious* state with "verified 60 times in 5 regions".
+- [ ] AC2 Every planted anomaly fires: `pnpm --filter api cli anomalies:run --tenant ivoryglow` then `http://localhost:3001/anomalies` shows exactly 5 anomalies whose `unitId`/`batchId` match `manifest.json.anomalies.ivoryglow`; scanning `manifest.json.units.ivoryglow.massDuplicated` at `http://localhost:3000/v/<code>` shows the _suspicious_ state with "verified 60 times in 5 regions".
 - [ ] AC3 Isolation matrix: `pnpm test:isolation` passes on `main`; on a throwaway branch add `GET /v1/tenants/:tenantId/leak` returning `prisma.batch.findMany()` with no scoping → the job fails naming `TenantLeakController.leak` and the missing metadata; adding the route to `allowlist.json` without a justification string also fails.
 - [ ] AC4 Journeys: `pnpm test:e2e --grep @journey` runs the five journeys green against compose in < 15 min; the HTML report artifact shows traces; journey (a) ends with `webhook-sink` at `http://localhost:4105` displaying `unit.flagged` for the unit from the run.
 - [ ] AC5 Visual: `pnpm test:e2e --grep @visual` passes; changing the verdict badge colour in web-verify on a throwaway branch fails with a diff image attached to the report.
@@ -115,6 +117,7 @@ Privacy rule: every email is under `.test`, `.local` or `example.com`; names fro
 ## Testing
 
 E21 is the testing epic; its own tests are:
+
 - Unit: `seededRng` determinism and distribution sanity (chi-squared on the geo/time buckets within tolerance), factory validity through E01 `verifyChecksum`, privacy scanner regexes (positive/negative corpus), isolation-matrix classifier on a fixture Nest app with deliberately good/bad controllers.
 - Integration: seed at scale 0.01 against a fresh `createTestDatabase()` asserting counts and referential integrity; matrix against the real app.
 - Self-check: every fixture in `tests/e2e/fixtures` has a spec exercising it alone (`fixtures.spec.ts`) so fixture breakage is diagnosed before journeys fail.
@@ -122,9 +125,9 @@ E21 is the testing epic; its own tests are:
 
 ## Compose services added
 
-| Service | Image | Host port | Notes |
-|---|---|---|---|
-| k6 | grafana/k6:0.54 | — | `profiles: [load]`; mounts `tools/load` at `/scripts`, results to `tools/load/results`; env `API_URL=http://api:4000`, `K6_OUT=json=/results/<script>-<ts>.json`; sends metrics to E17's Prometheus remote-write when present (`K6_PROMETHEUS_RW_SERVER_URL`) |
+| Service | Image           | Host port | Notes                                                                                                                                                                                                                                                         |
+| ------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| k6      | grafana/k6:0.54 | —         | `profiles: [load]`; mounts `tools/load` at `/scripts`, results to `tools/load/results`; env `API_URL=http://api:4000`, `K6_OUT=json=/results/<script>-<ts>.json`; sends metrics to E17's Prometheus remote-write when present (`K6_PROMETHEUS_RW_SERVER_URL`) |
 
 No ports exposed. E18's `postgres-restore` (profile `drill`) is started by the nightly `restore-drill` job.
 

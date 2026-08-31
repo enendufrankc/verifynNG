@@ -14,6 +14,8 @@ interface SessionRequestBody {
   password?: string;
   mfaToken?: string;
   tenantId?: string;
+  /** Tenant slug — E20's login-time tenant scoping (LoginDto.tenant). */
+  tenant?: string;
 }
 
 interface ApiMembership {
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   // ── Login ─────────────────────────────────────────────────
   if (body.action === 'login' || body.email) {
-    const { email, password } = body;
+    const { email, password, tenant } = body;
     if (!email || !password)
       return NextResponse.json(
         { code: 'BAD_REQUEST', message: 'Email and password are required' },
@@ -69,8 +71,30 @@ export async function POST(req: NextRequest) {
       const apiRes = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, tenant }),
       });
+      // A real rejection from the API (bad password, sso_required, TenantStatusGuard,
+      // ...) must surface as-is — falling through to the dev stub below would mask it
+      // behind a generic "invalid email or password" for a backend that's up and
+      // correctly saying no. Only an unreachable API (the catch block) falls through.
+      if (!apiRes.ok) {
+        const err = await apiRes.json().catch(() => ({}));
+        // Nest's default exception filter puts a structured payload (e.g.
+        // ForbiddenException({code, ssoStartUrl})) under `message`; a plain
+        // exception's `message` is just a string.
+        const structured =
+          err.message && typeof err.message === 'object' ? err.message : null;
+        return NextResponse.json(
+          {
+            code: structured?.code ?? err.code ?? 'LOGIN_FAILED',
+            message: structured
+              ? 'Login failed'
+              : (err.message ?? 'Login failed'),
+            ...(structured ?? {}),
+          },
+          { status: apiRes.status },
+        );
+      }
       if (apiRes.ok) {
         const data: LoginApiResponse = await apiRes.json();
         if (data.mfaRequired)
