@@ -32,12 +32,12 @@
     "depcheck": "npx depcheck --ignores=@types/node,tsup,typescript,vitest,@vitest/coverage-istanbul,@vitest/coverage-v8,fast-check,eslint,prettier,depcheck"
   },
   "devDependencies": {
-    "@types/node": "22",
+    "@types/node": "26",
     "@vitest/coverage-v8": "4.1.11",
     "@vitest/coverage-istanbul": "4.1.11",
-    "fast-check": "3.23.2",
+    "fast-check": "4.9.0",
     "tsup": "8.5.1",
-    "typescript": "5.9.2",
+    "typescript": "7.0.2",
     "vitest": "4.1.11"
   }
 }
