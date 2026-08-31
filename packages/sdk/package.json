@@ -1,0 +1,44 @@
+{
+  "name": "@verifynng/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "examples:typecheck": "tsc --noEmit -p tsconfig.examples.json",
+    "test": "vitest run",
+    "test:compose": "vitest run --config vitest.compose.config.ts",
+    "types:generate": "openapi-typescript ./openapi.json -o ./src/types.gen.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.13.4"
+  },
+  "devDependencies": {
+    "@types/node": "22",
+    "openapi-typescript": "^7.4.4",
+    "tsup": "8.5.1",
+    "typescript": "5.9.2",
+    "vitest": "4.1.11"
+  }
+}
