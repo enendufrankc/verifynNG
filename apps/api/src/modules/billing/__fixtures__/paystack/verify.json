@@ -1,0 +1,37 @@
+{
+  "status": true,
+  "message": "Verification successful",
+  "data": {
+    "id": 4099857420,
+    "domain": "test",
+    "status": "success",
+    "reference": "7PVGX8MEk85tgeEpVDtD",
+    "amount": 10000,
+    "message": null,
+    "gateway_response": "Successful",
+    "paid_at": "2026-08-22T10:00:00.000Z",
+    "created_at": "2026-08-22T09:59:00.000Z",
+    "channel": "card",
+    "currency": "NGN",
+    "ip_address": "127.0.0.1",
+    "metadata": "",
+    "authorization": {
+      "authorization_code": "AUTH_uh8bcl3zbn",
+      "bin": "408408",
+      "last4": "4081",
+      "exp_month": "12",
+      "exp_year": "2030",
+      "channel": "card",
+      "card_type": "visa",
+      "bank": "Test Bank",
+      "country_code": "NG",
+      "brand": "visa",
+      "reusable": true,
+      "signature": "SIG_xxxxxxxxxxxx"
+    },
+    "customer": {
+      "id": 84312,
+      "email": "customer@email.com"
+    }
+  }
+}

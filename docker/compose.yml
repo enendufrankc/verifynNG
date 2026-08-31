@@ -93,6 +93,10 @@ services:
     environment:
       FAKE_PAY_SECRET: fake_sk_test
       FAKE_PAY_WEBHOOK_URL: http://api:4000/v1/billing/webhooks/paystack
+      # Browser-reachable — the host port a worktree's own .env may remap
+      # (scripts/epic start), never the container-internal 4102 the api
+      # service uses to reach this one.
+      FAKE_PAY_PUBLIC_URL: http://localhost:${FAKE_PAY_PORT:-4102}
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4102/health']
       interval: 5s
