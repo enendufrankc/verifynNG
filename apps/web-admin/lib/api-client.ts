@@ -2,7 +2,10 @@ import { useAuthStore } from './auth-store';
 
 interface ApiErrorBody {
   code?: string;
-  message?: string;
+  // Nest's default exception filter puts a custom payload passed to an
+  // exception constructor (e.g. `new ConflictException({code, unmet})`)
+  // under `message` as an object, not a string — so this has to accept both.
+  message?: string | Record<string, unknown>;
   details?: Array<{ field: string; message: string }>;
 }
 
@@ -12,10 +15,29 @@ export class ApiError extends Error {
     public code: string,
     message: string,
     public details?: Array<{ field: string; message: string }>,
+    /** The raw structured `message` payload when the API sent an object
+     * instead of a string (e.g. `{ code: 'enforce_sso_preconditions_unmet', unmet: [...] }`). */
+    public payload?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+function normalizeErrorBody(body: ApiErrorBody): {
+  code: string;
+  message: string;
+  payload?: Record<string, unknown>;
+} {
+  if (body.message && typeof body.message === 'object') {
+    const payload = body.message;
+    const code = (payload.code as string | undefined) ?? body.code ?? 'UNKNOWN';
+    return { code, message: code, payload };
+  }
+  return {
+    code: body.code ?? 'UNKNOWN',
+    message: (body.message as string | undefined) ?? 'Request failed',
+  };
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -85,11 +107,13 @@ async function request<T>(
       });
       if (!retry.ok) {
         const err: ApiErrorBody = await retry.json().catch(() => ({}));
+        const normalized = normalizeErrorBody(err);
         throw new ApiError(
           retry.status,
-          err.code ?? 'UNKNOWN',
-          err.message ?? retry.statusText,
+          normalized.code,
+          normalized.message || retry.statusText,
           err.details,
+          normalized.payload,
         );
       }
       return (await retry.json()) as T;
@@ -98,11 +122,13 @@ async function request<T>(
   }
   if (!res.ok) {
     const err: ApiErrorBody = await res.json().catch(() => ({}));
+    const normalized = normalizeErrorBody(err);
     throw new ApiError(
       res.status,
-      err.code ?? 'UNKNOWN',
-      err.message ?? res.statusText,
+      normalized.code,
+      normalized.message || res.statusText,
       err.details,
+      normalized.payload,
     );
   }
   if (res.status === 204) return undefined as T;

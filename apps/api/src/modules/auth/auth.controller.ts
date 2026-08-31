@@ -46,7 +46,13 @@ export class AuthController {
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const userAgent = req.headers['user-agent'];
     const ip = req.ip || req.socket?.remoteAddress;
-    return this.authService.login(dto.email, dto.password, userAgent, ip);
+    return this.authService.login(
+      dto.email,
+      dto.password,
+      dto.tenant,
+      userAgent,
+      ip,
+    );
   }
 
   @Public()

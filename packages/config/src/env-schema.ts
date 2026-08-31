@@ -226,6 +226,27 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E20 SSO & MFA Policy ─────────────────────────────────────────
+const e20Schema = z.object({
+  // No `v1/` prefix — see the routing-convention note in E20-sso.md's T1
+  // checklist entry (this codebase doesn't actually use one).
+  SSO_CALLBACK_URL: z
+    .string()
+    .default('http://localhost:4000/auth/sso/callback'),
+  SSO_STATE_TTL_SECONDS: z.coerce.number().default(600),
+  SSO_DISCOVERY_TIMEOUT_MS: z.coerce.number().default(5000),
+  // `api` reaches the fake IdP over the compose network; a browser on the
+  // host redirected to it needs the host-published URL instead — same
+  // internal/public split as S3_ENDPOINT/S3_PUBLIC_ENDPOINT above.
+  FAKE_OIDC_ISSUER: z.string().default('http://fake-oidc:4104/default'),
+  FAKE_OIDC_PUBLIC_ISSUER: z.string().default('http://localhost:4104/default'),
+  SSO_CLIENT_SECRET_ENC_KEY: z
+    .string()
+    .default(
+      '0000000000000000000000000000000000000000000000000000000000000000',
+    ), // 64 hex chars = 32 bytes (aes-256-gcm key)
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -240,6 +261,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e20Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.
@@ -253,6 +275,12 @@ export const envSchema = e02Schema
       ctx.addIssue({
         code: 'custom',
         path: ['MFA_ENC_KEY'],
+        message: 'dev default key not allowed in production',
+      });
+    if (env.SSO_CLIENT_SECRET_ENC_KEY === ZERO_KEY)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SSO_CLIENT_SECRET_ENC_KEY'],
         message: 'dev default key not allowed in production',
       });
     if (

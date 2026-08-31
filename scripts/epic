@@ -24,6 +24,7 @@ write_env() {
   local wt="$1" eid="$2" n off
   n="$(num_for "$eid")"; off=$((107 * n))
   local pg=$((5432+off)) redis=$((6379+off)) minio=$((9000+off)) minioc=$((9001+off)) mpui=$((8025+off)) mpsmtp=$((1025+off))
+  local sms=$((4101+off)) pay=$((4102+off)) geo=$((4103+off)) oidc=$((4104+off)) api=$((4000+off)) wv=$((3000+off)) wa=$((3001+off))
   local sms=$((4101+off)) pay=$((4102+off)) geo=$((4103+off)) api=$((4000+off)) wv=$((3000+off)) wa=$((3001+off))
   local captcha=$((4106+off))
   local grafana=$((3100+off)) loki=$((3101+off)) tempo=$((3102+off)) prom=$((3103+off)) otel=$((3104+off)) uptime=$((3105+off))
@@ -41,6 +42,7 @@ MAILPIT_SMTP_PORT=$mpsmtp
 FAKE_SMS_PORT=$sms
 FAKE_PAY_PORT=$pay
 FAKE_GEO_PORT=$geo
+FAKE_OIDC_PORT=$oidc
 FAKE_CAPTCHA_PORT=$captcha
 API_HOST_PORT=$api
 WEB_VERIFY_PORT=$wv
@@ -76,6 +78,7 @@ print_ports() {
   printf "  %-14s http://localhost:%s\n" "MinIO"      "$(grep ^MINIO_CONSOLE_PORT "$wt/.env" | cut -d= -f2)"
   printf "  %-14s localhost:%s\n"        "Postgres"   "$(grep ^POSTGRES_PORT "$wt/.env" | cut -d= -f2)"
   printf "  %-14s localhost:%s\n"        "Redis"      "$(grep ^REDIS_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "fake-oidc"  "$(grep ^FAKE_OIDC_PORT "$wt/.env" | cut -d= -f2)"
 }
 
 case "$cmd" in

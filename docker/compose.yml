@@ -120,6 +120,20 @@ services:
       timeout: 5s
       retries: 5
 
+  fake-oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      JSON_CONFIG_PATH: /config/config.json
+      SERVER_PORT: '4104'
+    volumes:
+      - ../tools/fakes/oidc:/config:ro
+    ports:
+      - '${FAKE_OIDC_PORT:-4104}:4104'
+    # No healthcheck: the image is a distroless-style JRE build with no
+    # shell, wget, or curl to probe with (confirmed — `docker exec sh` fails
+    # with "executable file not found"). `api` depends on `service_started`
+    # only; it's a fast-starting JVM process and nothing needs it at boot.
+
   # ── Application services ──────────────────────────────────
   db-migrate:
     build:
@@ -253,6 +267,13 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E20 SSO & MFA Policy ──
+      SSO_CALLBACK_URL: http://localhost:${API_HOST_PORT:-4000}/auth/sso/callback
+      SSO_STATE_TTL_SECONDS: '600'
+      SSO_DISCOVERY_TIMEOUT_MS: '5000'
+      FAKE_OIDC_ISSUER: http://fake-oidc:4104/default
+      FAKE_OIDC_PUBLIC_ISSUER: http://localhost:${FAKE_OIDC_PORT:-4104}/default
+      SSO_CLIENT_SECRET_ENC_KEY: bbccddee11223344bbccddee11223344bbccddee11223344bbccddee11223344
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
@@ -266,6 +287,8 @@ services:
         condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
+      fake-oidc:
+        condition: service_started
     healthcheck:
       test:
         ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:4000/ready']

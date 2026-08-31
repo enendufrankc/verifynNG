@@ -14,7 +14,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 - [ ] Add role `oem` + `oemId` JWT claim (E05). **Partially done by E05 directly:** `oem` added to `TenantRole` (additive migration on `main`) — `RolesGuard`'s hierarchy map already falls back to treating an unrecognised role as its own singleton allowed-set, so no other E02 file changed. The `oemId` JWT claim was **not** added; E05's `OemScopeGuard` resolves `OemUser` from the DB per request instead (the spec's own documented fallback). Leaving this unchecked since the claim itself is still outstanding if a future epic wants it.
 - [ ] `UsersService.listMembers(tenantId, { roles })` (E14 routing).
 - [ ] `SessionService.issue/revoke` for impersonation sessions; never grants `owner`, max `operator` in write mode (E18).
-- [ ] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20).
+- [x] `LoginPolicyHook` multi-provider (`beforePasswordLogin`, `afterPrimaryAuth`) and `Session.amr[]`; optional `Membership.createdVia` (E20). **Done by E20 directly** (E02's worktree isn't active — flagged on issue #3 first): `Session.amr`/`Membership.createdVia` added in migration `20260831140000_E20_sso_mfa_policy`; `LoginPolicyRegistry` (a registration singleton, not a DI-resolved array — Nest has no Angular-style `multi: true`) wired into `AuthService.login`/`mfaChallenge` in `apps/api/src/modules/auth/login-policy-hook.ts`. Also added `LoginDto.tenant?: string` and tenant-scoped `AuthService.login`, since no tenant selection existed at all before (picked `memberships[0]` unconditionally) and both `EnforceSsoLoginHook` and `MfaPolicyLoginHook` need to evaluate a specific tenant. `TokenService`'s MFA token also carries an optional `tid` claim so tenant selection survives the two-step MFA challenge. See E20-sso.md's T5 checklist entry for the full list.
 - [ ] E20 owns `app/(auth)/sso/**` inside E02's auth route group.
 
 ## To E03 Tenant Lifecycle
@@ -63,7 +63,7 @@ Interfaces one epic needs another to provide. Collected when the epics were writ
 
 ## To E14 Notifications
 
-- [ ] Templates requested: `report.consumer_ack`, `report.consumer_update` (E08) · `subscription.restricted`, `subscription.reactivated`, `trial.ending` (E15) · `webhook.dead_lettered` (E16) · `ticket.*`, `impersonation.started` (E18) · `ops.alert` (E17) · `dsar.verify|ready|erased`, `legal.reaccept` (E19) · `anomaly.alert` data contract supplied by E07.
+- [ ] Templates requested: `report.consumer_ack`, `report.consumer_update` (E08) · `subscription.restricted`, `subscription.reactivated`, `trial.ending` (E15) · `webhook.dead_lettered` (E16) · `ticket.*`, `impersonation.started` (E18) · `ops.alert` (E17) · `dsar.verify|ready|erased`, `legal.reaccept` (E19) · `anomaly.alert` data contract supplied by E07 · `sso.enabled`, `mfa.policy.enforced`, `auth.break_glass_alert` (E20 — until these exist, `TemplateId` has no member for them so `NotificationService.send()` can't be called; E20 emits `sso.config.changed`/`mfa.policy.changed`/`auth.break_glass` domain events instead and leaves the email step for whoever adds the templates).
 - [ ] `mail.inbound` event from Mailpit/Resend inbound (E18).
 - [ ] Marketing-vs-transactional gate via `ConsentService.has(subject, 'marketing')` (E19).
 
