@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
+import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import { loadEnv } from '@verifynng/config';
 import { getTenantPublicProfile } from '@/lib/api';
@@ -9,6 +9,7 @@ import { PageBeacon } from '@/components/analytics/PageBeacon';
 import { ProductPageView } from '@/components/product-page/ProductPageView';
 import { pageThemeStyle } from '@/lib/product-page/theme';
 import { getPublishedPage } from '@/lib/product-page/page-fetcher';
+import { buildProductJsonLd } from '@/lib/product-page/json-ld';
 
 // Not `revalidate`/`generateStaticParams` — E09's root layout.tsx calls
 // headers() (already flagged as an unresolved FYI to E17 in
@@ -32,15 +33,25 @@ interface PageProps {
   params: Promise<{ tenantSlug: string; productSlug: string }>;
 }
 
+// generateMetadata and the page component both need the same published page
+// and tenant profile — React.cache dedupes the two fetches into one per
+// request (same pattern as E09's /v/[code]/page.tsx `loadVerify`).
+const loadPage = cache((tenantSlug: string, productSlug: string) =>
+  getPublishedPage(tenantSlug, productSlug),
+);
+const loadProfile = cache((tenantSlug: string) =>
+  getTenantPublicProfile(tenantSlug),
+);
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { tenantSlug, productSlug } = await params;
-  const result = await getPublishedPage(tenantSlug, productSlug);
+  const result = await loadPage(tenantSlug, productSlug);
   if (!result.ok) return {};
 
   const { seo, meta } = result.data;
-  const profile = await getTenantPublicProfile(tenantSlug);
+  const profile = await loadProfile(tenantSlug);
   const env = loadEnv();
   const canonical = `${env.PAGES_PUBLIC_BASE_URL}/p/${meta.tenantSlug}/${meta.productSlug}`;
   const title = seo.title ?? `${profile.name} — ${meta.productSlug}`;
@@ -78,7 +89,7 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: PageProps) {
   const { tenantSlug, productSlug } = await params;
-  const result = await getPublishedPage(tenantSlug, productSlug);
+  const result = await loadPage(tenantSlug, productSlug);
   // Next.js App Router pages can only signal 404 (via notFound()) or a
   // redirect — there is no supported way to return 410 from a page.tsx
   // (confirmed against vercel/next.js discussion #86345). The API's public
@@ -89,20 +100,16 @@ export default async function ProductPage({ params }: PageProps) {
   if (!result.ok) notFound();
 
   const { blocks, theme, seo } = result.data;
-  const profile = await getTenantPublicProfile(tenantSlug);
+  const profile = await loadProfile(tenantSlug);
   const locale = DEFAULT_LOCALE;
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: seo.title ?? productSlug,
-    brand: { '@type': 'Brand', name: profile.name },
-    description: seo.description,
-    url: `${loadEnv().PAGES_PUBLIC_BASE_URL}/p/${tenantSlug}/${productSlug}`,
-    image: blocks
-      .filter((b) => b.type === 'hero')
-      .flatMap((b) => (b.type === 'hero' ? b.image.variants.webp : [])),
-  };
+  const jsonLd = buildProductJsonLd({
+    tenantName: profile.name,
+    productSlug,
+    seo,
+    blocks,
+    canonicalUrl: `${loadEnv().PAGES_PUBLIC_BASE_URL}/p/${tenantSlug}/${productSlug}`,
+  });
 
   return (
     <TenantThemeProvider profile={profile}>

@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test --config=../../playwright.config.ts --project=web-verify-desktop --project=web-verify-mobile --grep=@e09",
-    "lighthouse": "lhci autorun --config=./lighthouserc.js"
+    "lighthouse": "node ./lighthouse/run.js"
   },
   "dependencies": {
-    "@verifynng/config": "workspace:*",
     "@verifyng/ui": "workspace:*",
+    "@verifynng/config": "workspace:*",
     "@verifynng/core": "workspace:*",
     "@verifynng/page-schema": "workspace:*",
     "@zxing/browser": "^0.1.5",
@@ -37,6 +37,7 @@
     "@types/react-dom": "19.1.9",
     "@types/sanitize-html": "^2.16.1",
     "jsdom": "^26.1.0",
+    "schema-dts": "^2.0.0",
     "tailwindcss": "4.1.11",
     "typescript": "5.9.2",
     "vitest": "^4.1.11"

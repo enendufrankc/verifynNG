@@ -8,5 +8,10 @@
     "path": "/verify",
     "resourceSizes": [{ "resourceType": "script", "budget": 130 }],
     "resourceCounts": []
+  },
+  {
+    "path": "/p/*",
+    "resourceSizes": [{ "resourceType": "image", "budget": 600 }],
+    "resourceCounts": []
   }
 ]

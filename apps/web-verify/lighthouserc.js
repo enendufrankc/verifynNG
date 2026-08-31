@@ -13,10 +13,38 @@ const fixtureCode =
 
 const budgets = require('./lighthouse/budgets.json');
 
+// E10 (AC9): `pnpm --filter web-verify lighthouse -- --url=/p/ivoryglow/
+// turmeric-curcumin` scopes the run to exactly that path and adds the `seo`
+// category (its own threshold — never loosens performance/accessibility/
+// best-practices below E09's bar). `lhci autorun` re-invokes itself as
+// separate `collect`/`assert` subcommands internally and does not forward
+// unrecognised CLI flags across that boundary (confirmed empirically — a
+// `--url` flag here is silently dropped by the time the `collect` phase
+// re-requires this file), so lighthouse/run.js — the actual `lighthouse`
+// script entrypoint — parses `--url` up front and re-execs through this
+// env var instead, which *does* survive lhci's internal re-invocations.
+// Omitting --url (or calling `lhci` directly) runs E09's original
+// multi-page collection unchanged.
+const overridePath = process.env.LIGHTHOUSE_URL_OVERRIDE || null;
+const overrideUrl = overridePath ? `${baseUrl}${overridePath}` : null;
+
+const collectUrl = overrideUrl
+  ? [overrideUrl]
+  : [`${baseUrl}/v/${fixtureCode}`, `${baseUrl}/verify`];
+const onlyCategories = overrideUrl
+  ? ['performance', 'accessibility', 'best-practices', 'seo']
+  : ['performance', 'accessibility', 'best-practices'];
+const assertions = {
+  'categories:performance': ['error', { minScore: 0.9 }],
+  'categories:accessibility': ['error', { minScore: 0.95 }],
+  'categories:best-practices': ['error', { minScore: 0.95 }],
+  ...(overrideUrl ? { 'categories:seo': ['error', { minScore: 0.95 }] } : {}),
+};
+
 module.exports = {
   ci: {
     collect: {
-      url: [`${baseUrl}/v/${fixtureCode}`, `${baseUrl}/verify`],
+      url: collectUrl,
       numberOfRuns: 1,
       settings: {
         formFactor: 'mobile',
@@ -28,16 +56,12 @@ module.exports = {
           disabled: false,
         },
         throttlingMethod: 'simulate',
-        onlyCategories: ['performance', 'accessibility', 'best-practices'],
+        onlyCategories,
         budgets,
       },
     },
     assert: {
-      assertions: {
-        'categories:performance': ['error', { minScore: 0.9 }],
-        'categories:accessibility': ['error', { minScore: 0.95 }],
-        'categories:best-practices': ['error', { minScore: 0.95 }],
-      },
+      assertions,
     },
     upload: {
       target: 'filesystem',

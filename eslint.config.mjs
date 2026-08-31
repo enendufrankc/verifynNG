@@ -20,6 +20,10 @@ export default tseslint.config(
       // Node CommonJS config file (lhci reads it directly, not via the
       // TS/bundler pipeline) — process/require/module are real globals here.
       'apps/web-verify/lighthouserc.js',
+      // Plain Node CommonJS wrapper script (the `lighthouse` npm script's
+      // entrypoint, invoked directly by node — same reasoning as
+      // lighthouserc.js above, not via the TS/bundler pipeline).
+      'apps/web-verify/lighthouse/run.js',
     ],
   },
   {
