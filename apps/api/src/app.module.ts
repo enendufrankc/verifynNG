@@ -40,6 +40,7 @@ import { AnomalyModule } from './modules/anomaly/anomaly.module';
 import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -91,6 +92,7 @@ import { PublicApiModule } from './modules/public-api/public-api.module';
     EntitlementsModule,
     ApiKeysModule,
     PublicApiModule,
+    WebhooksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: InternalOnlyGuard },

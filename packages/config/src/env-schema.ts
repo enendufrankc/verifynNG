@@ -236,6 +236,13 @@ const e16Schema = z.object({
   WEBHOOKS_BACKOFF_BASE_MS: z.coerce.number().default(30000),
   WEBHOOKS_MAX_ATTEMPTS: z.coerce.number().default(10),
   WEBHOOK_SINK_URL: z.string().default('http://webhook-sink:4105'),
+  // AES-256-GCM key encrypting WebhookEndpoint.secretEnc at rest — same
+  // [iv(12)|tag(16)|ciphertext] layout as E04's MANIFEST_ENC_KEY, own
+  // dedicated key rather than reusing another epic's.
+  WEBHOOK_SECRET_ENC_KEY: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/)
+    .default('fedcba9876543210'.repeat(4)),
 });
 
 const ZERO_KEY = '0'.repeat(64);

@@ -4,6 +4,7 @@ import { ApiKeysModule } from '../api-keys/api-keys.module.js';
 import { EntitlementsModule } from '../entitlements/entitlements.module.js';
 import { BatchesModule } from '../batches/batches.module.js';
 import { UnitsModule } from '../units/units.module.js';
+import { WebhooksModule } from '../webhooks/webhooks.module.js';
 import { QuotaService } from '../quota/quota.service.js';
 import { ScopesGuard } from './guards/scopes.guard.js';
 import { ApiErrorFilter } from './filters/api-error.filter.js';
@@ -17,16 +18,24 @@ import { PublicUnitsController } from './controllers/units.controller.js';
 import { PublicScansController } from './controllers/scans.controller.js';
 import { PublicReportsController } from './controllers/reports.controller.js';
 import { DocsController } from './controllers/docs.controller.js';
+import { PublicWebhookEndpointsController } from './controllers/webhook-endpoints.controller.js';
 import { PUBLIC_API_QUOTA_KIND } from './constants.js';
 
 @Module({
-  imports: [ApiKeysModule, EntitlementsModule, BatchesModule, UnitsModule],
+  imports: [
+    ApiKeysModule,
+    EntitlementsModule,
+    BatchesModule,
+    UnitsModule,
+    WebhooksModule,
+  ],
   controllers: [
     MeController,
     PublicBatchesController,
     PublicUnitsController,
     PublicScansController,
     PublicReportsController,
+    PublicWebhookEndpointsController,
     DocsController,
   ],
   providers: [

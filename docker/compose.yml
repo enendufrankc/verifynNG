@@ -245,6 +245,14 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E16 Public API & Webhooks ──
+      PUBLIC_API_DEFAULT_RPM: '120'
+      PUBLIC_API_MAX_KEYS_DEFAULT: '10'
+      # dev/compose only — production must leave both false (schema default).
+      WEBHOOKS_ALLOW_HTTP: 'true'
+      WEBHOOKS_ALLOW_PRIVATE: 'true'
+      WEBHOOKS_BACKOFF_BASE_MS: ${WEBHOOKS_BACKOFF_BASE_MS:-30000}
+      WEBHOOKS_MAX_ATTEMPTS: '10'
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
