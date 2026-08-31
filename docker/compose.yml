@@ -56,6 +56,7 @@ services:
       mc mb local/verifynng || true;
       mc mb local/dsar-exports || true;
       mc ilm rule add --expire-days 7 local/dsar-exports || true;
+      mc mb local/backups || true;
       "
 
   mailpit:
@@ -446,6 +447,25 @@ services:
       WEB_ADMIN_URL: http://web-admin:3001
       PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
       PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
+
+  # ── Restore drill (profile: drill) — E18 ────────────────────
+  # Throwaway target for docker/scripts/restore.sh; never touched by a plain
+  # `docker compose up`. See docs/runbooks/restore-from-backup.md.
+  postgres-restore:
+    image: postgres:16-alpine
+    profiles:
+      - drill
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: verifynng
+    ports:
+      - '${POSTGRES_RESTORE_PORT:-5433}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pgdata:
