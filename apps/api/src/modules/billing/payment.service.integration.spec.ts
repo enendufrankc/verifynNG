@@ -20,6 +20,7 @@ import { InvoiceService } from './invoice.service';
 import { PaymentMethodCipher } from './payment-method.cipher';
 import { EventsService } from '../../common/events.service';
 import { UsageReadService } from '../metering/usage-read.service';
+import { BillingClock } from './billing-clock.service';
 import type { PaymentGatewayPort } from './payment-gateway.port';
 
 describe('PaymentService integration (real Postgres)', () => {
@@ -90,6 +91,7 @@ describe('PaymentService integration (real Postgres)', () => {
       prisma,
       new EventsService(emitter),
       new UsageReadService(prisma),
+      new BillingClock(),
     );
     payments = new PaymentService(
       prisma,

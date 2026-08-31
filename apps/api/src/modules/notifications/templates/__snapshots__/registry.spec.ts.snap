@@ -142,6 +142,34 @@ Expires in 30 minutes",
 }
 `;
 
+exports[`TemplateRegistry > renders invoice.due 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Invoice INV-001 due 2026-09-29</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px">Invoice <strong>INV-001</strong> for <strong>₦10,000</strong> is due on 2026-09-29.</p><p style="margin:0"><a href="https://example.test/invoices/INV-001" style="display:inline-block;padding:12px 24px;background:#8b5cf6;color:#fff;border-radius:4px;text-decoration:none">View invoice</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "Invoice INV-001 (₦10,000) due 2026-09-29",
+  "subject": "Invoice INV-001 due 2026-09-29",
+  "text": "Invoice INV-001 due 2026-09-29
+Amount: ₦10,000
+View: https://example.test/invoices/INV-001",
+}
+`;
+
 exports[`TemplateRegistry > renders invoice.failed 1`] = `
 {
   "html": "<!DOCTYPE html>
@@ -484,6 +512,59 @@ Code: ivoryglow.2.k1.demo
 Type: suspected counterfeit
 Reported: 2026-08-29T00:00:00.000Z
 View: https://example.test/reports/RPT-001",
+}
+`;
+
+exports[`TemplateRegistry > renders subscription.reactivated 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>IVORY GLOW — account reactivated</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#0a8f4f"><strong>Your account is active again.</strong></p><p style="margin:0;color:#999;font-size:13px">Reactivated at 2026-08-29T00:00:00.000Z</p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "IVORY GLOW: account reactivated.",
+  "subject": "IVORY GLOW — account reactivated",
+  "text": "Your account is active again. Reactivated at 2026-08-29T00:00:00.000Z",
+}
+`;
+
+exports[`TemplateRegistry > renders subscription.restricted 1`] = `
+{
+  "html": "<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>IVORY GLOW — minting restricted</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden">
+<tr><td style="background:#8b5cf6;padding:24px 32px;color:#ffffff">
+<img src="https://example.test/logo.png" alt="IVORY GLOW" style="max-height:48px;margin-bottom:16px" />
+<h1 style="margin:0;font-size:20px;color:#ffffff">IVORY GLOW</h1>
+</td></tr>
+<tr><td style="padding:32px"><p style="margin:0 0 12px;color:#c00"><strong>⚠ Your account is restricted</strong></p><p style="margin:0 0 8px">Minting new codes is paused (dunning_exhausted). Consumer verification is unaffected.</p><p style="margin:12px 0 0"><a href="https://example.test/billing" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">Pay now</a></p></td></tr>
+<tr><td style="padding:16px 32px;border-top:1px solid #eee">
+<p style="margin:0;font-size:12px;color:#999">1 Test Street, Lagos</p>
+<p style="font-size:12px;color:#999;margin-top:24px">Manage notification preferences in your console.</p>
+</td></tr>
+</table>
+</td></tr></table>
+</body></html>",
+  "sms": "IVORY GLOW: account restricted (dunning_exhausted). Minting paused.",
+  "subject": "IVORY GLOW — minting restricted",
+  "text": "Your account is restricted (dunning_exhausted). Minting is paused; verification still works.
+Pay now: https://example.test/billing",
 }
 `;
 

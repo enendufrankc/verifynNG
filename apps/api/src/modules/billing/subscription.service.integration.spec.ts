@@ -20,6 +20,7 @@ import { InvoiceService } from './invoice.service';
 import { IllegalSubscriptionTransition } from './errors';
 import { EventsService } from '../../common/events.service';
 import { UsageReadService } from '../metering/usage-read.service';
+import { BillingClock } from './billing-clock.service';
 import type { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 
 describe('SubscriptionService integration (real Postgres)', () => {
@@ -56,6 +57,7 @@ describe('SubscriptionService integration (real Postgres)', () => {
       prisma,
       events,
       new UsageReadService(prisma),
+      new BillingClock(),
     );
     subscriptions = new SubscriptionService(
       prisma,

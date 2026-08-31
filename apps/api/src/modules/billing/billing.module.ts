@@ -8,6 +8,8 @@ import { EntitlementService } from './entitlement.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
 import { PaymentMethodCipher } from './payment-method.cipher';
+import { DunningService } from './dunning.service';
+import { BillingClock } from './billing-clock.service';
 import { TenantBillingController } from './tenant-billing.controller';
 import { BillingWebhooksController } from './billing-webhooks.controller';
 import { PaystackGateway } from './paystack.gateway';
@@ -17,17 +19,17 @@ import { BillingPeriodRollScheduler } from './jobs/period-roll.scheduler';
 import { BullMQModule } from '../../jobs/bullmq.module';
 import { TenantsModule } from '../tenants/tenants.module';
 import { MeteringModule } from '../metering/metering.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 // See BatchesModule for the WORKER_INLINE convention this mirrors: true in
 // dev (`pnpm dev`, single process) runs job processors inline here; false
-// in compose, where the dedicated `api-worker` process is meant to run
-// them instead (not yet wired there for billing — see docs/epics/E15
-// PR notes; the nightly cron still registers either way, it just has no
-// consumer in compose until that follow-up lands).
+// in compose, where the dedicated `api-worker` process runs them instead —
+// wired into apps/api/src/worker.module.ts (T8), same pattern as
+// MintProcessor/BatchExportsProcessor bypassing BatchesModule's own gate.
 const workerInline = loadEnv().WORKER_INLINE === 'true';
 
 @Module({
-  imports: [BullMQModule, TenantsModule, MeteringModule],
+  imports: [BullMQModule, TenantsModule, MeteringModule, NotificationsModule],
   controllers: [
     PlansController,
     TenantBillingController,
@@ -40,6 +42,8 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
     InvoiceService,
     PaymentService,
     PaymentMethodCipher,
+    DunningService,
+    BillingClock,
     BillingPeriodRollScheduler,
     ...(workerInline ? [BillingQueueProcessor] : []),
     {
@@ -67,6 +71,7 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
     EntitlementService,
     InvoiceService,
     PaymentService,
+    DunningService,
     PAYMENT_GATEWAY_PORT,
   ],
 })

@@ -10,6 +10,7 @@ import {
 import { InvoiceService } from './invoice.service';
 import { EventsService } from '../../common/events.service';
 import { UsageReadService } from '../metering/usage-read.service';
+import { BillingClock } from './billing-clock.service';
 
 describe('InvoiceService integration (real Postgres)', () => {
   let prisma: PrismaClient;
@@ -80,6 +81,7 @@ describe('InvoiceService integration (real Postgres)', () => {
       prisma,
       new EventsService(new EventEmitter2()),
       new UsageReadService(prisma),
+      new BillingClock(),
     );
   }, 30000);
 

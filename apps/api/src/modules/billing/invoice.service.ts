@@ -12,8 +12,7 @@ import { UsageReadService } from '../metering/usage-read.service';
 import { monthRangeUtc } from '../metering/month.util';
 import type { PlanFeatures } from './entitlement.service';
 import { renderInvoicePdf } from './invoice-pdf.renderer';
-
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+import { BillingClock } from './billing-clock.service';
 
 /**
  * Generates monthly invoices from E12's UsageSummary. `unit_overage` is
@@ -30,6 +29,7 @@ export class InvoiceService {
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     @Inject(EventsService) private readonly events: EventsService,
     @Inject(UsageReadService) private readonly usageRead: UsageReadService,
+    @Inject(BillingClock) private readonly clock: BillingClock,
   ) {}
 
   async generateForPeriod(tenantId: string, period: string): Promise<Invoice> {
@@ -169,8 +169,8 @@ export class InvoiceService {
     if (invoice.status !== 'draft') {
       throw new ConflictException('invoice_not_draft');
     }
-    const now = new Date();
-    const dueAt = new Date(now.getTime() + SEVEN_DAYS_MS);
+    const now = this.clock.now();
+    const dueAt = this.clock.addDays(now, 7);
     const updated = await this.prisma.invoice.update({
       where: { id: invoiceId },
       data: { status: 'issued', issuedAt: now, dueAt },

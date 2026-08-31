@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import { SubscriptionService } from '../subscription.service';
 import { PaymentService } from '../payment.service';
+import { DunningService } from '../dunning.service';
 
 /**
  * Single consumer for the 'billing' queue — BullMQ (and @nestjs/bullmq)
@@ -21,6 +22,7 @@ export class BillingQueueProcessor extends WorkerHost {
     private readonly subscriptions: SubscriptionService,
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     @Inject(PaymentService) private readonly payments: PaymentService,
+    @Inject(DunningService) private readonly dunning: DunningService,
   ) {
     super();
   }
@@ -32,6 +34,12 @@ export class BillingQueueProcessor extends WorkerHost {
         return;
       case 'process-webhook':
         await this.processWebhook(job.data.eventId as string);
+        return;
+      case 'dunning-charge':
+        await this.dunning.runScheduledCharge(job.data.invoiceId as string);
+        return;
+      case 'dunning-reminder':
+        await this.dunning.runReminder(job.data.invoiceId as string);
         return;
       default:
         this.logger.warn(`unknown billing job: ${job.name}`);

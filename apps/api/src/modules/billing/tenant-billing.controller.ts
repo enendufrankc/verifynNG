@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { Roles, TenantId } from '../../common/tenant';
+import { AllowWhenSuspended } from '../../common/tenant-status/decorators';
 import { SubscriptionService } from './subscription.service';
 import { InvoiceService } from './invoice.service';
 import { PaymentService } from './payment.service';
@@ -66,8 +67,14 @@ export class TenantBillingController {
     return this.invoices.getForTenant(tenantId, id);
   }
 
+  // A restricted tenant must still be able to pay its way out — otherwise
+  // AC6's "from the banner click Pay now" is a dead end (TenantStatusGuard
+  // blocks every write for a restricted tenant by default, same as
+  // suspended). Found live: this route 403'd with tenant_suspended for a
+  // genuinely restricted demo tenant before this decorator was added.
   @Post('invoices/:id/pay')
   @Roles('owner')
+  @AllowWhenSuspended()
   async payInvoice(
     @TenantId() tenantId: string,
     @Param('id') id: string,
