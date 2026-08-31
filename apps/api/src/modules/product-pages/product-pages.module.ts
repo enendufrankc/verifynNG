@@ -4,6 +4,8 @@ import { ProductPagesPublicController } from './product-pages-public.controller'
 import { ProductPagesService } from './product-pages.service';
 import { PageMediaService } from './page-media.service';
 import { PagesS3Service } from './pages-s3.service';
+import { PageRevalidator } from './page-revalidator';
+import { ProductUpdatedListener } from './product-updated.listener';
 import {
   PAGES_ENTITLEMENT_PORT,
   DefaultPagesEntitlementPort,
@@ -15,6 +17,8 @@ import {
     ProductPagesService,
     PageMediaService,
     PagesS3Service,
+    PageRevalidator,
+    ProductUpdatedListener,
     { provide: PAGES_ENTITLEMENT_PORT, useClass: DefaultPagesEntitlementPort },
   ],
   exports: [ProductPagesService, PageMediaService],

@@ -27,6 +27,7 @@ import {
   type PagesEntitlementPort,
 } from './pages-entitlement.port';
 import { signPreviewToken, verifyPreviewToken } from './preview-token';
+import { PageRevalidator } from './page-revalidator';
 
 const draftSchema = z.object({
   theme: themeOverrideSchema,
@@ -50,6 +51,7 @@ export class ProductPagesService {
   constructor(
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     private readonly events: EventsService,
+    private readonly revalidator: PageRevalidator,
     @Inject(PAGES_ENTITLEMENT_PORT)
     private readonly entitlement: PagesEntitlementPort,
   ) {}
@@ -209,6 +211,20 @@ export class ProductPagesService {
       productId: page.productId,
       at: new Date(),
     });
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    if (tenant) {
+      await this.revalidator.revalidate({
+        tenantSlug: tenant.slug,
+        productSlug: page.slug,
+        tenantId,
+        productId: page.productId,
+      });
+    }
+
     return { ok: true };
   }
 
@@ -423,6 +439,40 @@ export class ProductPagesService {
       productSlug: page.slug,
       publishedAt: version.publishedAt,
       publishedById: actorId,
+    });
+
+    if (tenant) {
+      await this.revalidator.revalidate({
+        tenantSlug: tenant.slug,
+        productSlug: page.slug,
+        tenantId,
+        productId: page.productId,
+      });
+    }
+  }
+
+  /** Revalidates every published page for a product — used when E04's
+   * `product.updated` event changes something a page reads (e.g. name). */
+  async revalidateByProductId(
+    tenantId: string,
+    productId: string,
+  ): Promise<void> {
+    const page = await this.prisma.productPage.findFirst({
+      where: { tenantId, productId, status: 'published' },
+    });
+    if (!page) return;
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { slug: true },
+    });
+    if (!tenant) return;
+
+    await this.revalidator.revalidate({
+      tenantSlug: tenant.slug,
+      productSlug: page.slug,
+      tenantId,
+      productId,
     });
   }
 

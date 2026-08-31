@@ -12,10 +12,12 @@ import {
   dropTestSchema,
   disconnectTestHelper,
 } from '@verifynng/db';
+import { ConfigService } from '@nestjs/config';
 import { EventsService } from '../../common/events.service';
 import { ProductPagesService } from './product-pages.service';
 import type { PagesEntitlementPort } from './pages-entitlement.port';
 import { verifyPreviewToken } from './preview-token';
+import { PageRevalidator } from './page-revalidator';
 
 const SECRET = 'test-preview-secret';
 
@@ -55,7 +57,16 @@ describe('ProductPagesService integration (real Postgres)', () => {
     const entitlement: PagesEntitlementPort = {
       canPublish: async () => entitled,
     };
-    return new ProductPagesService(prisma, events, entitlement);
+    const revalidator = new PageRevalidator(
+      new ConfigService({
+        PAGE_REVALIDATE_SECRET: SECRET,
+        // Deliberately unreachable — PageRevalidator swallows failures, so
+        // these tests exercise the "revalidate call attempted, didn't blow
+        // up the write" path without needing web-verify running.
+        PAGES_PUBLIC_BASE_URL: 'http://127.0.0.1:1',
+      }),
+    );
+    return new ProductPagesService(prisma, events, revalidator, entitlement);
   }
 
   it('creates a draft page and enforces tenant-unique slug', async () => {
