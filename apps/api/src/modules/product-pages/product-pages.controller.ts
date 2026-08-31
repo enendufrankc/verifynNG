@@ -10,21 +10,29 @@ import {
   Post,
   Put,
   Req,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { memoryStorage } from 'multer';
 import { Roles, TenantId } from '../../common/tenant';
 import { Audited } from '../audit/audited.decorator';
 import type { AuthenticatedRequest } from '../../common/authenticated-request';
 import { ProductPagesService } from './product-pages.service';
+import { PageMediaService } from './page-media.service';
 import { CreateProductPageDto } from './dto/create-product-page.dto';
 import { SaveDraftDto } from './dto/save-draft.dto';
 import { PublishDto } from './dto/publish.dto';
 import { RollbackDto } from './dto/rollback.dto';
 
+const MAX_UPLOAD_BYTES = 10 * 1_000_000;
+
 @Controller('v1/product-pages')
 export class ProductPagesController {
   constructor(
     private readonly pages: ProductPagesService,
+    private readonly media: PageMediaService,
     private readonly config: ConfigService,
   ) {}
 
@@ -103,6 +111,30 @@ export class ProductPagesController {
       tenantId,
       id,
       this.config.get<string>('PAGE_REVALIDATE_SECRET')!,
+    );
+  }
+
+  @Post(':id/media')
+  @Roles('operator')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_UPLOAD_BYTES },
+    }),
+  )
+  uploadMedia(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('alt') alt: string,
+  ) {
+    return this.media.upload(
+      tenantId,
+      id,
+      req.user!.userId!,
+      { buffer: file.buffer, size: file.size },
+      alt ?? '',
     );
   }
 
