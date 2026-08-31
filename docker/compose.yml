@@ -239,8 +239,16 @@ services:
       FAKE_GEO_KEY: vk_70b02ab6_70b02ab67319f58d15520e558280b06417d84a5211f18f464dfa6d5e7e844d88
       APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
       # ── E06 Verification & Scan Events ──
-      RATE_LIMIT_IP_PER_MIN: '20'
-      RATE_LIMIT_CODE_PER_MIN: '10'
+      # 120, not 20: every browser-driven e2e spec shares this IP, across both web-verify
+      # projects, run by Playwright's default worker parallelism (several spec files hitting
+      # verify concurrently) — 120 comfortably covers that legitimate traffic.
+      # tests/e2e/verify-rate-limited.spec.ts deliberately exhausts this same budget to prove
+      # the limiter degrades cleanly; it runs in its own `web-verify-rate-limit` Playwright
+      # project, ordered (via `dependencies`) strictly after web-verify-desktop and
+      # web-verify-mobile finish, so it can never race or poison their legitimate traffic.
+      # Override per-worktree via docker/.env for a stricter value when testing the limiter itself.
+      RATE_LIMIT_IP_PER_MIN: ${RATE_LIMIT_IP_PER_MIN:-120}
+      RATE_LIMIT_CODE_PER_MIN: ${RATE_LIMIT_CODE_PER_MIN:-10}
       RATE_LIMIT_TENANT_DEFAULT_PER_MIN: '600'
       ENUMERATION_INVALID_THRESHOLD: '15'
       ENUMERATION_WINDOW_SEC: '300'

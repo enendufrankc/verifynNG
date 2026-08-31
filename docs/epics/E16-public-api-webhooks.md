@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Wave | 3 |
-| Status | todo |
-| Owner | — |
+| Status | in-progress |
+| Owner | Frank Enendu |
 | GitHub Issue | [#17](https://github.com/enendufrankc/verifynNG/issues/17) |
 | Depends on | E02 (auth primitives, `ApiClient`), E04 (batches/units, `MintService`, `batch.minted`), E06 (scan events, `scan.recorded`), E07 (`anomaly.detected`, `unit.flagged`, `unit.decommissioned`), E13 (`QuotaService`, `@Audited`), E11 (admin shell), E15 (`hasFeature('publicApi')`, `maxApiKeys`) |
 | Unblocks | E21 (contract tests against the OpenAPI spec), E18 (API docs link from `apps/docs`) |
