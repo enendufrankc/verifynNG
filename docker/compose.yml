@@ -246,6 +246,12 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E18 Support Tooling ──
+      SUPPORT_IMPERSONATION_TTL_SECONDS: ${SUPPORT_IMPERSONATION_TTL_SECONDS:-1800}
+      SUPPORT_INBOUND_ADDRESS: support@verifyng.local
+      SUPPORT_PUBLIC_FORM_RPH: '5'
+      DOCS_BASE_URL: http://localhost:${DOCS_PORT:-3002}
+      NEXT_PUBLIC_DOCS_URL: http://localhost:${DOCS_PORT:-3002}
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a

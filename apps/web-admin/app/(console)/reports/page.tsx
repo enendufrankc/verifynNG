@@ -7,6 +7,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import {
   DataTable,
   EmptyState,
+  HelpLink,
   PageHeader,
   StatusChip,
   Tabs,
@@ -92,6 +93,7 @@ export default function ReportsPage() {
       <PageHeader
         title="Reports"
         description="Consumer fake reports for this tenant's products."
+        actions={<HelpLink docSlug="console/reports" module="reports" />}
       />
       <Tabs value={view} onValueChange={(v) => setView(v as SavedView)}>
         <TabsList>

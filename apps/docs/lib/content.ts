@@ -49,6 +49,12 @@ const SLUG_TO_FILE: Record<string, string> = {
   faq: 'faq.md',
   'console/support': 'console-support.md',
   'console/help': 'console-help.md',
+  'console/batches': 'console-batches.md',
+  'console/units': 'console-units.md',
+  'console/anomalies': 'console-anomalies.md',
+  'console/reports': 'console-reports.md',
+  'console/team': 'console-team.md',
+  'console/settings': 'console-settings.md',
 };
 
 export function listSlugs(): string[] {

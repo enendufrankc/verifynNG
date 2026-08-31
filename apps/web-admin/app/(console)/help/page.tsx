@@ -20,6 +20,7 @@ function HelpForm() {
   const params = useSearchParams();
   const { toast } = useToast();
   const activeTenantId = useAuthStore((s) => s.activeTenantId);
+  const hasBootstrapped = useAuthStore((s) => s.hasBootstrapped);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const pageUrl = params.get('pageUrl') ?? undefined;
@@ -77,7 +78,10 @@ function HelpForm() {
             required
           />
         </FormField>
-        <Button type="submit" disabled={mutation.isPending}>
+        <Button
+          type="submit"
+          disabled={mutation.isPending || !hasBootstrapped || !activeTenantId}
+        >
           Send
         </Button>
       </form>

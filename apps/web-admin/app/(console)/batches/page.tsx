@@ -7,6 +7,7 @@ import {
   Button,
   DataTable,
   EmptyState,
+  HelpLink,
   PageHeader,
   ProgressBar,
   StatusChip,
@@ -120,14 +121,17 @@ export default function BatchesPage() {
         title="Batches"
         description="Minted unit batches for this tenant's products."
         actions={
-          isOwner ? (
-            <Button asChild>
-              <Link href="/batches/new">
-                <PlusIcon className="mr-2 h-4 w-4" />
-                Mint batch
-              </Link>
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-3">
+            <HelpLink docSlug="console/batches" module="batches" />
+            {isOwner && (
+              <Button asChild>
+                <Link href="/batches/new">
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Mint batch
+                </Link>
+              </Button>
+            )}
+          </div>
         }
       />
 

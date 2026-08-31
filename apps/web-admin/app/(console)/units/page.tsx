@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input, PageHeader } from '@verifyng/ui';
+import { Button, HelpLink, Input, PageHeader } from '@verifyng/ui';
 
 export default function UnitsPage() {
   const router = useRouter();
@@ -13,6 +13,7 @@ export default function UnitsPage() {
       <PageHeader
         title="Units"
         description="Unit state, lifecycle, and scan history. Open a batch from Batches → Units & recall, or a unit from an anomaly's detail page — or jump straight to a unit id below."
+        actions={<HelpLink docSlug="console/units" module="units" />}
       />
       <form
         className="flex max-w-md gap-2"

@@ -292,12 +292,20 @@ export class TicketsService {
   ) {
     const ticket = await this.get(ticketId);
 
-    const body = dto.cannedResponseId
-      ? await this.cannedResponses.renderById(dto.cannedResponseId, {
-          ticketNumber: ticket.number,
-          requesterEmail: ticket.requesterEmail,
-        })
-      : dto.body;
+    let body = dto.body;
+    if (dto.cannedResponseId) {
+      const requester = ticket.requesterUserId
+        ? await this.prisma.user.findUnique({
+            where: { id: ticket.requesterUserId },
+            select: { displayName: true },
+          })
+        : null;
+      body = await this.cannedResponses.renderById(dto.cannedResponseId, {
+        ticketNumber: ticket.number,
+        requesterEmail: ticket.requesterEmail,
+        requesterName: requester?.displayName ?? ticket.requesterEmail,
+      });
+    }
 
     const note = await this.prisma.ticketNote.create({
       data: {
@@ -337,8 +345,10 @@ export class TicketsService {
         'ticket.replied',
         { email: ticket.requesterEmail },
         {
+          // The registry's own renderer builds "Re: {subject} [#{n}]" —
+          // pass the plain subject or "[#1] [#1]" ends up in the outbox.
           ticketNumber: ticket.number,
-          subject: `${ticket.subject} [#${ticket.number}]`,
+          subject: ticket.subject,
           replyBody: body,
           statusUrl: this.helpTicketsUrl(),
         },

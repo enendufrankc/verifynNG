@@ -26,6 +26,10 @@ import {
 import { TicketsTenantController } from './tickets/tickets-tenant.controller';
 import { TicketsPublicController } from './tickets/tickets-public.controller';
 import { InboundMailListener } from './mail/inbound-mail.listener';
+import { DevSimulateInboundController } from './mail/dev-simulate-inbound.controller';
+
+const devControllers =
+  process.env.NODE_ENV === 'production' ? [] : [DevSimulateInboundController];
 
 @Module({
   imports: [
@@ -43,6 +47,7 @@ import { InboundMailListener } from './mail/inbound-mail.listener';
     CannedResponsesController,
     TicketsTenantController,
     TicketsPublicController,
+    ...devControllers,
   ],
   providers: [
     { provide: PrismaClient, useFactory: () => new PrismaClient() },

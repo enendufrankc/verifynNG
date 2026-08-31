@@ -21,6 +21,12 @@ const VALID_SLUGS = new Set([
   'api',
   'console/support',
   'console/help',
+  'console/batches',
+  'console/units',
+  'console/anomalies',
+  'console/reports',
+  'console/team',
+  'console/settings',
 ]);
 const SKIP_DIRS = new Set([
   'node_modules',

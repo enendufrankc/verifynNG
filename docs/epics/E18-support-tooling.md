@@ -167,59 +167,82 @@ Change request to E13 (see Interfaces): `AuditLog.impersonatedBy String?`, `Audi
 
 ## Tasks
 
-- [x] T1 `SupportModule` scaffold + schema block + migration `E18_support`; support nav + shell, access restricted to `platformRole = support` (404 for others — see Notes below on the `(support)` vs `(console)/support` naming). Live-verified: login as `support@verifyng.local` redirects straight to `/support`, directory renders. Not done: a dedicated `loginAs('support')` smoke test (the Playwright spec added under T14 does its own inline login instead).
+- [x] T1 `SupportModule` scaffold + schema block + migration `E18_support`; support nav + shell, access restricted to `platformRole = support` (404 for others — see Notes below on the `(support)` vs `(console)/support` naming). Live-verified: login as `support@verifyng.local` redirects straight to `/support`, directory renders; login as an `ivoryglow` owner and visiting `/support` gets a clean 404. Not done: a dedicated `loginAs('support')` smoke test (the Playwright specs added under T14 do their own inline login instead).
 - [x] T2 Tenant directory — live-verified against the seeded stack (IVORY GLOW row with real units-this-year/scans-30d numbers, search/filter, detail drawer). `planCode` is a stubbed `null` — E15 hasn't shipped `GET /v1/platform/subscriptions` yet.
-- [x] T3 Impersonation (read) — live-verified: starting a session, the 403 on a mutation, the banner. `impersonatedBy`/`impersonationSessionId` land on `AuditLog` via `ImpersonationGuard` tagging the request (there's no separate `AuditContext` class in this codebase's actual E13 implementation — audit.interceptor.ts builds straight off `req.user`, so that's where this hooks in instead). The owner-notification email path is implemented and unit-covered via NotificationService but not confirmed in Mailpit live.
-- [x] T4 Impersonation (write + UX) — live-verified: reason validation, elevate, write-mode mutation succeeding, end session. **Security gap found and fixed while verifying this**: the guard only checked GET-vs-write, not the operator ceiling, so a write-mode session could reach an owner-only route (`unit.decommission`) — see the `fix(E18)` commit and `impersonation.guard.spec.ts`. Expiry job exists (`ImpersonationProcessor`) but the 60-second `SUPPORT_IMPERSONATION_TTL_SECONDS` override scenario (AC4) wasn't run live.
+- [x] T3 Impersonation (read) — live-verified: starting a session, the 403 on a mutation, the banner, the confirmation email in Mailpit for both console and public tickets (the impersonation-start owner notification specifically uses the same `NotificationService.send` path, unit-tested but not re-confirmed in Mailpit on this pass). `impersonatedBy`/`impersonationSessionId` land on `AuditLog` via `ImpersonationGuard` tagging the request (there's no separate `AuditContext` class in this codebase's actual E13 implementation — audit.interceptor.ts builds straight off `req.user`, so that's where this hooks in instead) — confirmed live against `unit.flag`, a route that's actually `@Audited()` (batch minting isn't — see AC3 below).
+- [x] T4 Impersonation (write + UX) — live-verified end to end: reason validation, elevate, write-mode mutation succeeding, end session, **and now expiry** (`SUPPORT_IMPERSONATION_TTL_SECONDS=60` override, the session record shows `endedAt` ~27ms after `expiresAt` — caught proactively by the BullMQ job, not just the guard's lazy check — `endedBy: "expiry"`, and the next request 401s). **Security gap found and fixed while verifying this**: the guard only checked GET-vs-write, not the operator ceiling, so a write-mode session could reach an owner-only route (`unit.decommission`) — see the `fix(E18)` commit and `impersonation.guard.spec.ts`.
 - [x] T5 `docs/support-impersonation-policy.md`.
-- [x] T6 Tickets core — service/models/events/`@Audited` all written and typechecked; not exercised live end-to-end (no ticket was actually created and moved through its status machine against the running stack).
-- [x] T7 Intake — console — built (`/help`, `/help/tickets`, `HelpLink`) and typechecked; not exercised live (no ticket actually submitted through the form in a browser).
-- [x] T8 Intake — public — built (`apps/web-verify/app/support/page.tsx`, captcha bypass input, quota); not exercised live.
-- [x] T9 Intake — email — built (`InboundMailListener` on `mail.inbound`, `support:simulate-inbound` CLI sending real SMTP through Mailpit); the CLI itself is also standing in for E14's own inbound emitter, which doesn't exist yet. Not run live.
-- [x] T10 Support ticket UI — built and typechecked; not exercised live.
+- [x] T6 Tickets core — live-verified: created via console/public/email intake, status transitions (resolved → reopened on inbound reply), notes (internal + reply), `@Audited` mutations. Two real bugs found and fixed while doing this (both were live-verified before _and_ after the fix): canned-response rendering never had a `requesterName` value to substitute (now resolves the requester's real `displayName` when known, falling back to their email); a support reply's outbound subject doubled its own `[#N]` tag (the caller and the template renderer were both appending it).
+- [x] T7 Intake — console — live-verified: `/help` prefilled from a `docSlug`/`module`-bearing URL, ticket created, visible at `/help/tickets` for the requester and `/support/tickets` for support with the right channel/tenant, confirmation email in Mailpit.
+- [x] T8 Intake — public — live-verified on `apps/web-verify/app/support/page.tsx`: ticket created with `channel=public`, `tenantId` resolved from a real scanned code, `relatedCode` redacted, confirmation email in Mailpit, and the 6th submission from the same IP within the hour returned 429 with the exact `support_public_form_per_ip_per_hour` quota body.
+- [x] T9 Intake — email — live-verified via the real CLI command (fixed two bugs to get there — see Notes): ticket created with `channel=email`; a support reply using a canned response produced the `[#N]`-tagged outbound subject in Mailpit; simulating an inbound reply with that subject appended a `reply` note (`authorId: null`) and reopened the ticket from `resolved` back to `open`.
+- [x] T10 Support ticket UI — live-verified: list with filters, detail page, status/priority controls, canned-response picker with variable substitution, reply vs. internal-note toggle, "View as tenant" from a ticket.
 - [x] T11 Runbooks — all written against what actually exists today (payment-failure.md and auth-lockout.md call out real gaps — no E15 billing yet, no admin MFA-reset endpoint — rather than describing tooling that doesn't exist). `restore-from-backup.md`'s drill was actually run twice against this worktree's stack; see its own "Last drill" table.
-- [x] T12 `apps/docs` — live-verified (build + browser: home, index, search for "scratch", a content page). Deliberately plain markdown + `marked` rather than Fumadocs — see the `feat(E18): T12` commit for why. `/docs/api` now has a real target: added a live `SwaggerModule` at `/api/docs` (didn't exist before this epic at all).
-- [ ] T13 Help links everywhere — only `console/support` and `console/help` (E18's own modules) done, as the worked example. The other nine modules listed need a one-line PR into each owning epic's path with that owner's sign-off — not done here. `pnpm docs:check-links` exists and passes for the two links that do exist.
-- [ ] T14 Playwright — `tests/e2e/support-impersonation.spec.ts` covers AC2-AC4's core (directory → impersonate read → blocked mutation → elevate → write succeeds), run live (3/3 passed). Ticket lifecycle across the three channels and a docs-site smoke test are not covered.
+- [x] T12 `apps/docs` — live-verified (build + browser: home, index, search for "scratch", several content pages, all 12 doc slugs statically prerendered). Deliberately plain markdown + `marked` rather than Fumadocs — see the `feat(E18): T12` commit for why. `/docs/api` links to a live `SwaggerModule` at `/api/docs` (didn't exist before this epic at all) — confirmed reachable (200) from this worktree's rebuilt API image.
+- [x] T13 Help links — `<HelpLink>` now wired into 8 modules' page headers: `console/support`, `console/help` (E18's own), plus `console/batches`, `console/units`, `console/anomalies`, `console/reports`, `console/team`, `console/settings` (single-line `PageHeader` `actions` additions, each with its own new `apps/docs/content/console-*.md` page). Not done: `scans` (E12) and `billing`/`api-keys` (E15/E16) — those modules are themselves still unbuilt `ModuleEmptyState` placeholders, so there's nothing real to link help to yet; add their `HelpLink` alongside whoever builds them. `pnpm docs:check-links` passes for all 8 live usages.
+- [x] T14 Playwright — `tests/e2e/support-impersonation.spec.ts` (AC2-AC4: directory → impersonate read → blocked mutation → elevate → write succeeds → expiry banner) and `tests/e2e/support-tickets.spec.ts` (AC5: console intake visible to both the requester and support; AC6: public intake confirmation) — both run live, all green. Not covered: AC7 (CLI-driven, not browser-driven, so not a natural Playwright case) and a docs-site smoke test.
 
 ## Acceptance criteria
 
 Verified against this worktree's compose stack (ports offset per
 `scripts/epic ports E18`, not the literal `localhost:3000/3001/4000/3002`
-below — see the epic's port table in the claiming comment) except where
-noted. Evidence is manual (curl/browser/Playwright output), not yet pasted
-onto issue #19 — see the final PR/handoff notes for why.
+below — see the epic's port table in the claiming comment). Evidence is
+manual (curl/browser/Playwright output) recorded here and in the PR
+description, not pasted onto issue #19 — this session's GitHub token 403s
+on both issue comments and self-assignment; needs a token with write scope,
+or for the orchestrator to do it by hand.
 
 - [x] AC1 Verified. Support login redirects to `/support` (this repo's
       actual route, not the epic's originally-planned bare `/tenants` — see
       Notes) and the directory lists the seeded tenants with real
-      units/scans numbers. `planCode` shows `—` (E15 hasn't shipped). Not
-      verified: `acme`/`nkem-naturals` specifically (this worktree's seed
-      only has `ivoryglow` + two unrelated E05 test tenants) or the
-      owner-redirect-away-from-`/support` half.
+      units/scans numbers. `planCode` shows `—` (E15 hasn't shipped). An
+      `ivoryglow` owner visiting `/support` gets a clean 404 (a deliberate
+      "never confirm access" choice over a redirect — see Notes). Not
+      verified: `acme`/`nkem-naturals` specifically — this worktree's
+      default seed only creates `ivoryglow` (plus two unrelated E05 test
+      tenants); those two names are E21 seed content, not something E18
+      controls.
 - [x] AC2 Verified live (browser + Playwright): new tab, read-only banner
-      with countdown, `POST .../batches` → 403 `impersonation_read_only`.
-      Not verified: the Mailpit owner-notification email.
-- [x] AC3 Verified live (curl + browser): reason validation, write-mode
-      mint succeeding. Not verified: the `batch.minted` audit row, because
-      `apps/api/src/modules/batches/batches.controller.ts`'s mint route has
-      no `@Audited()` decorator at all today — a pre-existing E04 gap, not
-      something this epic's own tagging mechanism can demonstrate against.
-      `impersonatedBy` tagging itself is verified via other audited routes'
-      test coverage (`impersonation.guard.spec.ts`).
-- [ ] AC4 Not run. `SUPPORT_IMPERSONATION_TTL_SECONDS` override + the
-      60-second wait wasn't exercised against the live stack.
-- [ ] AC5 Not run.
-- [ ] AC6 Not run.
-- [ ] AC7 Not run.
+      with countdown, direct API call on the tab's own token → 403
+      `impersonation_read_only`, confirmation email in Mailpit (for the
+      console/public ticket-created notices sharing the same send path;
+      the impersonation-start notice itself uses the same mechanism and is
+      unit-tested, not independently re-confirmed in Mailpit this pass).
+- [x] AC3 Verified live (curl + browser + Playwright): reason validation
+      (rejects <20 chars, accepts a real one), write-mode mint succeeding,
+      the reason recorded at `/support/impersonation`. `impersonatedBy`
+      confirmed directly on an `AuditLog` row from a write-mode session
+      hitting `unit.flag` (`@Audited`) — `batch.minted` specifically isn't
+      audited at all today (`apps/api/src/modules/batches/batches.controller.ts`
+      has no `@Audited()` decorator on mint), a pre-existing E04 gap this
+      epic's tagging mechanism can't be demonstrated against until E04
+      adds one.
+- [x] AC4 Verified live: `SUPPORT_IMPERSONATION_TTL_SECONDS=60` compose
+      override, the session's `endedAt` lands ~27ms after `expiresAt`
+      (the BullMQ expiry job caught it proactively), `endedBy: "expiry"`
+      at `/support/impersonation`, and the next request on that token
+      returns 401.
+- [x] AC5 Verified live (curl + Playwright): console help form pre-filled
+      with `pageUrl`, ticket created and visible to both the requester
+      (`/help/tickets`) and support (`/support/tickets`, correct
+      channel/tenant), confirmation email in Mailpit.
+- [x] AC6 Verified live (Playwright + curl): public form with a real
+      scanned code → ticket with `channel=public`, `tenantId` resolved,
+      `relatedCode` redacted, confirmation email in Mailpit; the 6th
+      submission from the same IP within the hour returned 429.
+- [x] AC7 Verified live via the real CLI: email → ticket
+      (`channel=email`); a canned-response reply produced a correctly
+      `[#N]`-tagged outbound subject in Mailpit; an inbound reply matching
+      that subject appended a `reply` note and reopened the ticket. Two
+      real bugs found and fixed to get a clean run — see T6/T9 above.
 - [x] AC8 Verified live — see `docs/runbooks/restore-from-backup.md`'s
       "Last drill" table for the actual run (two full backup→restore→verify
       cycles, ~11-32s each, correct verdict both times).
-- [x] AC9 Mostly verified live: site renders, search for "scratch" finds
-      _Applying labels_, `pnpm docs:check-links` passes. Not verified:
-      Lighthouse accessibility score (no Lighthouse run performed) and
-      `/docs/api`'s live link target (the API image serving `/api/docs` was
-      still mid-rebuild when this was last checked).
+- [x] AC9 Verified live: site renders, search for "scratch" finds
+      _Applying labels_, `/docs/api` reaches a live `/api/docs` (200) on
+      the rebuilt API image, `pnpm docs:check-links` passes for all 8 live
+      `HelpLink` usages. Not verified: a Lighthouse accessibility run
+      (no Lighthouse CLI invocation performed this session).
 
 ## Testing
 
@@ -235,7 +258,7 @@ onto issue #19 — see the final PR/handoff notes for why.
 | docs             | apps/docs          | 3002      | static export served by `next start`; no DB        |
 | postgres-restore | postgres:16-alpine | 5433      | `profiles: [drill]` — only started by `restore.sh` |
 
-`api` env additions: `SUPPORT_IMPERSONATION_TTL_SECONDS=1800`, `SUPPORT_INBOUND_ADDRESS=support@verifyng.local`, `SUPPORT_PUBLIC_FORM_RPH=5`, `DOCS_BASE_URL=http://localhost:3002`.
+`api` env additions (now actually wired into `docker/compose.yml`'s `api` service, not just the zod schema's defaults — `SUPPORT_IMPERSONATION_TTL_SECONDS` is overridable per the compose-override pattern used for AC4's drill): `SUPPORT_IMPERSONATION_TTL_SECONDS=1800`, `SUPPORT_INBOUND_ADDRESS=support@verifyng.local`, `SUPPORT_PUBLIC_FORM_RPH=5`, `DOCS_BASE_URL`/`NEXT_PUBLIC_DOCS_URL=http://localhost:3002`.
 
 ## Notes and decisions
 
@@ -248,3 +271,7 @@ onto issue #19 — see the final PR/handoff notes for why.
 - **Actual route is `apps/web-admin/app/(console)/support/**`, not `app/(support)/**`.** By the time E18 was claimed, E11/E19/E03 had already settled on one console route group with a `platform` nav section gated by `platformRole`, rather than the separate top-level `(support)` group this file originally specified — see `nav.config.ts`'s `platform.support` entry and E03's pre-existing `support/tenant-review/` page (kept as-is; added as one more tab in E18's own sub-nav). Followed the codebase's actual convention rather than this file's stale wording. Same reasoning for AC1: support lands on `/support`, not a bare `/tenants`.
 - **Correction to an earlier note in this file (now fixed, not just flagged):** `pnpm --filter @verifynng/web-admin build` briefly failed on every Server Component route rendering `packages/ui`'s `EmptyState` ("Functions cannot be passed directly to Client Components from Server Components"). This file previously called it "a pre-existing, unrelated bug" reproduced against `origin/main` — that revert test was flawed, since it only reverted two web-admin source files and reused this session's already-built (already-broken) `packages/ui/dist`, so it never actually tested a clean `origin/main`. The real cause: `packages/ui/src/HelpLink.tsx` (added by this epic) lived directly under `src/`, outside the `src/components/**` glob that `tsup.config.ts`'s per-component entries rely on to isolate each `'use client'` file into its own output chunk (see that file's own long comment on why). Reachable only from `src/index.ts`, HelpLink's code got inlined into `dist/index.js` itself, and the existing `preserve-use-client` esbuild plugin — correctly, per its own logic — tagged that whole shared entry chunk `'use client'`, dragging every other export (`EmptyState`, `PageHeader`, ...) into client-only territory with it. Fixed by moving `HelpLink.tsx` to `src/components/HelpLink.tsx` so it gets its own entry/chunk like every other component; `pnpm --filter @verifynng/web-admin build` now statically generates all 46 routes including `/` and `/units`. `/impersonate` still redirects to `/batches` rather than `/` — not a workaround, just a more useful landing page than an unbuilt dashboard placeholder.
 - **A real gap found while verifying T4 was fixed, not just noted**: write-mode impersonation could reach owner-only routes (RolesGuard's own `platformRole==='support'` bypass ignores `@Roles()` entirely once a session exists). `ImpersonationGuard` now also enforces the operator ceiling directly. See `impersonation.guard.spec.ts` and the `fix(E18)` commit.
+- **Two more bugs found (and fixed) only by actually sending a reply and reading the resulting email, not by reading the code**: a canned-response reply rendered `{{requesterName}}` literally (never had a value to substitute) — fixed by resolving the requester's real `User.displayName` when the ticket has one, falling back to their email; and a support reply's outbound subject showed `[#N] [#N]` — the ticket-note handler and the template renderer were each independently appending the `[#N]` tag. Neither would have been caught by typecheck/lint/unit tests; both only showed up in Mailpit.
+- **The CLI (`support:simulate-inbound`) originally bootstrapped the full `AppModule` in-process** to emit `mail.inbound` — broke immediately on first real run with `ERR_PACKAGE_PATH_NOT_EXPORTED` from `@react-pdf/hyphenate` (a transitive dependency of a completely unrelated module) under `tsx`'s strict ESM resolution. Fixed by having the CLI send the real SMTP message to Mailpit as before, then `POST` the same payload to a new dev-only endpoint (`v1/_dev/support/simulate-inbound`, same `NODE_ENV!=='production'` gating as the codebase's other `_dev` controllers) on the already-running API — the CLI no longer needs the full app graph at all. Also: the CLI never sourced `.env` itself (`@verifynng/config`'s `loadEnv()` only reads `process.env`, it doesn't load dotenv), so `SMTP_PORT` silently fell back to the schema default instead of this worktree's actual offset port — fixed by adding the same `dotenv.config()` calls every other script in this repo that touches `loadEnv()` already has.
+- **A real bug found while chasing a flaky T14 Playwright run, not by reading the code**: `/help`'s Send button was only gated on `mutation.isPending`. On a hard navigation straight to `/help` (exactly what `HelpLink`'s plain `<a href>` does — it can't be a `next/link` since it also has to work from a page the user is about to leave), the in-memory auth store resets and `AuthBootstrap` repopulates it asynchronously; a fast click landing before that resolves posted `POST /v1/tenants/null/support/tickets` and 401'd. Fixed by also gating Send on `hasBootstrapped && activeTenantId`.
+- **A second, unrelated bug surfaced once the first one was fixed**: with Send correctly gated, the test still failed intermittently — sometimes the click landed, sometimes the whole form silently lost its typed Subject/Body with no request ever firing. Root cause is in `apps/web-admin/app/(console)/legal/policy-reaccept-guard.tsx` (E19-owned, not touched here): it renders `<>{children}</>` (a bare Fragment) until its own async re-check resolves, then switches non-owner roles to `<div>{banner}{children}</div>` — a different element type at the same tree position, which forces React to unmount and remount everything below it, including `/help`'s local `subject`/`body` state, right as that check settles (which happens slightly _after_ `AuthBootstrap`, off the same auth state). This isn't E18-owned and wasn't touched; `support-tickets.spec.ts` instead waits for the guard's banner text to be visible before filling the form, so the fill happens after the remount rather than racing it. Confirmed stable across 8 consecutive runs after the fix (was failing ~2/3 of the time before it, non-deterministically, purely from click-vs-remount timing). Worth flagging to whoever owns E19: any other console page holding local, unsaved state (a draft, a dialog's open state) for an `operator`/`viewer` under a tenant with a pending policy re-acceptance will silently lose that state the same way, on every fresh page load.
