@@ -60,10 +60,9 @@ function ImpersonateBootstrap() {
           mode,
           expiresAt,
         });
-        // Not '/' (the tenant dashboard): a pre-existing, unrelated bug
-        // there ("Functions cannot be passed directly to Client Components"
-        // — see the E18 PR description) 500s it for every tenant, not just
-        // an impersonated one. /batches is a real, working landing page.
+        // /batches rather than '/': the dashboard route is still an
+        // unbuilt ModuleEmptyState placeholder, so batches is simply a more
+        // useful place for a support agent reproducing a problem to land.
         router.replace('/batches');
       } catch (err) {
         setError(

@@ -115,4 +115,4 @@ export {
   type GeoTableRow,
 } from './charts';
 // E18 — Support Tooling
-export { HelpLink, type HelpLinkProps } from './HelpLink';
+export { HelpLink, type HelpLinkProps } from './components/HelpLink';

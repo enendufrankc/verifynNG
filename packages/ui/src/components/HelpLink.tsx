@@ -1,7 +1,7 @@
 'use client';
 
 import { HelpCircle, LifeBuoy } from 'lucide-react';
-import { cn } from './lib/utils';
+import { cn } from '../lib/utils';
 
 declare const process: { env: Record<string, string | undefined> } | undefined;
 
