@@ -1,0 +1,124 @@
+{
+  "hero": {
+    "id": "blk-hero",
+    "type": "hero",
+    "eyebrow": "New",
+    "title": "Turmeric & Curcumin",
+    "subtitle": "A daily radiance ritual",
+    "stats": [{ "value": "10k+", "label": "verified scans" }],
+    "ctaPrimary": { "label": "Verify yours", "href": "#verify" },
+    "image": {
+      "assetId": "hero-bottle",
+      "alt": "Turmeric & Curcumin shower gel bottle",
+      "width": 960,
+      "height": 1200,
+      "variants": { "webp": ["hero-480.webp", "hero-960.webp"] }
+    }
+  },
+  "rich-text": {
+    "id": "blk-rich-text",
+    "type": "rich-text",
+    "md": "Made with **real** turmeric extract, sourced responsibly."
+  },
+  "story": {
+    "id": "blk-story",
+    "type": "story",
+    "kicker": "Since 2020",
+    "heading": "Our story",
+    "paragraphs": [
+      "It started with a question: can luxury skincare be honest?"
+    ],
+    "attribution": "Founder, Ivory Glow"
+  },
+  "gallery": {
+    "id": "blk-gallery",
+    "type": "gallery",
+    "heading": "In the wild",
+    "items": [
+      {
+        "media": {
+          "assetId": "model-2",
+          "alt": "Model applying the shower gel",
+          "width": 960,
+          "height": 1200,
+          "variants": { "webp": ["model-2-960.webp"] }
+        },
+        "caption": "Morning ritual"
+      }
+    ]
+  },
+  "ingredients": {
+    "id": "blk-ingredients",
+    "type": "ingredients",
+    "heading": "What is inside",
+    "items": [
+      {
+        "name": "Turmeric extract",
+        "percent": 5,
+        "role": "Active",
+        "note": "Brightening"
+      }
+    ]
+  },
+  "how-to-use": {
+    "id": "blk-how-to-use",
+    "type": "how-to-use",
+    "heading": "The ritual",
+    "steps": [
+      { "title": "Lather", "body": "Work into a rich lather with warm water." },
+      {
+        "title": "Breathe",
+        "body": "Let the turmeric aroma settle for a minute."
+      },
+      { "title": "Rinse", "body": "Rinse thoroughly and pat dry." }
+    ]
+  },
+  "batch-info": {
+    "id": "blk-batch-info",
+    "type": "batch-info",
+    "heading": "This bottle",
+    "showOem": true,
+    "showCommissionDate": true
+  },
+  "verification-education": {
+    "id": "blk-verification-education",
+    "type": "verification-education",
+    "heading": "How verification works",
+    "body": "Every unit carries a unique code checked against our registry.",
+    "showManualEntryLink": true
+  },
+  "faq": {
+    "id": "blk-faq",
+    "type": "faq",
+    "items": [
+      { "q": "Is this genuine?", "a": "Scan the QR code on the box to verify." }
+    ]
+  },
+  "links": {
+    "id": "blk-links",
+    "type": "links",
+    "items": [
+      { "label": "Shop", "href": "https://example.com/shop", "kind": "store" }
+    ]
+  },
+  "registration": {
+    "id": "blk-registration",
+    "type": "registration",
+    "heading": "Regulatory",
+    "items": [{ "label": "NAFDAC Reg. No.", "value": "01-1234" }],
+    "cautions": ["Keep out of reach of children.", "For external use only."]
+  },
+  "trademark": {
+    "id": "blk-trademark",
+    "type": "trademark",
+    "heading": "Trademark",
+    "marks": [
+      {
+        "name": "IVORY GLOW",
+        "number": "NG/TM/O/2020/11950",
+        "class": "3",
+        "jurisdiction": "Nigeria"
+      }
+    ]
+  }
+}

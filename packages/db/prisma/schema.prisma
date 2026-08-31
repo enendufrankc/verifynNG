@@ -1231,3 +1231,74 @@ model UnitStateTransition {
 }
 
 // ── end E07 models ────────────────────────────────────────────
+
+// ─── E10 Product Pages ──────────────────────────────────────────────────────
+// tenantId/productId are plain fields, not Prisma relations — Tenant and
+// Product are owned by other epics (hot-spot rule: never edit another
+// epic's models); referential integrity for them is enforced in
+// ProductPageService, matching the Anomaly/UnitStateTransition pattern above.
+
+enum ProductPageStatus {
+  draft
+  published
+  unpublished
+}
+
+model ProductPage {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  productId          String            @unique // one page per product (v1)
+  slug               String // URL segment; tenant-unique
+  status             ProductPageStatus @default(draft)
+  schemaVersion      Int               @default(1)
+  draftTheme         Json
+  draftBlocks        Json
+  draftSeo           Json
+  draftUpdatedAt     DateTime          @updatedAt
+  publishedVersionId String?           @unique
+  publishedAt        DateTime?
+  createdById        String
+  createdAt          DateTime          @default(now())
+
+  versions ProductPageVersion[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+model ProductPageVersion { // immutable snapshot written on every publish
+  id            String      @id @default(cuid())
+  tenantId      String
+  productPageId String
+  version       Int // 1, 2, 3 … per page
+  schemaVersion Int
+  theme         Json
+  blocks        Json
+  seo           Json
+  changeNote    String?
+  publishedById String
+  publishedAt   DateTime    @default(now())
+  page          ProductPage @relation(fields: [productPageId], references: [id])
+
+  @@unique([productPageId, version])
+  @@index([tenantId, productPageId, publishedAt])
+}
+
+model PageMediaAsset {
+  id            String   @id @default(cuid())
+  tenantId      String
+  productPageId String?
+  objectKey     String // pages/{tenantId}/{assetId}/original.<ext>
+  mimeType      String
+  width         Int
+  height        Int
+  bytes         Int
+  blurDataUrl   String
+  variants      Json // { webp: { 480: key, 960: key, 1600: key }, avif: {...} }
+  alt           String   @default("")
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, productPageId])
+}
+// ── end E10 models ────────────────────────────────────────────

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "theme": {
+    "palette": {
+      "primary": "#C08A2D",
+      "accent": "#F8F3EA",
+      "bg": "#F8F3EA",
+      "ink": "#231C10"
+    },
+    "fontDisplay": "Cormorant Garamond",
+    "fontBody": "Manrope"
+  },
+  "blocks": [
+    {
+      "id": "blk-hero",
+      "type": "hero",
+      "title": "Turmeric & Curcumin",
+      "image": {
+        "assetId": "hero-bottle",
+        "alt": "Turmeric & Curcumin shower gel bottle",
+        "width": 960,
+        "height": 1200,
+        "variants": { "webp": ["hero-960.webp"] }
+      }
+    },
+    {
+      "id": "blk-batch-info",
+      "type": "batch-info",
+      "showOem": true,
+      "showCommissionDate": true
+    },
+    {
+      "id": "blk-verification-education",
+      "type": "verification-education",
+      "showManualEntryLink": true
+    }
+  ],
+  "seo": {
+    "title": "Turmeric & Curcumin — Ivory Glow",
+    "description": "Verify your bottle and explore the ritual.",
+    "noindex": false
+  }
+}

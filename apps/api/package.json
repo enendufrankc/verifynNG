@@ -33,6 +33,7 @@
     "@verifynng/config": "workspace:*",
     "@verifynng/core": "workspace:*",
     "@verifynng/db": "workspace:*",
+    "@verifynng/page-schema": "workspace:*",
     "archiver": "7.0.1",
     "argon2": "^0.45.1",
     "@react-email/components": "^1.0.12",

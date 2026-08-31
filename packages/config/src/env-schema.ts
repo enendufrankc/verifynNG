@@ -226,6 +226,18 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E10 Product Pages & Page Builder ─────────────────────────────
+const e10Schema = z.object({
+  PAGE_REVALIDATE_SECRET: z.string().default('dev-page-revalidate-secret'),
+  PAGES_PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
+  PLATFORM_HOSTS: z.string().default('localhost:3000'),
+  // Compose-only stub for host→tenant domain lookup readiness, e.g.
+  // "ivoryglow.localhost:3000:ivoryglow" — no DNS/TLS involved.
+  PAGE_DOMAIN_STUB: z.string().default(''),
+  PAGES_MEDIA_BUCKET: z.string().default('pages'),
+  PAGES_MAX_UPLOAD_MB: z.coerce.number().default(10),
+});
+
 const ZERO_KEY = '0'.repeat(64);
 
 export const envSchema = e02Schema
@@ -240,6 +252,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e10Schema)
   .superRefine((env, ctx) => {
     if (env.DEPLOYMENT_ENV !== 'production') return;
     // Fail fast in real deployments: dev defaults must never reach production.
