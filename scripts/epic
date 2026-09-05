@@ -15,13 +15,19 @@ slug_for() { basename "$(file_for "$1")" .md | sed "s/^$1-//"; }
 issue_for() { grep -oE "issues/[0-9]+" "$(file_for "$1")" | head -1 | cut -d/ -f2; }
 num_for() { echo "$1" | sed 's/^E0*//'; }
 
-# Each worktree gets its own compose project and host ports: base + 103*N (N = epic number).
-# 103 is chosen so no two epics' shifted ports collide across the base port set.
+# Each worktree gets its own compose project and host ports: base + 107*N (N = epic number).
+# 107 is chosen so no two epics' shifted ports collide across the base port set — 103 (the
+# prior value) exactly matched the api/fake-geo base-port gap (4103-4000=103), so any two
+# adjacent-numbered epics' worktrees collided on api<->fake-geo (e.g. E20 fake-geo == E21 api).
+# Verified collision-free for offsets up to epic 30: no base-port pair differs by a multiple of 107.
 write_env() {
   local wt="$1" eid="$2" n off
-  n="$(num_for "$eid")"; off=$((103 * n))
+  n="$(num_for "$eid")"; off=$((107 * n))
   local pg=$((5432+off)) redis=$((6379+off)) minio=$((9000+off)) minioc=$((9001+off)) mpui=$((8025+off)) mpsmtp=$((1025+off))
+  local sms=$((4101+off)) pay=$((4102+off)) geo=$((4103+off)) oidc=$((4104+off)) api=$((4000+off)) wv=$((3000+off)) wa=$((3001+off))
   local sms=$((4101+off)) pay=$((4102+off)) geo=$((4103+off)) api=$((4000+off)) wv=$((3000+off)) wa=$((3001+off))
+  local captcha=$((4106+off))
+  local grafana=$((3100+off)) loki=$((3101+off)) tempo=$((3102+off)) prom=$((3103+off)) otel=$((3104+off)) uptime=$((3105+off))
   local proj="verifynng-$(echo "$eid" | tr 'A-Z' 'a-z')"
   local body
   body="$(cat <<EOF
@@ -36,14 +42,24 @@ MAILPIT_SMTP_PORT=$mpsmtp
 FAKE_SMS_PORT=$sms
 FAKE_PAY_PORT=$pay
 FAKE_GEO_PORT=$geo
+FAKE_OIDC_PORT=$oidc
+FAKE_CAPTCHA_PORT=$captcha
 API_HOST_PORT=$api
 WEB_VERIFY_PORT=$wv
 WEB_ADMIN_PORT=$wa
+# Observability stack (profile: observability) — only relevant if that profile is started.
+GRAFANA_PORT=$grafana
+LOKI_PORT=$loki
+TEMPO_PORT=$tempo
+PROMETHEUS_PORT=$prom
+OTEL_COLLECTOR_PORT=$otel
+UPTIME_PROBE_PORT=$uptime
 # Host-side tools (pnpm db:*, tests) reach the containers through the offset ports:
 DATABASE_URL=postgresql://postgres:postgres@localhost:$pg/verifynng?schema=public
 REDIS_URL=redis://localhost:$redis
 S3_ENDPOINT=http://localhost:$minio
 SMTP_PORT=$mpsmtp
+MAILPIT_API_URL=http://localhost:$mpui/api
 NEXT_PUBLIC_API_URL=http://localhost:$api
 EOF
 )"
@@ -62,6 +78,7 @@ print_ports() {
   printf "  %-14s http://localhost:%s\n" "MinIO"      "$(grep ^MINIO_CONSOLE_PORT "$wt/.env" | cut -d= -f2)"
   printf "  %-14s localhost:%s\n"        "Postgres"   "$(grep ^POSTGRES_PORT "$wt/.env" | cut -d= -f2)"
   printf "  %-14s localhost:%s\n"        "Redis"      "$(grep ^REDIS_PORT "$wt/.env" | cut -d= -f2)"
+  printf "  %-14s http://localhost:%s\n" "fake-oidc"  "$(grep ^FAKE_OIDC_PORT "$wt/.env" | cut -d= -f2)"
 }
 
 case "$cmd" in

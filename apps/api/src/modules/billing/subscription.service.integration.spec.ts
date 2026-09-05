@@ -230,15 +230,19 @@ describe('SubscriptionService integration (real Postgres)', () => {
     const freeTrial = await prisma.plan.findUniqueOrThrow({
       where: { code: 'free-trial' },
     });
-    const before = await subscriptions.getForTenant(tenantId);
+    const sub2 = await subscriptions.getForTenant(tenantId);
     await prisma.subscription.update({
-      where: { id: before!.id },
+      where: { id: sub2!.id },
       data: {
         planId: starter.id,
         pendingPlanId: freeTrial.id,
         currentPeriodEnd: new Date(Date.now() - 1000),
       },
     });
+    // Snapshot AFTER the rewind — the roll anchors on currentPeriodEnd, so
+    // comparing against the pre-rewind value races by however long the
+    // update itself took.
+    const before = await subscriptions.getForTenant(tenantId);
 
     const result = await subscriptions.runPeriodRoll();
     expect(result.periodsRolled).toBeGreaterThanOrEqual(1);

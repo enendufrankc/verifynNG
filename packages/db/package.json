@@ -33,6 +33,7 @@
     "@verifynng/config": "workspace:*",
     "@verifynng/core": "workspace:*",
     "argon2": "^0.45.1",
+    "sharp": "^0.34.4",
     "dotenv": "17.4.2"
   },
   "devDependencies": {

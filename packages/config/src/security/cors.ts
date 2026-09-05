@@ -21,6 +21,10 @@ const DEFAULT_HEADERS = [
   'X-Request-Id',
   'x-tenant',
   'x-nonce',
+  // If-Match: E10's product-page draft save uses it for optimistic
+  // concurrency; without it in the preflight allowlist, browsers block the
+  // request entirely (CORS preflight failure, not a 4xx from the API).
+  'If-Match',
 ];
 
 /**

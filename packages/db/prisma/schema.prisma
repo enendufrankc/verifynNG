@@ -117,6 +117,9 @@ model Tenant {
   manifestDeliveries    ManifestDelivery[] // E05
   printReceipts         PrintReceipt[] // E05
   shipments             Shipment[] // E05
+  ssoConfig             TenantSsoConfig? // E20
+  ssoIdentities         SsoIdentity[] // E20
+  mfaPolicy             TenantMfaPolicy? // E20
 }
 
 model User {
@@ -144,6 +147,9 @@ model User {
   // ─── E05 ────────────────────────────────────────────────────
   oemUser             OemUser?
   // ─── end E05 ────────────────────────────────────────────────
+  // ─── E20 ────────────────────────────────────────────────────
+  ssoIdentities       SsoIdentity[]
+  // ─── end E20 ────────────────────────────────────────────────
 
   @@index([tenantId])
 }
@@ -385,14 +391,15 @@ model ScanEvent {
 // ─── E02 Identity & Access models ──────────────────────────────────
 
 model Membership {
-  id        String     @id @default(cuid())
-  userId    String
-  tenantId  String
-  role      TenantRole
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  userId     String
+  tenantId   String
+  role       TenantRole
+  createdVia String? // E20: 'invite' | 'jit' — null for pre-existing memberships
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([userId, tenantId])
   @@index([tenantId, role])
@@ -406,6 +413,7 @@ model Session {
   familyId         String // stable across rotations; reuse of superseded hash revokes the family
   userAgent        String?
   ipPrefix         String? // /24 or /48 truncated per E19
+  amr              String[]  @default([]) // E20: authentication methods reference — pwd, otp, oidc:<provider>, break_glass
   createdAt        DateTime  @default(now())
   lastSeenAt       DateTime  @default(now())
   expiresAt        DateTime
@@ -1303,8 +1311,8 @@ model Subscription {
   pendingPlanId      String? // downgrade scheduled for period end
   restrictedAt       DateTime?
   cancelledAt        DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   plan Plan @relation(fields: [planId], references: [id])
 
@@ -1325,10 +1333,10 @@ model Invoice {
   issuedAt      DateTime?
   dueAt         DateTime? // issuedAt + 7 days
   paidAt        DateTime?
-  attemptCount  Int       @default(0)
+  attemptCount  Int           @default(0)
   nextRetryAt   DateTime?
   usageSnapshot Json // the E12 UsageSummary used, frozen
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime      @default(now())
 
   lines    InvoiceLine[]
   payments Payment[]
@@ -1374,7 +1382,7 @@ model Payment {
 }
 
 model PaymentMethod {
-  id                String    @id @default(cuid())
+  id                String          @id @default(cuid())
   tenantId          String
   provider          PaymentProvider
   authorizationCode String // Paystack reusable authorization; encrypted at rest via E13 secrets helper
@@ -1382,8 +1390,8 @@ model PaymentMethod {
   cardLast4         String?
   expMonth          Int?
   expYear           Int?
-  isDefault         Boolean   @default(false)
-  createdAt         DateTime  @default(now())
+  isDefault         Boolean         @default(false)
+  createdAt         DateTime        @default(now())
   revokedAt         DateTime?
 
   @@index([tenantId, isDefault])
@@ -1400,3 +1408,205 @@ model GatewayWebhookEvent {
 }
 
 // ── end E15 models ───────────────────────────────────────────
+// ─── E10 Product Pages ──────────────────────────────────────────────────────
+// tenantId/productId are plain fields, not Prisma relations — Tenant and
+// Product are owned by other epics (hot-spot rule: never edit another
+// epic's models); referential integrity for them is enforced in
+// ProductPageService, matching the Anomaly/UnitStateTransition pattern above.
+
+enum ProductPageStatus {
+  draft
+  published
+  unpublished
+}
+
+model ProductPage {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  productId          String            @unique // one page per product (v1)
+  slug               String // URL segment; tenant-unique
+  status             ProductPageStatus @default(draft)
+  schemaVersion      Int               @default(1)
+  draftTheme         Json
+  draftBlocks        Json
+  draftSeo           Json
+  draftUpdatedAt     DateTime          @updatedAt
+  publishedVersionId String?           @unique
+  publishedAt        DateTime?
+  createdById        String
+  createdAt          DateTime          @default(now())
+
+  versions ProductPageVersion[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+model ProductPageVersion {
+  id            String      @id @default(cuid())
+  tenantId      String
+  productPageId String
+  version       Int // 1, 2, 3 … per page
+  schemaVersion Int
+  theme         Json
+  blocks        Json
+  seo           Json
+  changeNote    String?
+  publishedById String
+  publishedAt   DateTime    @default(now())
+  page          ProductPage @relation(fields: [productPageId], references: [id])
+
+  @@unique([productPageId, version])
+  @@index([tenantId, productPageId, publishedAt])
+}
+
+model PageMediaAsset {
+  id            String   @id @default(cuid())
+  tenantId      String
+  productPageId String?
+  objectKey     String // pages/{tenantId}/{assetId}/original.<ext>
+  mimeType      String
+  width         Int
+  height        Int
+  bytes         Int
+  blurDataUrl   String
+  variants      Json // { webp: { 480: key, 960: key, 1600: key }, avif: {...} }
+  alt           String   @default("")
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, productPageId])
+}
+
+// ── end E10 models ────────────────────────────────────────────
+// ── E16 Public API & Webhooks ───────────────────────────────────
+// tenantId fields below are plain scalars (no @relation to Tenant), matching
+// IpBlock/UsageEvent above — avoids adding a back-relation field to the
+// E02/E03-owned Tenant model.
+
+enum WebhookEndpointStatus {
+  active
+  disabled
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  delivering
+  succeeded
+  failed
+  dead
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  prefix      String    @unique // "vk_live_3f9a" — first 12 chars, safe to display
+  hash        String    @unique // SHA-256 of full key; raw key never stored
+  mode        String // live | test — test keys hit the same API but writes are tagged Batch.isTest = true (E04 field request, pending)
+  scopes      String[]
+  createdById String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId, revokedAt])
+}
+
+model WebhookEndpoint {
+  id            String                @id @default(cuid())
+  tenantId      String
+  url           String // https required outside compose; http allowed when WEBHOOKS_ALLOW_HTTP=true
+  secretEnc     String // AEAD-encrypted via WebhookSigner's key ring helper; decrypted only inside WebhookSigner
+  events        String[] // subset of catalogue, or ["*"]
+  status        WebhookEndpointStatus @default(active)
+  description   String?
+  failureStreak Int                   @default(0) // auto-disable at 50 consecutive dead deliveries
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([tenantId, status])
+}
+
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  tenantId       String
+  endpointId     String
+  event          String
+  payload        Json
+  attempts       Int                   @default(0)
+  status         WebhookDeliveryStatus @default(pending)
+  nextAttemptAt  DateTime?
+  lastStatusCode Int?
+  lastResponse   String? // first 2 KB of body
+  lastError      String?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, endpointId, createdAt])
+  @@index([status, nextAttemptAt])
+}
+
+// ── end E16 models ───────────────────────────────────────────────
+// ── E20 SSO & MFA Policy ─────────────────────────────────────────
+enum SsoProvider {
+  google
+  microsoft
+  fake // only honoured when NODE_ENV !== "production"
+}
+
+model TenantSsoConfig {
+  id              String      @id @default(cuid())
+  tenantId        String      @unique
+  provider        SsoProvider
+  clientId        String
+  clientSecretEnc String // AES-256-GCM, SSO_CLIENT_SECRET_ENC_KEY; never returned by the API
+  issuer          String? // required for fake/generic; Entra: tenant-specific issuer; Google: fixed
+  allowedDomains  String[] // lowercase; empty = link-only, no JIT
+  jitProvisioning Boolean     @default(false)
+  jitDefaultRole  String      @default("viewer") // viewer | operator (never owner)
+  enforceSso      Boolean     @default(false)
+  enabled         Boolean     @default(true)
+  lastTestedAt    DateTime?
+  lastTestResult  String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model SsoIdentity {
+  id          String      @id @default(cuid())
+  tenantId    String
+  userId      String
+  provider    SsoProvider
+  subject     String // IdP `sub` — the stable link, not email
+  email       String
+  lastLoginAt DateTime?
+  createdAt   DateTime    @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, subject])
+  @@index([tenantId, userId])
+}
+
+model TenantMfaPolicy {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  requiredRoles   String[] // subset of owner|operator|viewer
+  gracePeriodDays Int      @default(7)
+  enforcedFrom    DateTime // set when the policy first becomes non-empty
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ── end E20 models ────────────────────────────────────────────
