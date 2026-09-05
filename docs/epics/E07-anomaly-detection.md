@@ -3,7 +3,7 @@
 |                 |                                                                                                                                                                                    |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Wave            | 2                                                                                                                                                                                  |
-| Status          | review                                                                                                                                                                             |
+| Status          | done                                                                                                                                                                             |
 | Owner           | @enendufrankc                                                                                                                                                                      |
 | GitHub Issue    | [#8](https://github.com/enendufrankc/verifynNG/issues/8)                                                                                                                           |
 | Depends on      | E06, E14, E13 (also consumes E04, E05 status/expectedShipDate, E11)                                                                                                                |
