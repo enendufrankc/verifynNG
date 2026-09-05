@@ -3,7 +3,7 @@
 |                 |                                                                                                                                                                                       |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Wave            | 3                                                                                                                                                                                     |
-| Status          | in-progress                                                                                                                                                                           |
+| Status          | done                                                                                                                                                                           |
 | Owner           | Frank Enendu                                                                                                                                                                          |
 | GitHub Issue    | [#21](https://github.com/enendufrankc/verifynNG/issues/21)                                                                                                                            |
 | Depends on      | E02 (identity: `User`, `Membership`, sessions, TOTP MFA, login hooks), E13 (`@Audited`, secrets helper), E11 (settings route group), E15 (`hasFeature('sso')`), E03 (tenant settings) |

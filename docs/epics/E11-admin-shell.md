@@ -3,7 +3,7 @@
 |                 |                                                                                                                             |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Wave            | 1                                                                                                                           |
-| Status          | in-progress                                                                                                                 |
+| Status          | done                                                                                                                 |
 | Owner           | enendufrankc                                                                                                                |
 | GitHub Issue    | [#12](https://github.com/enendufrankc/verifynNG/issues/12)                                                                  |
 | Depends on      | E02 (interfaces: `/auth/*` routes, JWT claims, `memberships`, roles), E00 (web-admin skeleton hand-off)                     |
