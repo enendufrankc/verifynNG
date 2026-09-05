@@ -21,7 +21,11 @@ export type TemplateId =
   | 'dsar.verify'
   | 'dsar.ready'
   | 'dsar.erased'
-  | 'legal.reaccept';
+  | 'legal.reaccept'
+  // ── E18 Support Tooling ────────────────────────────────────────
+  | 'impersonation.started'
+  | 'ticket.created'
+  | 'ticket.replied';
 
 // Branded types to reject keys named 'code' or 'tier2Code' at type level
 type NoCodeKeys<T> = {
@@ -152,6 +156,23 @@ export interface TemplateData {
     documentTitle: string;
     version: string;
     reacceptUrl: string;
+  }>;
+  // ── E18 Support Tooling ────────────────────────────────────────
+  'impersonation.started': NoCodeKeys<{
+    tenantName: string;
+    mode: 'read' | 'write';
+    startedAt: string;
+  }>;
+  'ticket.created': NoCodeKeys<{
+    ticketNumber: number;
+    subject: string;
+    statusUrl: string;
+  }>;
+  'ticket.replied': NoCodeKeys<{
+    ticketNumber: number;
+    subject: string;
+    replyBody: string;
+    statusUrl: string;
   }>;
 }
 

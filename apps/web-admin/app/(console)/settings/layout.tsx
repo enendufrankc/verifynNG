@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PageHeader, cn } from '@verifyng/ui';
+import { HelpLink, PageHeader, cn } from '@verifyng/ui';
 
 const SETTINGS_NAV = [
   { href: '/settings/organization', label: 'Organization' },
@@ -22,6 +22,7 @@ export default function SettingsLayout({
       <PageHeader
         title="Settings"
         description="Manage your organization, security and integrations."
+        actions={<HelpLink docSlug="console/settings" module="settings" />}
       />
       <div className="border-border flex gap-1 border-b">
         {SETTINGS_NAV.map((item) => {

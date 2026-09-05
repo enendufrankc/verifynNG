@@ -56,6 +56,7 @@ services:
       mc mb local/verifynng || true;
       mc mb local/dsar-exports || true;
       mc ilm rule add --expire-days 7 local/dsar-exports || true;
+      mc mb local/backups || true;
       "
 
   mailpit:
@@ -291,6 +292,12 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E18 Support Tooling ──
+      SUPPORT_IMPERSONATION_TTL_SECONDS: ${SUPPORT_IMPERSONATION_TTL_SECONDS:-1800}
+      SUPPORT_INBOUND_ADDRESS: support@verifyng.local
+      SUPPORT_PUBLIC_FORM_RPH: '5'
+      DOCS_BASE_URL: http://localhost:${DOCS_PORT:-3002}
+      NEXT_PUBLIC_DOCS_URL: http://localhost:${DOCS_PORT:-3002}
       # ── E15 Billing & Entitlements ──
       PAYMENT_GATEWAY: fake
       PAYSTACK_BASE_URL: http://fake-pay:4102
@@ -479,6 +486,29 @@ services:
       retries: 10
       start_period: 30s
 
+  # ── Public docs site — E18 ──────────────────────────────
+  docs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.docs
+      args:
+        # All baked into the client bundle at build time — every one of
+        # these is a browser-reachable URL, none are server-only.
+        NEXT_PUBLIC_APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
+        NEXT_PUBLIC_VERIFY_BASE_URL: http://localhost:${WEB_VERIFY_PORT:-3000}
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:${API_HOST_PORT:-4000}
+        NEXT_PUBLIC_DOCS_URL: http://localhost:${DOCS_PORT:-3002}
+    ports:
+      - '${DOCS_PORT:-3002}:3002'
+    environment:
+      HOSTNAME: 0.0.0.0
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:3002/']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   # ── Load testing (profile: load) ────────────────────────
   k6:
     image: grafana/k6:0.54.0
@@ -560,6 +590,25 @@ services:
       WEB_ADMIN_URL: http://web-admin:3001
       PROBE_KEY: ${PROBE_KEY:-probe-secret-local}
       PROBE_FIXTURE_CODE: ${PROBE_FIXTURE_CODE:-PROBE_TIER1_OK}
+
+  # ── Restore drill (profile: drill) — E18 ────────────────────
+  # Throwaway target for docker/scripts/restore.sh; never touched by a plain
+  # `docker compose up`. See docs/runbooks/restore-from-backup.md.
+  postgres-restore:
+    image: postgres:16-alpine
+    profiles:
+      - drill
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: verifynng
+    ports:
+      - '${POSTGRES_RESTORE_PORT:-5433}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
   pgdata:

@@ -102,7 +102,15 @@ function LoginForm() {
 
       // An OEM user has no tenant console to land on — the email link's own
       // `next` (an /oem/... deep link) still takes priority when present.
-      const fallback = data.activeRole === 'oem' ? '/oem/deliveries' : '/';
+      // Same reasoning for platform support: no tenant membership means `/`
+      // (a tenant dashboard) has nothing to show them — see AC1 in
+      // docs/epics/E18-support-tooling.md.
+      const fallback =
+        data.activeRole === 'oem'
+          ? '/oem/deliveries'
+          : data.user?.platformRole === 'support'
+            ? '/support'
+            : '/';
       const next = searchParams.get('next') || fallback;
       router.push(next);
     } catch {

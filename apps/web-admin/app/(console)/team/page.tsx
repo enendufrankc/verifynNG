@@ -18,6 +18,7 @@ import {
   EmptyState,
   FormField,
   Input,
+  HelpLink,
   PageHeader,
   Select,
   SelectContent,
@@ -169,61 +170,64 @@ export default function TeamPage() {
         title="Team"
         description="Members of your organization and their roles."
         actions={
-          isOwner ? (
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <UserPlusIcon className="mr-2 h-4 w-4" />
-                  Invite member
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Invite a team member</DialogTitle>
-                </DialogHeader>
-                <Form
-                  form={inviteForm}
-                  onSubmit={(values) => inviteMutation.mutate(values)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    label="Email"
-                    htmlFor="invite-email"
-                    error={inviteForm.formState.errors.email?.message}
-                    required
+          <div className="flex items-center gap-3">
+            <HelpLink docSlug="console/team" module="team" />
+            {isOwner && (
+              <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlusIcon className="mr-2 h-4 w-4" />
+                    Invite member
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite a team member</DialogTitle>
+                  </DialogHeader>
+                  <Form
+                    form={inviteForm}
+                    onSubmit={(values) => inviteMutation.mutate(values)}
+                    className="space-y-4"
                   >
-                    <Input
-                      id="invite-email"
-                      type="email"
-                      {...inviteForm.register('email')}
-                    />
-                  </FormField>
-                  <FormField label="Role" htmlFor="invite-role" required>
-                    <Select
-                      defaultValue="viewer"
-                      onValueChange={(value) =>
-                        inviteForm.setValue('role', value as MemberRole)
-                      }
+                    <FormField
+                      label="Email"
+                      htmlFor="invite-email"
+                      error={inviteForm.formState.errors.email?.message}
+                      required
                     >
-                      <SelectTrigger id="invite-role">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="owner">Owner</SelectItem>
-                        <SelectItem value="operator">Operator</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormField>
-                  <DialogFooter>
-                    <Button type="submit" disabled={inviteMutation.isPending}>
-                      {inviteMutation.isPending ? 'Sending…' : 'Send invite'}
-                    </Button>
-                  </DialogFooter>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          ) : undefined
+                      <Input
+                        id="invite-email"
+                        type="email"
+                        {...inviteForm.register('email')}
+                      />
+                    </FormField>
+                    <FormField label="Role" htmlFor="invite-role" required>
+                      <Select
+                        defaultValue="viewer"
+                        onValueChange={(value) =>
+                          inviteForm.setValue('role', value as MemberRole)
+                        }
+                      >
+                        <SelectTrigger id="invite-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="owner">Owner</SelectItem>
+                          <SelectItem value="operator">Operator</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    <DialogFooter>
+                      <Button type="submit" disabled={inviteMutation.isPending}>
+                        {inviteMutation.isPending ? 'Sending…' : 'Send invite'}
+                      </Button>
+                    </DialogFooter>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         }
       />
 

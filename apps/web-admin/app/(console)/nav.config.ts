@@ -18,6 +18,7 @@ import {
   Siren,
   Trash2,
   Download,
+  LifeBuoy as HelpIcon,
   FileStackIcon,
   KeyRound,
   Webhook,
@@ -218,6 +219,14 @@ export const NAV: NavEntry[] = [
     icon: Trash2,
     section: 'organization',
     order: 80,
+  },
+  {
+    id: 'organization.help',
+    label: 'Help',
+    href: '/help',
+    icon: HelpIcon,
+    section: 'organization',
+    order: 90,
   },
   {
     id: 'platform.support',

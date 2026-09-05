@@ -23,6 +23,7 @@ export class AuditController {
     @Query('to') to?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Query('impersonated') impersonated?: string,
   ) {
     return this.auditService.query({
       tenantId,
@@ -34,6 +35,7 @@ export class AuditController {
       to: to ? new Date(to) : undefined,
       cursor,
       limit: limit ? parseInt(limit, 10) : undefined,
+      impersonated: impersonated === 'true',
     });
   }
 }
@@ -73,6 +75,7 @@ export class SupportAuditController {
     @Query('to') to?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Query('impersonated') impersonated?: string,
   ) {
     return this.auditService.query({
       tenantId,
@@ -84,6 +87,7 @@ export class SupportAuditController {
       to: to ? new Date(to) : undefined,
       cursor,
       limit: limit ? parseInt(limit, 10) : undefined,
+      impersonated: impersonated === 'true',
     });
   }
 }

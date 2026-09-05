@@ -33,6 +33,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  // E18: self-contained command — bootstraps itself, no Nest context needed.
+  if (command === 'support:simulate-inbound') {
+    process.argv = [process.argv[0], process.argv[1], ...process.argv.slice(3)];
+    await import('../src/modules/support/mail/simulate-inbound.command.js');
+    return;
+  }
+
   const app = await NestFactory.createApplicationContext(BillingCliModule, {
     logger: ['error', 'warn'],
   });

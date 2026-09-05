@@ -226,6 +226,15 @@ const e07Schema = z.object({
   ANOMALY_ALERT_DEBOUNCE_MIN: z.coerce.number().default(60),
 });
 
+// ── E18 Support Tooling ──────────────────────────────────────────
+const e18Schema = z.object({
+  SUPPORT_IMPERSONATION_TTL_SECONDS: z.coerce.number().default(1800),
+  SUPPORT_INBOUND_ADDRESS: z.string().default('support@verifyng.local'),
+  SUPPORT_PUBLIC_FORM_RPH: z.coerce.number().default(5),
+  DOCS_BASE_URL: z.string().default('http://localhost:3002'),
+  NEXT_PUBLIC_DOCS_URL: z.string().default('http://localhost:3002'),
+});
+
 // ── E15 Billing & Entitlements ──────────────────────────────────
 const e15Schema = z.object({
   PAYMENT_GATEWAY: z.enum(['paystack', 'fake']).default('fake'),
@@ -322,6 +331,7 @@ export const envSchema = e02Schema
   .merge(e12Schema)
   .merge(e19Schema)
   .merge(e07Schema)
+  .merge(e18Schema)
   .merge(e15Schema)
   .merge(e10Schema)
   .merge(e16Schema)

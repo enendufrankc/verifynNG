@@ -131,6 +131,22 @@ const samples: { [T in TemplateId]: TemplateData[T] } = {
     version: '2026-09-01',
     reacceptUrl: 'https://example.test/legal',
   },
+  'impersonation.started': {
+    tenantName: 'IVORY GLOW',
+    mode: 'read',
+    startedAt: '2026-08-29T00:00:00.000Z',
+  },
+  'ticket.created': {
+    ticketNumber: 1042,
+    subject: 'Codes not scanning',
+    statusUrl: 'https://example.test/help/tickets/1042',
+  },
+  'ticket.replied': {
+    ticketNumber: 1042,
+    subject: 'Codes not scanning',
+    replyBody: 'Please try applying the label per our printer spec guide.',
+    statusUrl: 'https://example.test/help/tickets/1042',
+  },
 };
 
 describe('TemplateRegistry', () => {

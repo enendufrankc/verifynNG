@@ -7,6 +7,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import {
   DataTable,
   EmptyState,
+  HelpLink,
   PageHeader,
   Select,
   SelectContent,
@@ -140,6 +141,7 @@ export default function AnomaliesPage() {
       <PageHeader
         title="Anomalies"
         description="Rules-engine findings across scan events. Rules only — no ML."
+        actions={<HelpLink docSlug="console/anomalies" module="anomalies" />}
       />
 
       <div className="flex flex-wrap items-center gap-3">

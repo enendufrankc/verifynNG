@@ -97,6 +97,9 @@ model Tenant {
   branding              Json?
   supportEmail          String?
   websiteUrl            String?
+  // E18 — requested via CROSS-EPIC-REQUESTS.md "To E03 Tenant Lifecycle";
+  // silences the "Platform support viewed your account" notice on impersonation start.
+  notifyOnImpersonation Boolean      @default(true)
   verifyRateLimitPerMin Int          @default(600) // E06: per-tenant verify rate limit
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
@@ -469,6 +472,13 @@ model AuditLog {
   requestId  String?
   targetType String         @default("")
   targetId   String         @default("")
+
+  // E18 — change request to E13 (docs/epics/CROSS-EPIC-REQUESTS.md "To E13
+  // Audit & Security"): tags rows written during an impersonated request so
+  // the audit viewer can filter on "impersonated" and so AC3's restore-drill
+  // check (`impersonatedBy = support@verifyng.local`) has something to read.
+  impersonatedBy         String?
+  impersonationSessionId String?
 
   tenant Tenant? @relation(fields: [tenantId], references: [id])
 
@@ -1240,6 +1250,103 @@ model UnitStateTransition {
 
 // ── end E07 models ────────────────────────────────────────────
 
+// ── E18 Support Tooling ─────────────────────────────────────────
+enum ImpersonationMode {
+  read
+  write
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  pending_customer
+  resolved
+  closed
+}
+
+enum TicketPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum TicketChannel {
+  console
+  public
+  email
+}
+
+enum TicketNoteKind {
+  internal
+  reply
+  system
+}
+
+model ImpersonationSession {
+  id            String            @id @default(cuid())
+  supportUserId String
+  tenantId      String
+  mode          ImpersonationMode
+  reason        String? // required when mode = write (validated in service)
+  sessionId     String            @unique // E02 Session row created for the impersonated context
+  startedAt     DateTime          @default(now())
+  expiresAt     DateTime // startedAt + SUPPORT_IMPERSONATION_TTL_SECONDS, non-extendable
+  endedAt       DateTime?
+  endedBy       String? // user | expiry | revoked
+
+  @@index([supportUserId, endedAt])
+  @@index([tenantId, startedAt])
+}
+
+model Ticket {
+  id              String         @id @default(cuid())
+  number          Int            @unique @default(autoincrement()) // shown as #1042
+  tenantId        String? // null for anonymous consumer tickets
+  requesterEmail  String
+  requesterUserId String?
+  channel         TicketChannel
+  subject         String
+  body            String
+  status          TicketStatus   @default(open)
+  priority        TicketPriority @default(normal)
+  assigneeId      String?
+  pageUrl         String? // console page the help form was opened from
+  relatedCode     String? // redacted code for consumer tickets
+  emailThreadId   String? // Message-ID root for inbound replies
+  lastActivityAt  DateTime       @default(now())
+  resolvedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  notes           TicketNote[]
+
+  @@index([status, priority, lastActivityAt])
+  @@index([tenantId, createdAt])
+  @@index([requesterEmail])
+}
+
+model TicketNote {
+  id        String         @id @default(cuid())
+  ticketId  String
+  authorId  String? // null for inbound email from requester
+  kind      TicketNoteKind
+  body      String
+  createdAt DateTime       @default(now())
+  ticket    Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+model CannedResponse {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  body      String // supports {{requesterName}}, {{tenantName}}, {{ticketNumber}}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── end E18 models ───────────────────────────────────────────────
 // ── E15 Billing & Entitlements ──────────────────────────────────
 // Additive-only. tenantId fields below are plain scalars (no Prisma
 // @relation to Tenant), matching the E07 models above — Tenant stays owned

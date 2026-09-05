@@ -40,6 +40,15 @@ export interface AuditEntry {
   target: AuditTarget;
   payload?: Record<string, unknown>;
   requestId?: string;
+  /**
+   * E18 — set when this action happened during an impersonated request.
+   * Deliberately NOT part of the hash-chain input below: adding it there
+   * would change the canonicalized hash for every row going forward without
+   * a chain reset, breaking verifyChain() for every row written before this
+   * field existed. See docs/epics/CROSS-EPIC-REQUESTS.md "To E13".
+   */
+  impersonatedBy?: string;
+  impersonationSessionId?: string;
 }
 
 export interface AuditPage {
@@ -110,6 +119,8 @@ export class AuditService {
           requestId: entry.requestId,
           targetType: entry.target.type,
           targetId: entry.target.id,
+          impersonatedBy: entry.impersonatedBy,
+          impersonationSessionId: entry.impersonationSessionId,
         },
       });
 
@@ -146,6 +157,8 @@ export class AuditService {
     to?: Date;
     cursor?: string;
     limit?: number;
+    /** E18 — "impersonated" filter chip: true = impersonatedBy is set. */
+    impersonated?: boolean;
   }): Promise<AuditPage> {
     const limit = Math.min(filter.limit ?? 50, 200);
 
@@ -155,6 +168,7 @@ export class AuditService {
     if (filter.action) where.action = { contains: filter.action };
     if (filter.targetType) where.targetType = filter.targetType;
     if (filter.targetId) where.targetId = filter.targetId;
+    if (filter.impersonated) where.impersonatedBy = { not: null };
     if (filter.from || filter.to) {
       where.createdAt = {};
       if (filter.from) where.createdAt.gte = filter.from;

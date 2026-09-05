@@ -62,7 +62,10 @@ export class TokenService {
     return this.accessTtlSeconds;
   }
 
-  async issueAccessToken(payload: AccessTokenPayload): Promise<string> {
+  async issueAccessToken(
+    payload: AccessTokenPayload,
+    opts?: { expiresInSeconds?: number },
+  ): Promise<string> {
     const { kid, secret } = this.keyRing.active();
     return this.jwtService.signAsync(
       {
@@ -75,7 +78,13 @@ export class TokenService {
       },
       {
         secret: Buffer.from(secret),
-        expiresIn: this.accessTtlSeconds,
+        // E18 — impersonation sessions are deliberately non-extendable (no
+        // refresh token is ever handed to the client for one), so their
+        // access token's own JWT expiry must match the impersonation TTL
+        // exactly rather than the account-wide default, or the token would
+        // 401 well before (TTL < default) or outlive (TTL > default) the
+        // ImpersonationSession row that's the real source of truth.
+        expiresIn: opts?.expiresInSeconds ?? this.accessTtlSeconds,
         keyid: kid,
       },
     );
