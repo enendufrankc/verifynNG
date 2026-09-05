@@ -31,14 +31,14 @@
     "test:nocov": "vitest run"
   },
   "dependencies": {
-    "zod": "3.25.76"
+    "zod": "4.5.4"
   },
   "devDependencies": {
-    "@types/node": "22",
+    "@types/node": "26",
     "@vitest/coverage-v8": "4.1.11",
     "@vitest/coverage-istanbul": "4.1.11",
     "tsup": "8.5.1",
-    "typescript": "5.9.2",
+    "typescript": "7.0.2",
     "vitest": "4.1.11"
   }
 }

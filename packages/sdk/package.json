@@ -32,13 +32,13 @@
     "types:generate": "openapi-typescript ./openapi.json -o ./src/types.gen.ts"
   },
   "dependencies": {
-    "openapi-fetch": "^0.13.4"
+    "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
-    "@types/node": "22",
+    "@types/node": "26",
     "openapi-typescript": "^7.4.4",
     "tsup": "8.5.1",
-    "typescript": "5.9.2",
+    "typescript": "7.0.2",
     "vitest": "4.1.11"
   }
 }

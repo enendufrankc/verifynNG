@@ -18,11 +18,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "zod": "3.25.76"
+    "zod": "4.5.4"
   },
   "devDependencies": {
-    "@types/node": "22",
-    "typescript": "5.9.2",
+    "@types/node": "26",
+    "typescript": "7.0.2",
     "vitest": "4.1.11"
   }
 }
