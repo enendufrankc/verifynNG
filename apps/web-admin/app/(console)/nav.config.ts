@@ -19,6 +19,9 @@ import {
   Trash2,
   Download,
   LifeBuoy as HelpIcon,
+  FileStackIcon,
+  KeyRound,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
@@ -75,6 +78,14 @@ export const NAV: NavEntry[] = [
     icon: Truck,
     section: 'catalog',
     order: 40,
+  },
+  {
+    id: 'catalog.pages',
+    label: 'Pages',
+    href: '/pages',
+    icon: FileStackIcon,
+    section: 'catalog',
+    order: 50,
   },
   {
     id: 'monitoring.units',
@@ -161,6 +172,22 @@ export const NAV: NavEntry[] = [
     order: 40,
   },
   {
+    id: 'organization.apiKeys',
+    label: 'API keys',
+    href: '/api-keys',
+    icon: KeyRound,
+    section: 'organization',
+    order: 45,
+  },
+  {
+    id: 'organization.webhooks',
+    label: 'Webhooks',
+    href: '/webhooks',
+    icon: Webhook,
+    section: 'organization',
+    order: 46,
+  },
+  {
     id: 'organization.legal',
     label: 'Your agreements',
     href: '/legal',
@@ -236,6 +263,15 @@ export const NAV: NavEntry[] = [
     section: 'platform',
     platformRole: 'support',
     order: 40,
+  },
+  {
+    id: 'platform.subscriptions',
+    label: 'Subscriptions',
+    href: '/support/subscriptions',
+    icon: CreditCard,
+    section: 'platform',
+    platformRole: 'support',
+    order: 50,
   },
 ];
 

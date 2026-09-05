@@ -4,6 +4,13 @@ export interface EntitlementCheck {
   allowed: boolean;
   reason?: string;
   upgradeHint?: string;
+  // Populated by E15's PlanEntitlementPolicy so the 402 MintService throws
+  // below carries the machine-readable shape docs/epics/E15-billing-
+  // entitlements.md's AC2 expects, alongside the original `reason`/
+  // `upgradeHint` every existing caller of this interface already uses.
+  code?: string;
+  limit?: number;
+  used?: number;
 }
 
 export interface EntitlementPolicy {

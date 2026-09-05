@@ -35,6 +35,14 @@ import { loadEnv } from '@verifynng/config';
         name: 'units',
         defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
       },
+      {
+        name: 'billing',
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
+      },
+      {
+        name: 'webhooks',
+        defaultJobOptions: { removeOnComplete: 100, removeOnFail: 50 },
+      },
     ),
   ],
   exports: [BullModule],

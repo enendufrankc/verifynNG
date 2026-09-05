@@ -91,6 +91,13 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${FAKE_PAY_PORT:-4102}:4102'
+    environment:
+      FAKE_PAY_SECRET: fake_sk_test
+      FAKE_PAY_WEBHOOK_URL: http://api:4000/v1/billing/webhooks/paystack
+      # Browser-reachable — the host port a worktree's own .env may remap
+      # (scripts/epic start), never the container-internal 4102 the api
+      # service uses to reach this one.
+      FAKE_PAY_PUBLIC_URL: http://localhost:${FAKE_PAY_PORT:-4102}
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4102/health']
       interval: 5s
@@ -120,6 +127,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # ── E16 Public API & Webhooks ──
+  webhook-sink:
+    build:
+      context: ../tools/fakes/webhook-sink
+      dockerfile: Dockerfile
+    ports:
+      - '${WEBHOOK_SINK_PORT:-4105}:4105'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4105/health']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  fake-oidc:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    environment:
+      JSON_CONFIG_PATH: /config/config.json
+      SERVER_PORT: '4104'
+    volumes:
+      - ../tools/fakes/oidc:/config:ro
+    ports:
+      - '${FAKE_OIDC_PORT:-4104}:4104'
+    # No healthcheck: the image is a distroless-style JRE build with no
+    # shell, wget, or curl to probe with (confirmed — `docker exec sh` fails
+    # with "executable file not found"). `api` depends on `service_started`
+    # only; it's a fast-starting JVM process and nothing needs it at boot.
 
   # ── Application services ──────────────────────────────────
   db-migrate:
@@ -178,6 +211,11 @@ services:
       MINT_MAX_COUNT: '1000000'
       MANIFEST_ENC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       VERIFY_BASE_URL: http://localhost:3000
+      # ── E10 Product Pages ──
+      # Container-internal — PageRevalidator's POST /p/revalidate call.
+      # Never the browser-facing PAGES_PUBLIC_BASE_URL (defaulted, unused
+      # here): `localhost` inside this container never reaches web-verify's.
+      WEB_VERIFY_INTERNAL_URL: http://web-verify:3000
       WORKER: 'false'
       # false: the dedicated api-worker service below consumes queues instead.
       # Both containers running BullMQ workers on the same queues races two
@@ -226,8 +264,16 @@ services:
       FAKE_GEO_KEY: vk_70b02ab6_70b02ab67319f58d15520e558280b06417d84a5211f18f464dfa6d5e7e844d88
       APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
       # ── E06 Verification & Scan Events ──
-      RATE_LIMIT_IP_PER_MIN: '20'
-      RATE_LIMIT_CODE_PER_MIN: '10'
+      # 120, not 20: every browser-driven e2e spec shares this IP, across both web-verify
+      # projects, run by Playwright's default worker parallelism (several spec files hitting
+      # verify concurrently) — 120 comfortably covers that legitimate traffic.
+      # tests/e2e/verify-rate-limited.spec.ts deliberately exhausts this same budget to prove
+      # the limiter degrades cleanly; it runs in its own `web-verify-rate-limit` Playwright
+      # project, ordered (via `dependencies`) strictly after web-verify-desktop and
+      # web-verify-mobile finish, so it can never race or poison their legitimate traffic.
+      # Override per-worktree via docker/.env for a stricter value when testing the limiter itself.
+      RATE_LIMIT_IP_PER_MIN: ${RATE_LIMIT_IP_PER_MIN:-120}
+      RATE_LIMIT_CODE_PER_MIN: ${RATE_LIMIT_CODE_PER_MIN:-10}
       RATE_LIMIT_TENANT_DEFAULT_PER_MIN: '600'
       ENUMERATION_INVALID_THRESHOLD: '15'
       ENUMERATION_WINDOW_SEC: '300'
@@ -252,6 +298,33 @@ services:
       SUPPORT_PUBLIC_FORM_RPH: '5'
       DOCS_BASE_URL: http://localhost:${DOCS_PORT:-3002}
       NEXT_PUBLIC_DOCS_URL: http://localhost:${DOCS_PORT:-3002}
+      # ── E15 Billing & Entitlements ──
+      PAYMENT_GATEWAY: fake
+      PAYSTACK_BASE_URL: http://fake-pay:4102
+      PAYSTACK_SECRET_KEY: fake_sk_test
+      PAYSTACK_PUBLIC_KEY: fake_pk_test
+      FAKE_PAY_URL: http://fake-pay:4102
+      FAKE_PAY_SECRET: fake_sk_test
+      BILLING_TAX_RATE_BPS_NGN: '0'
+      BILLING_TAX_RATE_BPS_GBP: '0'
+      BILLING_DUNNING_SCHEDULE_DAYS: '1,3,7'
+      BILLING_CLOCK_SKEW_SECONDS: '0'
+      BILLING_PAYMENT_METHOD_ENC_KEY: 48dedaff69303776b73be2b402894ed937b6d90fd521675785c1df44bd7bbd09
+      # ── E16 Public API & Webhooks ──
+      PUBLIC_API_DEFAULT_RPM: '120'
+      PUBLIC_API_MAX_KEYS_DEFAULT: '10'
+      # dev/compose only — production must leave both false (schema default).
+      WEBHOOKS_ALLOW_HTTP: 'true'
+      WEBHOOKS_ALLOW_PRIVATE: 'true'
+      WEBHOOKS_BACKOFF_BASE_MS: ${WEBHOOKS_BACKOFF_BASE_MS:-30000}
+      WEBHOOKS_MAX_ATTEMPTS: '10'
+      # ── E20 SSO & MFA Policy ──
+      SSO_CALLBACK_URL: http://localhost:${API_HOST_PORT:-4000}/auth/sso/callback
+      SSO_STATE_TTL_SECONDS: '600'
+      SSO_DISCOVERY_TIMEOUT_MS: '5000'
+      FAKE_OIDC_ISSUER: http://fake-oidc:4104/default
+      FAKE_OIDC_PUBLIC_ISSUER: http://localhost:${FAKE_OIDC_PORT:-4104}/default
+      SSO_CLIENT_SECRET_ENC_KEY: bbccddee11223344bbccddee11223344bbccddee11223344bbccddee11223344
     volumes:
       # Directory (not the file itself) so a first `docker compose up`, before
       # anyone has run `pnpm secrets:rotate-core-key`, doesn't bind-mount a
@@ -265,6 +338,8 @@ services:
         condition: service_healthy
       db-migrate:
         condition: service_completed_successfully
+      fake-oidc:
+        condition: service_started
     healthcheck:
       test:
         ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:4000/ready']
@@ -302,6 +377,33 @@ services:
       VERIFY_BASE_URL: http://localhost:3000
       WORKER: 'true'
       WORKER_INLINE: 'false'
+      APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
+      # ── E15 Billing & Entitlements — must match the `api` service's
+      # values exactly: DunningService's chargeAuthorisation runs here, and
+      # a mismatched BILLING_PAYMENT_METHOD_ENC_KEY makes every stored
+      # PaymentMethod undecryptable in this process (found live: the key
+      # was missing here entirely, silently falling back to the schema's
+      # all-zeros default while `api` had a real one — every dunning
+      # auto-charge failed with an AES-GCM auth-tag error before ever
+      # reaching the gateway). ──
+      PAYMENT_GATEWAY: fake
+      PAYSTACK_BASE_URL: http://fake-pay:4102
+      PAYSTACK_SECRET_KEY: fake_sk_test
+      PAYSTACK_PUBLIC_KEY: fake_pk_test
+      FAKE_PAY_URL: http://fake-pay:4102
+      FAKE_PAY_SECRET: fake_sk_test
+      BILLING_TAX_RATE_BPS_NGN: '0'
+      BILLING_TAX_RATE_BPS_GBP: '0'
+      BILLING_DUNNING_SCHEDULE_DAYS: '1,3,7'
+      BILLING_CLOCK_SKEW_SECONDS: '0'
+      BILLING_PAYMENT_METHOD_ENC_KEY: 48dedaff69303776b73be2b402894ed937b6d90fd521675785c1df44bd7bbd09
+      # ── E16 Public API & Webhooks ── mirrors the api service's block so the
+      # webhooks BullMQ worker behaves the same regardless of which process
+      # ends up consuming the queue.
+      WEBHOOKS_ALLOW_HTTP: 'true'
+      WEBHOOKS_ALLOW_PRIVATE: 'true'
+      WEBHOOKS_BACKOFF_BASE_MS: ${WEBHOOKS_BACKOFF_BASE_MS:-30000}
+      WEBHOOKS_MAX_ATTEMPTS: '10'
     depends_on:
       postgres:
         condition: service_healthy
@@ -335,6 +437,15 @@ services:
       NEXT_PUBLIC_MINIO_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}
       NEXT_PUBLIC_DEFAULT_TENANT: ivoryglow
       HOSTNAME: 0.0.0.0
+      # ── E10 Product Pages ── browser-facing origin for canonical URLs,
+      # sitemap <loc>, and JSON-LD (never used for container-to-container
+      # calls — see WEB_VERIFY_INTERNAL_URL on the api service).
+      PAGES_PUBLIC_BASE_URL: http://localhost:${WEB_VERIFY_PORT:-3000}
+      PLATFORM_HOSTS: localhost:${WEB_VERIFY_PORT:-3000}
+      # T9 host-header routing readiness stub (no DNS/TLS) — demos
+      # ivoryglow.localhost:<port>/turmeric-curcumin resolving once E09
+      # wires the one-line productPageRewrite() call (change request).
+      PAGE_DOMAIN_STUB: ivoryglow.localhost:${WEB_VERIFY_PORT:-3000}:ivoryglow
     depends_on:
       api:
         condition: service_healthy
@@ -353,6 +464,9 @@ services:
         # Baked into the client bundle — must be reachable from the host
         # browser, unlike the runtime value below (container-internal only).
         NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
+        # E10's page-builder preview iframe (client-side) needs the
+        # browser-reachable web-verify origin.
+        NEXT_PUBLIC_VERIFY_URL: http://localhost:${WEB_VERIFY_PORT:-3000}
     ports:
       - '${WEB_ADMIN_PORT:-3001}:3001'
     environment:

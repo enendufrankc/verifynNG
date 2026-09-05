@@ -6,13 +6,12 @@ import { BatchesService } from './batches.service';
 import { MintService } from './mint.service';
 import { ManifestService } from './manifest.service';
 import { ExportsService } from './exports.service';
-import {
-  ENTITLEMENT_POLICY,
-  AllowAllEntitlementPolicy,
-} from './entitlement.policy';
+import { ENTITLEMENT_POLICY } from './entitlement.policy';
 import { BullMQModule } from '../../jobs/bullmq.module';
 import { MintProcessor } from '../../jobs/mint.processor';
 import { BatchExportsProcessor } from '../../jobs/batch-exports.processor';
+import { BillingModule } from '../billing/billing.module';
+import { EntitlementService } from '../billing/entitlement.service';
 
 // WORKER_INLINE gates whether the HTTP process also consumes the mint /
 // batch-exports queues. It's true by default (`pnpm dev`, single process);
@@ -22,7 +21,7 @@ import { BatchExportsProcessor } from '../../jobs/batch-exports.processor';
 const workerInline = loadEnv().WORKER_INLINE === 'true';
 
 @Module({
-  imports: [BullMQModule],
+  imports: [BullMQModule, BillingModule],
   controllers: [BatchesController, JobsController],
   providers: [
     BatchesService,
@@ -32,7 +31,7 @@ const workerInline = loadEnv().WORKER_INLINE === 'true';
     ...(workerInline ? [MintProcessor, BatchExportsProcessor] : []),
     {
       provide: ENTITLEMENT_POLICY,
-      useClass: AllowAllEntitlementPolicy,
+      useExisting: EntitlementService,
     },
   ],
   exports: [BatchesService, MintService, ManifestService, ExportsService],

@@ -200,6 +200,34 @@ const renderers: Record<
     sms: `FAILED: Invoice ${data.invoiceNumber} (${data.amount}). ${data.reason}`,
   }),
 
+  // ── E15 Billing & Entitlements ──────────────────────────────
+  'invoice.due': (data: TemplateData['invoice.due'], branding) => ({
+    subject: `Invoice ${data.invoiceNumber} due ${data.dueDate}`,
+    bodyHtml: `<p style="margin:0 0 12px">Invoice <strong>${esc(data.invoiceNumber)}</strong> for <strong>${esc(data.amount)}</strong> is due on ${esc(data.dueDate)}.</p><p style="margin:0"><a href="${esc(data.dashboardUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">View invoice</a></p>`,
+    text: `Invoice ${data.invoiceNumber} due ${data.dueDate}\nAmount: ${data.amount}\nView: ${data.dashboardUrl}`,
+    sms: `Invoice ${data.invoiceNumber} (${data.amount}) due ${data.dueDate}`,
+  }),
+
+  'subscription.restricted': (
+    data: TemplateData['subscription.restricted'],
+    branding,
+  ) => ({
+    subject: `${branding.tenantName} — minting restricted`,
+    bodyHtml: `<p style="margin:0 0 12px;color:#c00"><strong>⚠ Your account is restricted</strong></p><p style="margin:0 0 8px">Minting new codes is paused (${esc(data.reason)}). Consumer verification is unaffected.</p><p style="margin:12px 0 0"><a href="${esc(data.dashboardUrl)}" style="display:inline-block;padding:12px 24px;background:#c00;color:#fff;border-radius:4px;text-decoration:none">Pay now</a></p>`,
+    text: `Your account is restricted (${data.reason}). Minting is paused; verification still works.\nPay now: ${data.dashboardUrl}`,
+    sms: `${branding.tenantName}: account restricted (${data.reason}). Minting paused.`,
+  }),
+
+  'subscription.reactivated': (
+    data: TemplateData['subscription.reactivated'],
+    branding,
+  ) => ({
+    subject: `${branding.tenantName} — account reactivated`,
+    bodyHtml: `<p style="margin:0 0 12px;color:#0a8f4f"><strong>Your account is active again.</strong></p><p style="margin:0;color:#999;font-size:13px">Reactivated at ${esc(data.at)}</p>`,
+    text: `Your account is active again. Reactivated at ${data.at}`,
+    sms: `${branding.tenantName}: account reactivated.`,
+  }),
+
   'password.reset': (data: TemplateData['password.reset'], branding) => ({
     subject: `Password reset — ${branding.tenantName}`,
     bodyHtml: `<p style="margin:0 0 12px">A password reset was requested for your ${esc(branding.tenantName)} account.</p><p style="margin:0 0 8px">This link expires in ${esc(data.expiresIn)}.</p><p style="margin:0"><a href="${esc(data.resetUrl)}" style="display:inline-block;padding:12px 24px;background:${branding.primaryColor ?? '#1a1a2e'};color:#fff;border-radius:4px;text-decoration:none">Reset password</a></p>`,

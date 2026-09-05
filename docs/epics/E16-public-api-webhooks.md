@@ -1,14 +1,14 @@
 # E16 — Public API & Webhooks
 
-| | |
-|---|---|
-| Wave | 3 |
-| Status | todo |
-| Owner | — |
-| GitHub Issue | [#17](https://github.com/enendufrankc/verifynNG/issues/17) |
-| Depends on | E02 (auth primitives, `ApiClient`), E04 (batches/units, `MintService`, `batch.minted`), E06 (scan events, `scan.recorded`), E07 (`anomaly.detected`, `unit.flagged`, `unit.decommissioned`), E13 (`QuotaService`, `@Audited`), E11 (admin shell), E15 (`hasFeature('publicApi')`, `maxApiKeys`) |
-| Unblocks | E21 (contract tests against the OpenAPI spec), E18 (API docs link from `apps/docs`) |
-| Readiness items | `production-readiness.md` §10 all rows (public API + keys, signed webhooks, versioned API + OpenAPI docs + deprecation policy) · §1 service-to-service auth · §2 per-tenant rate limits (consumed) |
+|                 |                                                                                                                                                                                                                                                                                                 |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wave            | 3                                                                                                                                                                                                                                                                                               |
+| Status          | in-progress                                                                                                                                                                                                                                                                                     |
+| Owner           | Frank Enendu                                                                                                                                                                                                                                                                                    |
+| GitHub Issue    | [#17](https://github.com/enendufrankc/verifynNG/issues/17)                                                                                                                                                                                                                                      |
+| Depends on      | E02 (auth primitives, `ApiClient`), E04 (batches/units, `MintService`, `batch.minted`), E06 (scan events, `scan.recorded`), E07 (`anomaly.detected`, `unit.flagged`, `unit.decommissioned`), E13 (`QuotaService`, `@Audited`), E11 (admin shell), E15 (`hasFeature('publicApi')`, `maxApiKeys`) |
+| Unblocks        | E21 (contract tests against the OpenAPI spec), E18 (API docs link from `apps/docs`)                                                                                                                                                                                                             |
+| Readiness items | `production-readiness.md` §10 all rows (public API + keys, signed webhooks, versioned API + OpenAPI docs + deprecation policy) · §1 service-to-service auth · §2 per-tenant rate limits (consumed)                                                                                              |
 
 ## Goal
 
@@ -38,6 +38,7 @@ docs/webhooks-consumer-guide.md
 ## Interfaces
 
 **Consumes:**
+
 - E02: `Membership`/roles for the admin routes (`@Roles('owner')` to create/revoke keys and endpoints; `viewer` can list), `TenantId()` for console routes, password/JWT untouched — API-key auth is a separate guard.
 - E04: `MintService.mint(tenantId, { productId, oemId?, count })`, `BatchService.get/list`, `UnitService.get/list/flag/decommission/restore`, events `batch.minted`.
 - E05: events `batch.printed`, `batch.shipped`.
@@ -51,6 +52,7 @@ docs/webhooks-consumer-guide.md
 **Exposes:**
 
 Nest providers:
+
 ```ts
 ApiKeyService        // create(tenantId, {name, scopes, expiresAt?}) → { key: 'vk_live_…' (once), record }, verify(rawKey) → { tenantId, scopes, keyId } | null, revoke(id), touchLastUsed(id)
 ApiKeyGuard          // reads Authorization: Bearer vk_…; sets request.apiKey + request.tenantId; 401/403 envelope
@@ -66,6 +68,7 @@ WebhookSigner            // sign(secret, timestamp, body) → 'v1=<hex>'; verify
 ```
 
 Public HTTP routes (all `/api/v1`, all require `Authorization: Bearer vk_…`, JSON only):
+
 ```
 GET    /api/v1/batches                       read:batches   ?cursor&limit&productId&status
 POST   /api/v1/batches                       write:batches  Idempotency-Key required  { productId, oemId?, count }  → 202 { batch, exportUrl }
@@ -87,6 +90,7 @@ GET    /api/openapi.json                     public         generated spec
 ```
 
 Internal (console, JWT) routes:
+
 ```
 GET/POST        /v1/tenants/:tenantId/api-keys              owner (viewer: GET)
 DELETE          /v1/tenants/:tenantId/api-keys/:id          owner   (revoke)
@@ -98,12 +102,21 @@ POST            /v1/tenants/:tenantId/webhook-deliveries/:id/redeliver    owner
 ```
 
 Error envelope (every non-2xx on `/api/v1`):
+
 ```json
-{ "error": { "type": "not_found|validation|unauthorized|forbidden|rate_limited|conflict|idempotency_mismatch|plan_limit|internal",
-             "message": "…", "requestId": "…", "docs": "https://…/api/docs#errors", "details": [{ "field": "count", "issue": "must be ≤ 100000" }] } }
+{
+  "error": {
+    "type": "not_found|validation|unauthorized|forbidden|rate_limited|conflict|idempotency_mismatch|plan_limit|internal",
+    "message": "…",
+    "requestId": "…",
+    "docs": "https://…/api/docs#errors",
+    "details": [{ "field": "count", "issue": "must be ≤ 100000" }]
+  }
+}
 ```
 
 Webhook wire format:
+
 ```
 POST <endpoint.url>
 Content-Type: application/json
@@ -117,6 +130,7 @@ X-VerifyNG-Signature: v1=<hex HMAC-SHA256(secret, `${timestamp}.${rawBody}`)>
 Event catalogue (external names → source event): `scan.suspicious` ← E06 `scan.recorded` where verdict ∈ {suspicious, flagged, unknown-tier2}; `unit.flagged`, `unit.decommissioned`, `anomaly.detected` ← E07; `batch.minted` ← E04; `batch.printed`, `batch.shipped` ← E05; `report.created` ← E08; `ping` ← test-send. Payload schemas are part of the OpenAPI spec under `components.schemas.WebhookEvent*`.
 
 Domain events emitted (Nest `EventEmitter`):
+
 ```
 apikey.created            { tenantId, apiKeyId, prefix, scopes, createdBy }
 apikey.revoked            { tenantId, apiKeyId, prefix, revokedBy }
@@ -188,32 +202,32 @@ Change request to E04: add `Batch.isTest Boolean @default(false)` so `vk_test_` 
 
 ## Tasks
 
-- [ ] T1 `ApiKeysModule`: schema block + migration `E16_api_keys_webhooks`, `ApiKeyService` (key = `vk_{live|test}_` + 32 base62 chars, SHA-256 hash, prefix), console routes, `apikey.created/revoked` events, `@Audited`. Enforce E15 `maxApiKeys` and `hasFeature('publicApi')` (402 `plan_limit` otherwise).
-- [ ] T2 `PublicApiModule` router: Nest `RouterModule` mounting at `/api/v1`, `ApiKeyGuard`, `ScopesGuard`, `ApiErrorFilter` with envelope, `X-Request-Id` echo, `ApiVersion` header (`2026-09-01`) on every response, `GET /api/v1/me`.
-- [ ] T3 Rate limiting + idempotency: `RateLimitInterceptor` calling E13 `QuotaService` with `apikey:<id>` and E15 `apiRateLimitPerMin` (fallback env `PUBLIC_API_DEFAULT_RPM=120`), standard headers + 429 envelope; `IdempotencyInterceptor` storing `{ bodyHash, status, response }` in Redis for 24h keyed `idem:<tenantId>:<key>`; missing header on POST → 400 `validation`.
-- [ ] T4 Read endpoints: batches, batch units, unit, scans, reports — thin controllers over E04/E06/E08 services; `CursorPaginator` (opaque base64url of `createdAt|id`, `limit` 1–200 default 50, response `{ data, nextCursor }`); tier-2 data never serialised (DTO whitelist tests).
-- [ ] T5 Write endpoints: `POST /batches` → `MintService` (202 + `Location`), `POST /units/:id/{flag,decommission,restore}` → E04 `UnitService`; all `@Audited` with `actorType: 'api_key'`, `actorId: apiKey.id`.
-- [ ] T6 OpenAPI 3.1: `@nestjs/swagger` decorators on every public DTO/route, `DocumentBuilder` with servers, security scheme `bearerAuth (vk_…)`, tags, examples, webhook payload schemas under `components`; `GET /api/openapi.json`; Scalar UI at `/api/docs` (`@scalar/nestjs-api-reference`); spec committed as `packages/sdk/openapi.json` and CI fails if the generated spec differs from the committed one (`pnpm api:openapi:check`).
-- [ ] T7 `packages/sdk`: `openapi-typescript` → `types.gen.ts`; hand-written `createClient({ apiKey, baseUrl })` over `openapi-fetch` with auto `Idempotency-Key` (uuid) on POST, cursor iterator helper `client.batches.listAll()`, `verifyWebhookSignature(secret, headers, rawBody)` helper; README with quick start; published in-repo as `@verifyng/sdk` (workspace), tsup build, tests against the compose API.
-- [ ] T8 Deprecation policy: `docs/public-api-deprecation-policy.md` (date-based `ApiVersion`, 12-month support after `Deprecation: true` + `Sunset: <http-date>` + `Link: rel="deprecation"` headers, changelog location, what counts as breaking); `DeprecationInterceptor` reading a static `deprecations.ts` map so a route can be marked without code changes elsewhere.
-- [ ] T9 `WebhooksModule` core: `WebhookEndpointService` (URL validation, SSRF guard: block private ranges unless `WEBHOOKS_ALLOW_PRIVATE=true` in compose, secret generation `whsec_` + 32 bytes, encrypt at rest), `WebhookSigner`, console routes, `hasFeature('webhooks')`.
-- [ ] T10 `WebhookDispatcher` + `WebhookDeliveryProcessor`: subscribe to catalogue source events, map to external payloads, create `WebhookDelivery` per matching endpoint, enqueue BullMQ `webhooks.deliver` with `jobId = deliveryId`; worker POSTs with 10s timeout, 2xx = succeeded, else backoff `min(24h, 30s × 2^attempt)` with jitter, max 10 attempts (~24h), then `dead` + `webhook.delivery.failed` + E14 notification `webhook.dead_lettered` to owner (template request to E14); `failureStreak` auto-disable at 50; redeliver route resets and re-enqueues.
-- [ ] T11 `tools/fakes/webhook-sink` (Node + Hono, port 4105): `POST /hook/:name` records delivery (headers, body, verifies signature when `SINK_SECRET_<NAME>` env is set, shows ✓/✗), `GET /` HTML list newest-first with auto-refresh, `GET /api/deliveries?name=` JSON for tests, `POST /api/behaviour/:name { status: 500 | 'timeout' | 200 }` to force failures, `DELETE /api/deliveries`, `/health`.
-- [ ] T12 web-admin `app/(console)/api-keys/**`: list (prefix, name, scopes, last used, expiry, status), create dialog with scope checkboxes and mode toggle, one-time key reveal with copy + "I have stored it" confirmation, revoke with confirm; `app/(console)/webhooks/**`: endpoints list, create/edit (URL, events multiselect, description), secret reveal once + rotate, **Send test** button showing the live result, delivery log with status filter, expandable attempt details (status code, response, error), **Redeliver** button; nav group "Developers" in `nav.config.ts`; in-page link to `/api/docs`.
-- [ ] T13 `docs/webhooks-consumer-guide.md`: signature verification sample code in Node, Python and PHP (Nigerian ERP vendors), timestamp window, idempotency on `X-VerifyNG-Delivery`, retry expectations, IP allow-list note, event catalogue table with sample payloads generated from the spec.
-- [ ] T14 Playwright E2E for both admin screens; SDK smoke test in CI against compose (`pnpm --filter @verifyng/sdk test:compose`).
+- [x] T1 `ApiKeysModule`: schema block + migration `E16_api_keys_webhooks`, `ApiKeyService` (key = `vk_{live|test}_` + 32 base62 chars, SHA-256 hash, prefix), console routes, `apikey.created/revoked` events, `@Audited`. Enforce E15 `maxApiKeys` and `hasFeature('publicApi')` (402 `plan_limit` otherwise).
+- [x] T2 `PublicApiModule` router: Nest `RouterModule` mounting at `/api/v1`, `ApiKeyGuard`, `ScopesGuard`, `ApiErrorFilter` with envelope, `X-Request-Id` echo, `ApiVersion` header (`2026-09-01`) on every response, `GET /api/v1/me`.
+- [x] T3 Rate limiting + idempotency: `RateLimitInterceptor` calling E13 `QuotaService` with `apikey:<id>` and E15 `apiRateLimitPerMin` (fallback env `PUBLIC_API_DEFAULT_RPM=120`), standard headers + 429 envelope; `IdempotencyInterceptor` storing `{ bodyHash, status, response }` in Redis for 24h keyed `idem:<tenantId>:<key>`; missing header on POST → 400 `validation`.
+- [x] T4 Read endpoints: batches, batch units, unit, scans, reports — thin controllers over E04/E06/E08 services; `CursorPaginator` (opaque base64url of `createdAt|id`, `limit` 1–200 default 50, response `{ data, nextCursor }`); tier-2 data never serialised (DTO whitelist tests).
+- [x] T5 Write endpoints: `POST /batches` → `MintService` (202 + `Location`), `POST /units/:id/{flag,decommission,restore}` → E04 `UnitService`; all `@Audited` with `actorType: 'api_key'`, `actorId: apiKey.id`.
+- [x] T6 OpenAPI 3.1: `@nestjs/swagger` decorators on every public DTO/route, `DocumentBuilder` with servers, security scheme `bearerAuth (vk_…)`, tags, examples, webhook payload schemas under `components`; `GET /api/openapi.json`; Scalar UI at `/api/docs` (`@scalar/nestjs-api-reference`); spec committed as `packages/sdk/openapi.json` and CI fails if the generated spec differs from the committed one (`pnpm api:openapi:check`).
+- [x] T7 `packages/sdk`: `openapi-typescript` → `types.gen.ts`; hand-written `createClient({ apiKey, baseUrl })` over `openapi-fetch` with auto `Idempotency-Key` (uuid) on POST, cursor iterator helper `client.batches.listAll()`, `verifyWebhookSignature(secret, headers, rawBody)` helper; README with quick start; published in-repo as `@verifyng/sdk` (workspace), tsup build, tests against the compose API.
+- [x] T8 Deprecation policy: `docs/public-api-deprecation-policy.md` (date-based `ApiVersion`, 12-month support after `Deprecation: true` + `Sunset: <http-date>` + `Link: rel="deprecation"` headers, changelog location, what counts as breaking); `DeprecationInterceptor` reading a static `deprecations.ts` map so a route can be marked without code changes elsewhere.
+- [x] T9 `WebhooksModule` core: `WebhookEndpointService` (URL validation, SSRF guard: block private ranges unless `WEBHOOKS_ALLOW_PRIVATE=true` in compose, secret generation `whsec_` + 32 bytes, encrypt at rest), `WebhookSigner`, console routes, `hasFeature('webhooks')`.
+- [x] T10 `WebhookDispatcher` + `WebhookDeliveryProcessor`: subscribe to catalogue source events, map to external payloads, create `WebhookDelivery` per matching endpoint, enqueue BullMQ `webhooks.deliver` with `jobId = deliveryId`; worker POSTs with 10s timeout, 2xx = succeeded, else backoff `min(24h, 30s × 2^attempt)` with jitter, max 10 attempts (~24h), then `dead` + `webhook.delivery.failed` + E14 notification `webhook.dead_lettered` to owner (template request to E14); `failureStreak` auto-disable at 50; redeliver route resets and re-enqueues.
+- [x] T11 `tools/fakes/webhook-sink` (Node + Hono, port 4105): `POST /hook/:name` records delivery (headers, body, verifies signature when `SINK_SECRET_<NAME>` env is set, shows ✓/✗), `GET /` HTML list newest-first with auto-refresh, `GET /api/deliveries?name=` JSON for tests, `POST /api/behaviour/:name { status: 500 | 'timeout' | 200 }` to force failures, `DELETE /api/deliveries`, `/health`.
+- [x] T12 web-admin `app/(console)/api-keys/**`: list (prefix, name, scopes, last used, expiry, status), create dialog with scope checkboxes and mode toggle, one-time key reveal with copy + "I have stored it" confirmation, revoke with confirm; `app/(console)/webhooks/**`: endpoints list, create/edit (URL, events multiselect, description), secret reveal once + rotate, **Send test** button showing the live result, delivery log with status filter, expandable attempt details (status code, response, error), **Redeliver** button; nav group "Developers" in `nav.config.ts`; in-page link to `/api/docs`.
+- [x] T13 `docs/webhooks-consumer-guide.md`: signature verification sample code in Node, Python and PHP (Nigerian ERP vendors), timestamp window, idempotency on `X-VerifyNG-Delivery`, retry expectations, IP allow-list note, event catalogue table with sample payloads generated from the spec.
+- [x] T14 Playwright E2E for both admin screens; SDK smoke test in CI against compose (`pnpm --filter @verifyng/sdk test:compose`).
 
 ## Acceptance criteria
 
-- [ ] AC1 As `ivoryglow` owner at `http://localhost:3001/api-keys` create key *ERP* with scopes `read:batches write:batches read:units` → the full key is shown exactly once; reloading the page shows only `vk_live_…` prefix. `curl localhost:4000/api/v1/me -H "Authorization: Bearer $KEY"` → `{ tenantId:"…", scopes:[…], rateLimit:{ perMinute:120 } }`.
-- [ ] AC2 `curl -X POST localhost:4000/api/v1/batches -H "Authorization: Bearer $KEY" -H "Idempotency-Key: demo-1" -d '{"productId":"…","count":100}'` → 202 with batch id; same command again → identical 202 body, and `SELECT count(*) FROM "Batch"` unchanged; same key with `count: 200` → 409 `idempotency_mismatch`; without the header → 400.
-- [ ] AC3 Scopes + isolation: a key with only `read:batches` gets 403 `forbidden` on `POST /api/v1/units/:id/flag`; a key of tenant `acme` (E21 seed) calling `GET /api/v1/batches/<ivoryglow batch id>` → 404 (never 403 — no existence leak); E21's isolation matrix passes for every `/api/v1` route.
-- [ ] AC4 Rate limit: `hey -n 200 -c 20 -H "Authorization: Bearer $KEY" http://localhost:4000/api/v1/batches` → some 429 responses with `Retry-After` and `X-RateLimit-Remaining: 0`; the count of 2xx in the first minute ≤ the plan's `apiRateLimitPerMin`.
-- [ ] AC5 Docs + SDK: `http://localhost:4000/api/docs` renders Scalar with every `/api/v1` route and the webhook schemas; `curl localhost:4000/api/openapi.json | npx @redocly/cli lint -` passes; `pnpm api:openapi:check` is green; in `packages/sdk/examples/list-batches.ts`, `createClient({ apiKey, baseUrl:'http://localhost:4000' }).batches.list()` returns typed data (`tsc` green).
-- [ ] AC6 Webhooks happy path: create endpoint `http://webhook-sink:4105/hook/erp` subscribed to `unit.flagged`; flag a unit in the console → within 5s `http://localhost:4105` shows the delivery with ✓ signature (sink has the secret), `X-VerifyNG-Event: unit.flagged`; the delivery log at `http://localhost:3001/webhooks/<id>/deliveries` shows `succeeded`, 1 attempt, 200.
-- [ ] AC7 Retries + dead-letter: `curl -X POST localhost:4105/api/behaviour/erp -d '{"status":500}'`, flag another unit → delivery shows `failed` with growing `nextAttemptAt`; with `WEBHOOKS_BACKOFF_BASE_MS=100` in compose the 10th attempt lands within a minute → status `dead`, `webhook.delivery.failed` in audit, owner email in Mailpit; set behaviour back to 200, click **Redeliver** → `succeeded`.
-- [ ] AC8 Signature: **Send test** posts a `ping`; the sink's verifier accepts it; replaying the same request via `curl` to the sink with a timestamp older than 5 minutes is marked ✗ (stale) — matching the sample code in `docs/webhooks-consumer-guide.md`.
-- [ ] AC9 Deprecation headers: mark `GET /api/v1/me` deprecated in `deprecations.ts` on a throwaway branch → response carries `Deprecation: true`, `Sunset: <date>`, `Link: <…deprecation-policy>; rel="deprecation"`; spec shows `deprecated: true`.
+- [x] AC1 As `ivoryglow` owner at `http://localhost:3001/api-keys` create key _ERP_ with scopes `read:batches write:batches read:units` → the full key is shown exactly once; reloading the page shows only `vk_live_…` prefix. `curl localhost:4000/api/v1/me -H "Authorization: Bearer $KEY"` → `{ tenantId:"…", scopes:[…], rateLimit:{ perMinute:120 } }`.
+- [x] AC2 `curl -X POST localhost:4000/api/v1/batches -H "Authorization: Bearer $KEY" -H "Idempotency-Key: demo-1" -d '{"productId":"…","count":100}'` → 202 with batch id; same command again → identical 202 body, and `SELECT count(*) FROM "Batch"` unchanged; same key with `count: 200` → 409 `idempotency_mismatch`; without the header → 400.
+- [x] AC3 Scopes + isolation: a key with only `read:batches` gets 403 `forbidden` on `POST /api/v1/units/:id/flag`; a key of tenant `acme` (E21 seed) calling `GET /api/v1/batches/<ivoryglow batch id>` → 404 (never 403 — no existence leak); E21's isolation matrix passes for every `/api/v1` route.
+- [x] AC4 Rate limit: `hey -n 200 -c 20 -H "Authorization: Bearer $KEY" http://localhost:4000/api/v1/batches` → some 429 responses with `Retry-After` and `X-RateLimit-Remaining: 0`; the count of 2xx in the first minute ≤ the plan's `apiRateLimitPerMin`.
+- [x] AC5 Docs + SDK: `http://localhost:4000/api/docs` renders Scalar with every `/api/v1` route and the webhook schemas; `curl localhost:4000/api/openapi.json | npx @redocly/cli lint -` passes; `pnpm api:openapi:check` is green; in `packages/sdk/examples/list-batches.ts`, `createClient({ apiKey, baseUrl:'http://localhost:4000' }).batches.list()` returns typed data (`tsc` green).
+- [x] AC6 Webhooks happy path: create endpoint `http://webhook-sink:4105/hook/erp` subscribed to `unit.flagged`; flag a unit in the console → within 5s `http://localhost:4105` shows the delivery with ✓ signature (sink has the secret), `X-VerifyNG-Event: unit.flagged`; the delivery log at `http://localhost:3001/webhooks/<id>/deliveries` shows `succeeded`, 1 attempt, 200.
+- [x] AC7 Retries + dead-letter: `curl -X POST localhost:4105/api/behaviour/erp -d '{"status":500}'`, flag another unit → delivery shows `failed` with growing `nextAttemptAt`; with `WEBHOOKS_BACKOFF_BASE_MS=100` in compose the 10th attempt lands within a minute → status `dead`, `webhook.delivery.failed` in audit, owner email in Mailpit; set behaviour back to 200, click **Redeliver** → `succeeded`.
+- [x] AC8 Signature: **Send test** posts a `ping`; the sink's verifier accepts it; replaying the same request via `curl` to the sink with a timestamp older than 5 minutes is marked ✗ (stale) — matching the sample code in `docs/webhooks-consumer-guide.md`.
+- [x] AC9 Deprecation headers: mark `GET /api/v1/me` deprecated in `deprecations.ts` on a throwaway branch → response carries `Deprecation: true`, `Sunset: <date>`, `Link: <…deprecation-policy>; rel="deprecation"`; spec shows `deprecated: true`.
 
 ## Testing
 
@@ -224,9 +238,9 @@ Change request to E04: add `Batch.isTest Boolean @default(false)` so `vk_test_` 
 
 ## Compose services added
 
-| Service | Image | Host port | Notes |
-|---|---|---|---|
-| webhook-sink | tools/fakes/webhook-sink | 4105 | `SINK_SECRET_ERP` set by the E2E fixture via `POST /api/secrets/:name` (dev only) |
+| Service      | Image                    | Host port | Notes                                                                             |
+| ------------ | ------------------------ | --------- | --------------------------------------------------------------------------------- |
+| webhook-sink | tools/fakes/webhook-sink | 4105      | `SINK_SECRET_ERP` set by the E2E fixture via `POST /api/secrets/:name` (dev only) |
 
 `api` env additions: `PUBLIC_API_DEFAULT_RPM=120`, `WEBHOOKS_ALLOW_HTTP=true`, `WEBHOOKS_ALLOW_PRIVATE=true`, `WEBHOOKS_BACKOFF_BASE_MS=30000` (E2E override 100), `WEBHOOKS_MAX_ATTEMPTS=10`.
 

@@ -1,0 +1,22 @@
+{
+  "event": "charge.success",
+  "data": {
+    "id": 4099857420,
+    "domain": "test",
+    "status": "success",
+    "reference": "7PVGX8MEk85tgeEpVDtD",
+    "amount": 10000,
+    "gateway_response": "Successful",
+    "currency": "NGN",
+    "authorization": {
+      "authorization_code": "AUTH_uh8bcl3zbn",
+      "last4": "4081",
+      "card_type": "visa",
+      "reusable": true
+    },
+    "customer": {
+      "id": 84312,
+      "email": "customer@email.com"
+    }
+  }
+}

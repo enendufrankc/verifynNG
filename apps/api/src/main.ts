@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { QuotaService } from './modules/quota/quota.service.js';
 import { AppLogger } from './telemetry/logger';
+import { setPublicApiApp } from './modules/public-api/app-holder.js';
 
 // Bootstrap OTel before Nest — must be first
 startOtel();
@@ -23,8 +24,16 @@ async function bootstrap() {
   const env = loadEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    // E15: POST /v1/billing/webhooks/paystack needs the exact raw bytes for
+    // HMAC-SHA512 signature verification — re-serialising the parsed JSON
+    // body (as E14's fake-mail/resend webhooks do) isn't guaranteed to
+    // byte-match what a real provider signed. This populates `req.rawBody`
+    // for every route without disabling the default JSON body parser
+    // elsewhere.
+    rawBody: true,
   });
   app.useLogger(app.get(AppLogger));
+  setPublicApiApp(app);
 
   // Security headers (E13). CSP is handled by the Next apps; the API serves no HTML.
   app.use(
@@ -112,6 +121,7 @@ async function bootstrap() {
     window: 'hour',
   });
   // manifest_downloads_per_hour is registered by OemManifestModule.onModuleInit()
+  // public_api_per_min is registered by PublicApiModule.onModuleInit()
 
   await app.listen(env.API_PORT);
   console.log(`API running on http://localhost:${env.API_PORT}`);

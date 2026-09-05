@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>fake-oidc — pick a user</title>
+  <style>
+    body { font-family: sans-serif; max-width: 32rem; margin: 3rem auto; }
+    form { border: 1px solid #ccc; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
+    button { cursor: pointer; }
+    code { font-size: 0.85em; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>fake-oidc — E20 test users</h1>
+  <p>No password. Pick a seeded user; see <code>tools/fakes/oidc/README.md</code> for what each one is for.</p>
+
+  <form method="post">
+    <input type="hidden" name="username" value="owner@ivoryglow.com">
+    <input type="hidden" name="claims" value='{"sub":"fake-owner-ivoryglow","email":"owner@ivoryglow.com","email_verified":true,"hd":"ivoryglow.com","amr":["mfa"]}'>
+    <button type="submit">owner@ivoryglow.com</button> — ivoryglow owner, IdP-asserted MFA
+  </form>
+
+  <form method="post">
+    <input type="hidden" name="username" value="ops@ivoryglow.com">
+    <input type="hidden" name="claims" value='{"sub":"fake-ops-ivoryglow","email":"ops@ivoryglow.com","email_verified":true,"hd":"ivoryglow.com"}'>
+    <button type="submit">ops@ivoryglow.com</button> — ivoryglow operator
+  </form>
+
+  <form method="post">
+    <input type="hidden" name="username" value="newhire@ivoryglow.com">
+    <input type="hidden" name="claims" value='{"sub":"fake-newhire-ivoryglow","email":"newhire@ivoryglow.com","email_verified":true,"hd":"ivoryglow.com"}'>
+    <button type="submit">newhire@ivoryglow.com</button> — not yet a member (JIT)
+  </form>
+
+  <form method="post">
+    <input type="hidden" name="username" value="newhire2@ivoryglow.com">
+    <input type="hidden" name="claims" value='{"sub":"fake-newhire2-ivoryglow","email":"newhire2@ivoryglow.com","email_verified":true,"hd":"ivoryglow.com"}'>
+    <button type="submit">newhire2@ivoryglow.com</button> — JIT, used for the JIT-off check
+  </form>
+
+  <form method="post">
+    <input type="hidden" name="username" value="outsider@gmail.com">
+    <input type="hidden" name="claims" value='{"sub":"fake-outsider-gmail","email":"outsider@gmail.com","email_verified":true,"hd":"gmail.com"}'>
+    <button type="submit">outsider@gmail.com</button> — domain not allowed
+  </form>
+</body>
+</html>

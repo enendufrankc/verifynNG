@@ -1,0 +1,14 @@
+{
+  "name": "fake-pay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test contract.test.mjs"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^8.0.2",
+    "fastify": "^5.0.0"
+  }
+}

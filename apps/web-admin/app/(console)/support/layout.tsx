@@ -23,10 +23,14 @@ export default function SupportLayout({
   const { platformRole, hasBootstrapped } = useAuth();
   const pathname = usePathname();
 
-  // hasBootstrapped guards against the false-empty flash on a hard reload —
-  // platformRole reads as null until AuthBootstrap's cookie-refresh settles,
-  // which would otherwise 404 a real support user every time. Noted as a
-  // known gap in lib/auth-store.ts before this fix.
+
+  // This route is statically prerendered, so without this guard Next
+  // executes this component once at build time (no auth context at all —
+  // platformRole is null) and permanently bakes a 404 into the static
+  // output. hasBootstrapped only flips true after the client-side auth
+  // store rehydrates post-hydration (see auth-store.ts's own comment on
+  // this class of bug); same fix already proven in production for
+  // apps/web-admin/app/(console)/billing/layout.tsx.
   if (!hasBootstrapped) return null;
   if (platformRole !== 'support') notFound();
 

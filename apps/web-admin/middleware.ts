@@ -9,6 +9,11 @@ const PUBLIC_PATHS = [
   '/set-password',
   '/api/auth',
   '/api/health',
+  // E20 — reached before a session exists (SSO callback hand-off, error
+  // page, owner emergency access).
+  '/sso/complete',
+  '/sso/error',
+  '/sso/break-glass',
 ];
 
 /**
@@ -42,8 +47,10 @@ export function middleware(request: NextRequest) {
     apiOrigin: env.NEXT_PUBLIC_API_URL,
     reportOnly: env.CSP_REPORT_ONLY,
   });
-  for (const [key, value] of Object.entries(cspHeaders)) response.headers.set(key, value);
-  for (const [key, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(key, value);
+  for (const [key, value] of Object.entries(cspHeaders))
+    response.headers.set(key, value);
+  for (const [key, value] of Object.entries(SECURITY_HEADERS))
+    response.headers.set(key, value);
   return response;
 }
 

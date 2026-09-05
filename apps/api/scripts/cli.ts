@@ -1,36 +1,83 @@
 /**
- * Generic CLI dispatcher — `pnpm --filter api cli <command> [...args]`.
- * Add a case per command as they're needed; each command owns its own args.
+ * General-purpose operator CLI: `pnpm --filter api cli <command> [...args]`.
+ * Bootstraps a minimal Nest application context per command family (see
+ * BillingCliModule) and exits. Currently one command family: billing.
  */
-import { config as loadDotenv } from 'dotenv';
+import { config } from 'dotenv';
 import { resolve } from 'node:path';
 
-// Per-worktree overrides first (.env, written by scripts/epic start), then
-// repo defaults — same precedence as packages/db/scripts/prisma-with-env.cjs.
-// Without this, commands using @verifynng/config's loadEnv() (which only
-// reads process.env, it never sources .env itself) silently fall back to
-// every zod schema default — found the hard way running this exact command:
-// SMTP_PORT resolved to the schema's default 1025 instead of this
-// worktree's actual offset Mailpit port, and the connection just refused.
-loadDotenv({ path: resolve(__dirname, '../../../.env') });
-loadDotenv({ path: resolve(__dirname, '../../../.env.example') });
+process.env.WORKER_INLINE = process.env.WORKER_INLINE ?? 'false';
 
-const command = process.argv[2];
-const rest = process.argv.slice(3);
+// Per-worktree overrides first (.env, written by scripts/epic start), then repo defaults.
+config({ path: resolve(__dirname, '../../../.env') });
+config({ path: resolve(__dirname, '../../../.env.example') });
 
-async function main() {
-  switch (command) {
-    case 'support:simulate-inbound': {
-      process.argv = [process.argv[0], process.argv[1], ...rest];
-      await import('../src/modules/support/mail/simulate-inbound.command.js');
-      break;
+import { NestFactory } from '@nestjs/core';
+import { prisma } from '@verifynng/db';
+import { BillingCliModule } from '../src/modules/billing/billing-cli.module';
+import { InvoiceService } from '../src/modules/billing/invoice.service';
+
+function parseArg(name: string): string | undefined {
+  const prefix = `--${name}=`;
+  const inline = process.argv.find((a) => a.startsWith(prefix));
+  if (inline) return inline.slice(prefix.length);
+  const idx = process.argv.indexOf(`--${name}`);
+  return idx >= 0 ? process.argv[idx + 1] : undefined;
+}
+
+async function main(): Promise<void> {
+  const command = process.argv[2];
+  if (!command) {
+    console.error('usage: cli <command> [...args]');
+    process.exitCode = 1;
+    return;
+  }
+
+  // E18: self-contained command — bootstraps itself, no Nest context needed.
+  if (command === 'support:simulate-inbound') {
+    process.argv = [process.argv[0], process.argv[1], ...process.argv.slice(3)];
+    await import('../src/modules/support/mail/simulate-inbound.command.js');
+    return;
+  }
+
+  const app = await NestFactory.createApplicationContext(BillingCliModule, {
+    logger: ['error', 'warn'],
+  });
+
+  try {
+    switch (command) {
+      case 'billing:run-invoices': {
+        const tenantSlug = parseArg('tenant');
+        const period = parseArg('period');
+        if (!tenantSlug || !period) {
+          console.error(
+            'usage: cli billing:run-invoices --tenant <slug> --period <YYYY-MM>',
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const tenant = await prisma.tenant.findUniqueOrThrow({
+          where: { slug: tenantSlug },
+        });
+        const invoices = app.get(InvoiceService);
+        const invoice = await invoices.generateForPeriod(tenant.id, period);
+        const issued = await invoices.issue(invoice.id);
+        const full = await invoices.getForTenant(tenant.id, issued.id);
+        console.log(JSON.stringify(full));
+        break;
+      }
+      default:
+        console.error(`unknown command: ${command}`);
+        process.exitCode = 1;
     }
-    default:
-      console.error(
-        `Unknown cli command: ${command ?? '(none)'}\nAvailable: support:simulate-inbound`,
-      );
-      process.exit(1);
+  } finally {
+    await app.close();
   }
 }
 
-main();
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

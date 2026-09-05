@@ -58,9 +58,26 @@ export async function loginAs(
 }
 
 /**
- * TODO(E20): SSO login stub.
+ * Drives the real SSO login flow against `fake-oidc`: `/login` → fill the
+ * Organisation field → **Continue with SSO** → fake-oidc's login page (one
+ * button per seeded user, see `tools/fakes/oidc/login.html`) → back through
+ * `/sso/complete`. Resolves once the redirect lands somewhere other than
+ * `/login` or `/sso/*` — a rejection (`/sso/error`) or an MFA challenge
+ * (`/login/mfa`) both count as "the flow finished", so callers that expect
+ * either of those should assert on `page.url()` themselves afterward.
  */
-export async function loginViaSso(page: Page): Promise<void> {
-  // TODO(E20): implement SSO login via fake-oidc
-  await page.goto('/');
+export async function loginViaSso(
+  page: Page,
+  fakeUser: string,
+  tenantSlug = 'ivoryglow',
+): Promise<void> {
+  await page.goto('/login');
+  await page.locator('#tenant').fill(tenantSlug);
+  await page.getByRole('button', { name: /continue with sso/i }).click();
+  await page.getByRole('button', { name: fakeUser, exact: true }).click();
+  await page.waitForURL(
+    (url) =>
+      !url.pathname.startsWith('/login') && url.pathname !== '/sso/complete',
+    { timeout: 15_000 },
+  );
 }

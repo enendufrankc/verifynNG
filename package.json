@@ -27,6 +27,8 @@
     "seed:lint": "echo 'TODO(E21): seed privacy scanner — placeholder'",
     "docs:check-links": "node scripts/docs-check-links.mjs",
     "notifications:preview": "pnpm --filter @verifynng/api notifications:preview",
+    "api:openapi:generate": "pnpm --filter @verifynng/api run public-api:openapi:generate",
+    "api:openapi:check": "pnpm --filter @verifynng/api run public-api:openapi:check",
     "prepare": "husky"
   },
   "devDependencies": {

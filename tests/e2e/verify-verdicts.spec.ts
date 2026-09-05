@@ -75,18 +75,11 @@ test.describe('E09 verdicts @e09', () => {
     );
     expect(blocking).toEqual([]);
   });
-
-  // Last on purpose: this exhausts the per-IP/per-code rate limit for the
-  // next ~60s, which would make any verdict request after it look
-  // rate-limited too — nothing in this file runs after it.
-  test('rate-limited — too many attempts, no crash', async ({
-    page,
-    request,
-  }) => {
-    for (let i = 0; i < 70; i++) {
-      await request.get(`/v/${fixtures.tier1Ok}`);
-    }
-    await page.goto(`/v/${fixtures.tier1Ok}`);
-    await expect(page.locator('h1')).toHaveText('Too many checks');
-  });
 });
+
+// The rate-limit-exhaustion assertion lives in verify-rate-limited.spec.ts,
+// run by its own `web-verify-rate-limit` Playwright project (depends on both
+// web-verify-desktop and web-verify-mobile) — see that file and
+// playwright.config.ts for why: it deliberately exhausts the shared per-IP
+// budget every browser-driven verify spec relies on, so it must run only
+// after everything else that needs a working budget has finished.

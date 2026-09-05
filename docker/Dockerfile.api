@@ -9,6 +9,7 @@ COPY packages/config/package.json packages/config/
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/db/prisma/schema.prisma packages/db/prisma/schema.prisma
+COPY packages/page-schema/package.json packages/page-schema/
 COPY apps/api/package.json apps/api/
 
 RUN pnpm install --frozen-lockfile
@@ -17,6 +18,7 @@ COPY packages/core/ packages/core/
 COPY packages/config/ packages/config/
 COPY packages/core/ packages/core/
 COPY packages/db/ packages/db/
+COPY packages/page-schema/ packages/page-schema/
 COPY apps/api/ apps/api/
 COPY content/ content/
 COPY tsconfig.base.json ./
@@ -27,6 +29,7 @@ RUN pnpm --filter @verifynng/db prisma:generate
 RUN pnpm --filter @verifynng/core build
 RUN pnpm --filter @verifynng/config build
 RUN pnpm --filter @verifynng/core build
+RUN pnpm --filter @verifynng/page-schema build
 RUN pnpm --filter @verifynng/db build
 RUN pnpm --filter @verifynng/api build
 
