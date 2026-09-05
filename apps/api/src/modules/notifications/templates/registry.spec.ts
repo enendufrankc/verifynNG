@@ -90,6 +90,19 @@ const samples: { [T in TemplateId]: TemplateData[T] } = {
     reason: 'Card declined',
     retryUrl: 'https://example.test/invoices/INV-001/retry',
   },
+  'invoice.due': {
+    invoiceNumber: 'INV-001',
+    amount: '₦10,000',
+    dueDate: '2026-09-29',
+    dashboardUrl: 'https://example.test/invoices/INV-001',
+  },
+  'subscription.restricted': {
+    reason: 'dunning_exhausted',
+    dashboardUrl: 'https://example.test/billing',
+  },
+  'subscription.reactivated': {
+    at: '2026-08-29T00:00:00.000Z',
+  },
   'password.reset': {
     resetUrl: 'https://example.test/reset/token',
     expiresIn: '30 minutes',

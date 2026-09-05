@@ -54,6 +54,25 @@ export const queryKeys = {
     detail: (deliveryId: string) =>
       ['oem-portal', 'detail', deliveryId] as const,
   },
+  billing: {
+    plans: () => ['billing', 'plans'] as const,
+    subscription: (tenantId: string) =>
+      ['billing', 'subscription', tenantId] as const,
+    status: (tenantId: string) => ['billing', 'status', tenantId] as const,
+    usageVsPlan: (tenantId: string) =>
+      ['billing', 'usage-vs-plan', tenantId] as const,
+    changePlanPreview: (tenantId: string, planCode: string) =>
+      ['billing', 'change-plan-preview', tenantId, planCode] as const,
+    invoices: (tenantId: string) => ['billing', 'invoices', tenantId] as const,
+    invoice: (tenantId: string, invoiceId: string) =>
+      ['billing', 'invoice', tenantId, invoiceId] as const,
+    paymentMethods: (tenantId: string) =>
+      ['billing', 'payment-methods', tenantId] as const,
+    platformSubscriptions: (filters: string) =>
+      ['billing', 'platform-subscriptions', filters] as const,
+    supportInvoices: (tenantId: string) =>
+      ['billing', 'support-invoices', tenantId] as const,
+  },
   analytics: {
     overview: (tenantId: string, range: string) =>
       ['analytics', 'overview', tenantId, range] as const,

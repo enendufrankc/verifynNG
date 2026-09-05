@@ -78,6 +78,26 @@ describe('Webhook endpoints (integration)', () => {
       slug: a.tenant.slug,
     });
     sharedTenantIds.push(a.tenant.id);
+    // The guard's policy-acceptance check also runs on the shared prisma
+    // connection, and the E03/E19 migrations seed AUP/ToS PolicyDocument rows
+    // into every database — mirror the owner's acceptances alongside the
+    // tenant mirror above, or every owner write 403s policy_acceptance_required.
+    const policyDocs = await sharedPrisma.policyDocument.findMany({
+      where: { kind: { in: ['aup', 'tos'] }, effectiveFrom: { lte: new Date() } },
+      orderBy: { version: 'desc' },
+    });
+    const latestByKind = new Map<string, (typeof policyDocs)[number]>();
+    for (const d of policyDocs)
+      if (!latestByKind.has(d.kind)) latestByKind.set(d.kind, d);
+    for (const d of latestByKind.values())
+      await sharedPrisma.policyAcceptance.create({
+        data: {
+          tenantId: a.tenant.id,
+          userId: a.owner.user.id,
+          kind: d.kind,
+          version: d.version,
+        },
+      });
     return { tenantId: a.tenant.id, auth: `Bearer ${a.owner.accessToken}` };
   }
 

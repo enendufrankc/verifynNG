@@ -1,6 +1,10 @@
 import type { APIRequestContext } from '@playwright/test';
 
-const MAILPIT_API = process.env.MAILPIT_API_URL ?? 'http://localhost:8025/api';
+// docker/compose.yml exposes Mailpit's UI/API port as MAILPIT_UI_PORT (per-
+// worktree offset by scripts/epic start), not a full URL — MAILPIT_API_URL
+// was never actually set anywhere, so this always silently fell back to the
+// unoffset default and failed to connect on any worktree but the main one.
+const MAILPIT_API = `http://localhost:${process.env.MAILPIT_UI_PORT ?? '8025'}/api`;
 
 export interface MailpitMatch {
   id: string;

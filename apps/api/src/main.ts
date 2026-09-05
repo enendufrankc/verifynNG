@@ -23,6 +23,13 @@ async function bootstrap() {
   const env = loadEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    // E15: POST /v1/billing/webhooks/paystack needs the exact raw bytes for
+    // HMAC-SHA512 signature verification — re-serialising the parsed JSON
+    // body (as E14's fake-mail/resend webhooks do) isn't guaranteed to
+    // byte-match what a real provider signed. This populates `req.rawBody`
+    // for every route without disabling the default JSON body parser
+    // elsewhere.
+    rawBody: true,
   });
   app.useLogger(app.get(AppLogger));
   setPublicApiApp(app);

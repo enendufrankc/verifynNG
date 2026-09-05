@@ -90,6 +90,13 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${FAKE_PAY_PORT:-4102}:4102'
+    environment:
+      FAKE_PAY_SECRET: fake_sk_test
+      FAKE_PAY_WEBHOOK_URL: http://api:4000/v1/billing/webhooks/paystack
+      # Browser-reachable — the host port a worktree's own .env may remap
+      # (scripts/epic start), never the container-internal 4102 the api
+      # service uses to reach this one.
+      FAKE_PAY_PUBLIC_URL: http://localhost:${FAKE_PAY_PORT:-4102}
     healthcheck:
       test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4102/health']
       interval: 5s
@@ -284,6 +291,18 @@ services:
       REPORTS_BUCKET_INCOMING: reports-incoming
       REPORTS_BUCKET: reports
       REPORT_MAX_INPUT_PIXELS: '40000000'
+      # ── E15 Billing & Entitlements ──
+      PAYMENT_GATEWAY: fake
+      PAYSTACK_BASE_URL: http://fake-pay:4102
+      PAYSTACK_SECRET_KEY: fake_sk_test
+      PAYSTACK_PUBLIC_KEY: fake_pk_test
+      FAKE_PAY_URL: http://fake-pay:4102
+      FAKE_PAY_SECRET: fake_sk_test
+      BILLING_TAX_RATE_BPS_NGN: '0'
+      BILLING_TAX_RATE_BPS_GBP: '0'
+      BILLING_DUNNING_SCHEDULE_DAYS: '1,3,7'
+      BILLING_CLOCK_SKEW_SECONDS: '0'
+      BILLING_PAYMENT_METHOD_ENC_KEY: 48dedaff69303776b73be2b402894ed937b6d90fd521675785c1df44bd7bbd09
       # ── E16 Public API & Webhooks ──
       PUBLIC_API_DEFAULT_RPM: '120'
       PUBLIC_API_MAX_KEYS_DEFAULT: '10'
@@ -351,6 +370,26 @@ services:
       VERIFY_BASE_URL: http://localhost:3000
       WORKER: 'true'
       WORKER_INLINE: 'false'
+      APP_BASE_URL: http://localhost:${WEB_ADMIN_PORT:-3001}
+      # ── E15 Billing & Entitlements — must match the `api` service's
+      # values exactly: DunningService's chargeAuthorisation runs here, and
+      # a mismatched BILLING_PAYMENT_METHOD_ENC_KEY makes every stored
+      # PaymentMethod undecryptable in this process (found live: the key
+      # was missing here entirely, silently falling back to the schema's
+      # all-zeros default while `api` had a real one — every dunning
+      # auto-charge failed with an AES-GCM auth-tag error before ever
+      # reaching the gateway). ──
+      PAYMENT_GATEWAY: fake
+      PAYSTACK_BASE_URL: http://fake-pay:4102
+      PAYSTACK_SECRET_KEY: fake_sk_test
+      PAYSTACK_PUBLIC_KEY: fake_pk_test
+      FAKE_PAY_URL: http://fake-pay:4102
+      FAKE_PAY_SECRET: fake_sk_test
+      BILLING_TAX_RATE_BPS_NGN: '0'
+      BILLING_TAX_RATE_BPS_GBP: '0'
+      BILLING_DUNNING_SCHEDULE_DAYS: '1,3,7'
+      BILLING_CLOCK_SKEW_SECONDS: '0'
+      BILLING_PAYMENT_METHOD_ENC_KEY: 48dedaff69303776b73be2b402894ed937b6d90fd521675785c1df44bd7bbd09
       # ── E16 Public API & Webhooks ── mirrors the api service's block so the
       # webhooks BullMQ worker behaves the same regardless of which process
       # ends up consuming the queue.

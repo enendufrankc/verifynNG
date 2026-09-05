@@ -37,6 +37,7 @@ import { RetentionModule } from './modules/retention/retention.module';
 import { IncidentsModule } from './modules/incidents/incidents.module';
 import { UnitsModule } from './modules/units/units.module';
 import { AnomalyModule } from './modules/anomaly/anomaly.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { ProductPagesModule } from './modules/product-pages/product-pages.module';
 import { EntitlementsModule } from './modules/entitlements/entitlements.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
@@ -91,6 +92,7 @@ import { SsoModule } from './modules/sso/sso.module';
     IncidentsModule,
     UnitsModule,
     AnomalyModule,
+    BillingModule,
     ProductPagesModule,
     EntitlementsModule,
     ApiKeysModule,

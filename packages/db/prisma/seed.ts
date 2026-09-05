@@ -8,6 +8,8 @@ import { seedPolicies } from './seed/policies';
 import { seedLegalDocuments } from './seed/legal-documents';
 import { seedAnalyticsFixtures } from './seed/e12-analytics-fixtures';
 import { seedOemDelivery } from './seed/e05-oem';
+import { seedPlans } from '../src/plan-catalogue';
+import { seedSubscriptions } from './seed/plans';
 import { seedProductPages } from './seed/product-pages';
 
 const prisma = new PrismaClient();
@@ -243,6 +245,9 @@ async function main() {
   // ── E05: OEM Manifest Delivery — dev fixtures ────────────────
   await seedOemDelivery(prisma);
 
+  // ── E15: Billing & Entitlements — plan catalogue + trialing subscriptions ──
+  await seedPlans(prisma);
+  await seedSubscriptions(prisma);
   // ── E10: Product Pages — IVORY GLOW seed content (AC1 fixture) ──
   await seedProductPages(prisma, tenant.id, productIds, owner.id);
 }

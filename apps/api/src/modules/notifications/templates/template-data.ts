@@ -12,6 +12,9 @@ export type TemplateId =
   | 'invoice.issued'
   | 'invoice.paid'
   | 'invoice.failed'
+  | 'invoice.due'
+  | 'subscription.restricted'
+  | 'subscription.reactivated'
   | 'password.reset'
   | 'mfa.recovery'
   | 'notification.test'
@@ -113,6 +116,21 @@ export interface TemplateData {
     amount: string;
     reason: string;
     retryUrl: string;
+  }>;
+  // ── E15 Billing & Entitlements — E14 change request fulfilled by E15,
+  // since it's the epic that needs them (see CROSS-EPIC-REQUESTS.md) ──
+  'invoice.due': NoCodeKeys<{
+    invoiceNumber: string;
+    amount: string;
+    dueDate: string;
+    dashboardUrl: string;
+  }>;
+  'subscription.restricted': NoCodeKeys<{
+    reason: string;
+    dashboardUrl: string;
+  }>;
+  'subscription.reactivated': NoCodeKeys<{
+    at: string;
   }>;
   'password.reset': NoCodeKeys<{
     resetUrl: string;
