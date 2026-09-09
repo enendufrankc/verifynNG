@@ -54,6 +54,8 @@ services:
       OEM_PORTAL_BASE_URL: https://admin.verifyproduct.app
       PAGES_PUBLIC_BASE_URL: https://verifyproduct.app
       SSO_CALLBACK_URL: https://api.verifyproduct.app/auth/sso/callback
+      CORS_ORIGINS_ADMIN: https://admin.verifyproduct.app
+      CORS_ORIGINS_VERIFY: https://verifyproduct.app,https://www.verifyproduct.app
       # Mail: Resend adapter (E14) instead of Mailpit.
       MAIL_PROVIDER: resend
       RESEND_API_KEY: ${RESEND_API_KEY:?}
