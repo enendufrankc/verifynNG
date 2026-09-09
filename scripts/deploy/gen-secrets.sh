@@ -15,6 +15,7 @@ CORE_SECRET=$(hex32)
 cat <<EOF
 DEPLOYMENT_ENV=production
 JWT_KEYS=${KID}:$(hex32)
+JWT_ACTIVE_KID=${KID}
 CORE_KEYS=${KID}:${CORE_SECRET}
 CORE_ACTIVE_KID=${KID}
 CORE_KEYS_JSON='{"active":"${KID}","keys":{"${KID}":"${CORE_SECRET}"}}'
