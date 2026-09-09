@@ -33,6 +33,7 @@ services:
       # defaults once DEPLOYMENT_ENV=production, so a missing value here is a
       # boot error, not a silent downgrade.
       JWT_KEYS: ${JWT_KEYS:?}
+      JWT_ACTIVE_KID: ${JWT_ACTIVE_KID:?}
       CORE_KEYS: ${CORE_KEYS:?}
       CORE_ACTIVE_KID: ${CORE_ACTIVE_KID:?}
       CORE_KEYS_JSON: ${CORE_KEYS_JSON:?}
