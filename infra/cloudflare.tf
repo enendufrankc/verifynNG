@@ -24,6 +24,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "app" {
       service  = "http://web-verify:3000"
     }
     ingress_rule {
+      hostname = "www.${var.domain}"
+      service  = "http://web-verify:3000"
+    }
+    ingress_rule {
       hostname = "admin.${var.domain}"
       service  = "http://web-admin:3001"
     }
@@ -66,4 +70,12 @@ resource "cloudflare_r2_bucket" "backups" {
   account_id = var.cloudflare_account_id
   name       = "verifynng-backups"
   location   = "WEUR"
+}
+
+resource "cloudflare_record" "www" {
+  zone_id = data.cloudflare_zone.main.id
+  name    = "www"
+  type    = "CNAME"
+  content = "${cloudflare_zero_trust_tunnel_cloudflared.app.id}.cfargotunnel.com"
+  proxied = true
 }

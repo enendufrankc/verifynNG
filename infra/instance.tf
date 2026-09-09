@@ -61,7 +61,7 @@ resource "oci_core_instance" "app" {
   # Replacing the VM must never be a silent side effect of an apply — it holds
   # the database. Recreate only via explicit taint after backups are verified.
   lifecycle {
-    prevent_destroy = false # flip back to true after first successful boot
+    prevent_destroy = true
     ignore_changes  = [source_details, metadata]
   }
 }
