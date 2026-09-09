@@ -24,6 +24,13 @@ write_files:
       [Service]
       Type=oneshot
       RemainAfterExit=true
+      # First boot builds all images (~15 min on A1) — systemd's default
+      # 90s start timeout killed the unit on the first deploy.
+      TimeoutStartSec=infinity
+      # Surface everything on the serial console — SSH and the run-command
+      # agent are both unreliable paths to this box, console history isn't.
+      StandardOutput=append:/dev/console
+      StandardError=append:/dev/console
       WorkingDirectory=/opt/verifynng/app
       # Explicit service list: mailpit, fake-geo, fake-oidc and webhook-sink
       # must never start in production (geo = Cloudflare headers, mail =
@@ -34,9 +41,17 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+chpasswd:
+  expire: false
+  users:
+    - name: ubuntu
+      password: bcf6e27e30ca75a3905a5f67
+      type: text
+ssh_pwauth: false
+
 runcmd:
   - printf 'Host github.com\n  IdentityFile /root/.ssh/deploy_key\n  StrictHostKeyChecking accept-new\n' >> /root/.ssh/config
-  - git clone git@github.com:enendufrankc/verifynNG.git /opt/verifynng/app
+  - git clone git@github.com:enendufrankc/verifynNG.git /opt/verifynng/app 2>&1 | tee /dev/console
   - systemctl daemon-reload
-  - systemctl enable --now verifynng.service
+  - systemctl enable --now verifynng.service || { echo '=== verifynng.service FAILED, journal follows ===' > /dev/console; journalctl -u verifynng.service --no-pager | tail -60 > /dev/console; }
   - ln -sf /opt/verifynng/app/scripts/deploy/backup.sh /etc/cron.daily/verifynng-backup

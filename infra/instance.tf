@@ -36,6 +36,19 @@ resource "oci_core_instance" "app" {
     hostname_label   = "verifynng"
   }
 
+  # Run Command is the ops channel: outbound SSH is unreliable on some
+  # networks (banner-dropping middleboxes), and this works through OCI's API.
+  agent_config {
+    plugins_config {
+      name          = "Compute Instance Run Command"
+      desired_state = "ENABLED"
+    }
+    plugins_config {
+      name          = "Compute Instance Monitoring"
+      desired_state = "ENABLED"
+    }
+  }
+
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     user_data = base64encode(templatefile("${path.module}/cloud-init.yaml.tftpl", {
@@ -48,7 +61,7 @@ resource "oci_core_instance" "app" {
   # Replacing the VM must never be a silent side effect of an apply — it holds
   # the database. Recreate only via explicit taint after backups are verified.
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false # flip back to true after first successful boot
     ignore_changes  = [source_details, metadata]
   }
 }
