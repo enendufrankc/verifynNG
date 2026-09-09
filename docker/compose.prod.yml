@@ -54,6 +54,8 @@ services:
       # Mail: Resend adapter (E14) instead of Mailpit.
       MAIL_PROVIDER: resend
       RESEND_API_KEY: ${RESEND_API_KEY:?}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?}
       # Geo comes from cf-ipcountry/cf-ipcity headers (verify.controller);
       # fake-geo is not started, and this URL is never reached.
       GEOIP_PROVIDER: fake
@@ -79,12 +81,28 @@ services:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:?}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?}
 
+  # Base minio-init hardcodes minioadmin; production rotates the root creds.
+  # Also creates the buckets newer epics default to (reports, pages).
+  minio-init:
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:?} ${S3_SECRET_KEY:?};
+      mc mb local/verifynng || true;
+      mc mb local/dsar-exports || true;
+      mc ilm rule add --expire-days 7 local/dsar-exports || true;
+      mc mb local/backups || true;
+      mc mb local/reports || true;
+      mc mb local/reports-incoming || true;
+      mc mb local/pages || true;
+      "
+
   db-migrate:
-    environment:
-      DEPLOYMENT_ENV: production
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?}@postgres:5432/verifynng?schema=public
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:?}
+    environment: *prod_api_env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
 
   web-verify:
     restart: unless-stopped
