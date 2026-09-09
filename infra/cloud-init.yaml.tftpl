@@ -1,0 +1,42 @@
+#cloud-config
+package_update: true
+packages:
+  - git
+  - docker.io
+  - docker-compose-v2
+
+write_files:
+  - path: /root/.ssh/deploy_key
+    permissions: "0600"
+    content: |
+      ${indent(6, github_deploy_key)}
+  - path: /opt/verifynng/.env.production
+    permissions: "0600"
+    content: |
+      ${indent(6, production_env)}
+      TUNNEL_TOKEN=${tunnel_token}
+  - path: /etc/systemd/system/verifynng.service
+    content: |
+      [Unit]
+      Description=verifynNG stack
+      Requires=docker.service
+      After=docker.service
+      [Service]
+      Type=oneshot
+      RemainAfterExit=true
+      WorkingDirectory=/opt/verifynng/app
+      # Explicit service list: mailpit, fake-geo, fake-oidc and webhook-sink
+      # must never start in production (geo = Cloudflare headers, mail =
+      # Resend, SSO = real IdPs). fake-pay/fake-captcha stay: launch posture
+      # until Paystack/Turnstile are enabled.
+      ExecStart=/usr/bin/docker compose -f docker/compose.yml -f docker/compose.prod.yml --env-file /opt/verifynng/.env.production up -d --build postgres redis minio minio-init db-migrate api api-worker web-verify web-admin fake-pay fake-captcha fake-sms cloudflared
+      ExecStop=/usr/bin/docker compose -f docker/compose.yml -f docker/compose.prod.yml --env-file /opt/verifynng/.env.production down
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - printf 'Host github.com\n  IdentityFile /root/.ssh/deploy_key\n  StrictHostKeyChecking accept-new\n' >> /root/.ssh/config
+  - git clone git@github.com:enendufrankc/verifynNG.git /opt/verifynng/app
+  - systemctl daemon-reload
+  - systemctl enable --now verifynng.service
+  - ln -sf /opt/verifynng/app/scripts/deploy/backup.sh /etc/cron.daily/verifynng-backup
