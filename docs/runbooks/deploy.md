@@ -59,6 +59,26 @@ Then the real smoke: log into admin, mint a 5-unit batch, scan/enter one
 tier-1 code on verifyproduct.app → verdict `ok`; check the batch-minted email
 arrived (Resend dashboard → Logs).
 
+## Operating the VM without SSH (serial console)
+
+Outbound SSH is unreliable from some networks (banner-dropping middleboxes)
+and Ubuntu's Oracle agent ignores Run Command. The dependable path is the
+**serial console**: `oci compute instance-console-connection create` with an
+RSA key (ed25519 is rejected), then SSH via the printed ProxyCommand (port
+443) and log in as `ubuntu` with the console password from cloud-init
+(`~/.verifynng-console-pw` on the deploy machine). `/tmp/run-console.sh`
+pattern: expect-driven, one command per call.
+
+Moving files onto the VM: upload to the R2 backups bucket, then pull with the
+aws-cli container using the R2 creds already in `.env.production` (this is
+how the 10k pre-minted batch was imported: `scripts/deploy/import-preminted.mjs`
+copied into the api container and run from `/app/apps/api`).
+
+Cutover gotchas hit on 2026-09-09: the landing Worker's custom domains had to
+be deleted via the Workers API (`wrangler triggers deploy` does not remove
+them) before the tunnel CNAMEs could be created, and the edge cache served the
+old page until a `purge_everything`.
+
 ## Update to a new version
 
 ```bash
