@@ -58,10 +58,11 @@ export default function BatchesPage() {
     enabled: !!activeTenantId,
   });
 
-  const productName = (id: string) =>
-    productsQuery.data?.find((p) => p.id === id)?.sku ?? id.slice(0, 8);
-  const oemName = (id: string) =>
-    oemsQuery.data?.find((o) => o.id === id)?.name ?? id.slice(0, 8);
+  // Both ids can be null (imported / legacy batches) — never .slice() on null.
+  const productName = (id: string | null) =>
+    productsQuery.data?.find((p) => p.id === id)?.sku ?? id?.slice(0, 8) ?? '—';
+  const oemName = (id: string | null) =>
+    oemsQuery.data?.find((o) => o.id === id)?.name ?? id?.slice(0, 8) ?? '—';
 
   const columns: ColumnDef<Batch>[] = [
     {
