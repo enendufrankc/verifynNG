@@ -436,6 +436,8 @@ services:
       NEXT_PUBLIC_API_URL: http://api:4000
       NEXT_PUBLIC_MINIO_PUBLIC_URL: http://localhost:${MINIO_PORT:-9000}
       NEXT_PUBLIC_DEFAULT_TENANT: ivoryglow
+      # E09 landing-page links target the public tenant console.
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:${WEB_ADMIN_PORT:-3001}}
       HOSTNAME: 0.0.0.0
       # ── E10 Product Pages ── browser-facing origin for canonical URLs,
       # sitemap <loc>, and JSON-LD (never used for container-to-container
