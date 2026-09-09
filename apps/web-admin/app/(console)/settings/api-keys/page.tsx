@@ -1,6 +1,7 @@
-import { KeyRound } from 'lucide-react';
-import { ModuleEmptyState } from '@/components/module-empty-state';
+import { redirect } from 'next/navigation';
 
-export default function SettingsApiKeysPage() {
-  return <ModuleEmptyState icon={KeyRound} title="API keys" epic="E16" />;
+// E16 built API keys at /api-keys (where the nav points); this path was an
+// E11 scaffold stub.
+export default function LegacyApiKeysPage() {
+  redirect('/api-keys');
 }
