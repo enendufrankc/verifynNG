@@ -311,7 +311,20 @@ export class VerifyController {
         country: string | null;
         city: string | null;
       } | null = null;
-      if (ip) {
+      // Behind the Cloudflare Tunnel (production) the edge has already
+      // resolved the visitor's location: cf-ipcountry is on every proxied
+      // request, cf-ipcity when the "visitor location headers" managed
+      // transform is enabled. Prefer those — fake-geo doesn't run in
+      // production and its random cities would poison anomaly signals.
+      // Absent (local/dev), fall through to the GeoIpPort as before.
+      const cfCountry = headers['cf-ipcountry'];
+      if (typeof cfCountry === 'string' && cfCountry && cfCountry !== 'XX') {
+        const cfCity = headers['cf-ipcity'];
+        geoResult = {
+          country: cfCountry,
+          city: typeof cfCity === 'string' && cfCity ? cfCity : null,
+        };
+      } else if (ip) {
         try {
           const looked = await this.geoIp.lookup(ip);
           geoResult = looked
