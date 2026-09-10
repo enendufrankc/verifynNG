@@ -62,13 +62,15 @@ export class TenantLifecycleService {
           statusChangedAt: new Date(),
         },
       });
-      // Keyed by the caller's own principal id (the stub's x-user-id, until
-      // E02 ships real accounts) so policy acceptances and memberships
-      // recorded here line up with the id every later request already sends
-      // — a client never learns a server-generated id after this call.
+      // Keyed by the caller's own principal id so policy acceptances and
+      // memberships recorded here line up with the id every later request
+      // already sends — a client never learns a server-generated id after
+      // this call. The caller is a real registered account in the self-serve
+      // flow, so `update` leaves their own name alone: only a synthesised
+      // row (no prior account) is named after the business.
       const owner = await tx.user.upsert({
         where: { id: input.ownerUserId },
-        update: { displayName: input.name },
+        update: {},
         create: {
           id: input.ownerUserId,
           email: input.ownerEmail ?? `${input.ownerUserId}@local.verifyng`,

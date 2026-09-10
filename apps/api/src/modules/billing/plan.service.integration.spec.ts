@@ -24,11 +24,12 @@ describe('PlanService integration (real Postgres)', () => {
     await disconnectTestHelper();
   });
 
-  it('seeds the four-plan catalogue', async () => {
+  it('seeds the five-plan catalogue', async () => {
     await plans.seed();
     const list = await plans.list();
     expect(list.map((p) => p.code).sort()).toEqual([
       'enterprise',
+      'free',
       'free-trial',
       'growth',
       'starter',
@@ -39,6 +40,7 @@ describe('PlanService integration (real Postgres)', () => {
     await plans.seed();
     const list = await plans.list();
     expect(list.map((p) => p.code)).toEqual([
+      'free',
       'free-trial',
       'starter',
       'growth',
@@ -61,6 +63,6 @@ describe('PlanService integration (real Postgres)', () => {
     await plans.seed();
     await plans.seed();
     const list = await plans.list();
-    expect(list).toHaveLength(4);
+    expect(list).toHaveLength(5);
   });
 });
