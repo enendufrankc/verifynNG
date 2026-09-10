@@ -12,7 +12,7 @@ import { EventsService } from '../../common/events.service';
 import { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 import { IllegalSubscriptionTransition } from './errors';
 import { InvoiceService } from './invoice.service';
-import type { PlanFeatures } from './entitlement.service';
+import { hasUnitCeiling, type PlanFeatures } from './entitlement.service';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -275,10 +275,9 @@ export class SubscriptionService {
 
     const isUpgrade = targetPlan.sortOrder > sub.plan.sortOrder;
     let blockedByUnitsCap: { used: number; limit: number } | null = null;
-    if (!isUpgrade) {
+    if (!isUpgrade && hasUnitCeiling(targetPlan)) {
       const used = await this.prisma.unit.count({ where: { tenantId } });
-      const features = (targetPlan.features ?? {}) as PlanFeatures;
-      if (!features.customPricing && used > targetPlan.includedUnitsPerYear) {
+      if (used > targetPlan.includedUnitsPerYear) {
         blockedByUnitsCap = { used, limit: targetPlan.includedUnitsPerYear };
       }
     }
@@ -366,7 +365,7 @@ export class SubscriptionService {
     const isUpgrade = targetPlan.sortOrder > sub.plan.sortOrder;
 
     if (!isUpgrade) {
-      if (!opts.force) {
+      if (!opts.force && hasUnitCeiling(targetPlan)) {
         const used = await this.prisma.unit.count({ where: { tenantId } });
         if (used > targetPlan.includedUnitsPerYear) {
           throw new ConflictException({

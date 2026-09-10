@@ -54,6 +54,37 @@ describe('signup plan = free (real Postgres)', () => {
     return t.id;
   }
 
+  /** Real Unit rows (via a throwaway Batch) so a cap check exercises the
+   *  actual `prisma.unit.count` query rather than a stub. */
+  async function makeUnits(tenantId: string, count: number): Promise<void> {
+    const product = await prisma.product.create({
+      data: { tenantId, sku: `sku-${Math.random()}`, name: 'P' },
+    });
+    const batch = await prisma.batch.create({
+      data: {
+        tenantId,
+        productId: product.id,
+        count,
+        idempotencyKey: `idem-${Math.random()}`,
+        requestedBy: 'test',
+        watermark: 'w',
+        kid: 'k1',
+      },
+    });
+    for (let i = 0; i < count; i++) {
+      await prisma.unit.create({
+        data: {
+          tenantId,
+          batchId: batch.id,
+          tier1Code: `t1-${batch.id}-${i}`,
+          tier2Hash: `t2-${batch.id}-${i}`,
+          serial: i,
+          productId: product.id,
+        },
+      });
+    }
+  }
+
   beforeAll(async () => {
     const result = await createTestDatabase('subscription-signup-plan');
     prisma = result.prisma;
@@ -112,6 +143,70 @@ describe('signup plan = free (real Postgres)', () => {
     expect(tenantLifecycle.transition).not.toHaveBeenCalled();
     const after = await subscriptions.getForTenant(tenantId);
     expect(after?.status).toBe('active');
+  });
+
+  it('lets a trialing tenant move onto free however many units it has minted', async () => {
+    // The plan a brand is moved onto at launch, so this is the path the
+    // production cutover takes. `free` records its unlimited allowance as
+    // zero, which a naive cap check reads as "includes nothing".
+    const tenantId = await makeTenant();
+    const trial = await prisma.plan.findUniqueOrThrow({
+      where: { code: 'free-trial' },
+    });
+    const now = new Date();
+    await prisma.subscription.create({
+      data: {
+        tenantId,
+        planId: trial.id,
+        status: 'trialing',
+        currency: 'NGN',
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        trialEndsAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+    await makeUnits(tenantId, 3);
+
+    const preview = await subscriptions.previewChangePlan(tenantId, 'free');
+    expect(preview.blockedByUnitsCap).toBeNull();
+
+    await expect(
+      subscriptions.changePlan(tenantId, 'free'),
+    ).resolves.toBeDefined();
+  });
+
+  it('still warns before a downgrade onto a plan that really has a ceiling', async () => {
+    const tenantId = await makeTenant();
+    const growth = await prisma.plan.findUniqueOrThrow({
+      where: { code: 'growth' },
+    });
+    const now = new Date();
+    await prisma.subscription.create({
+      data: {
+        tenantId,
+        planId: growth.id,
+        status: 'active',
+        currency: 'NGN',
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+    await makeUnits(tenantId, 3);
+
+    const preview = await subscriptions.previewChangePlan(tenantId, 'starter');
+    expect(preview.blockedByUnitsCap).toBeNull();
+
+    // Starter includes 10,000 units a year; pretend this tenant is past it.
+    await prisma.plan.update({
+      where: { code: 'starter' },
+      data: { includedUnitsPerYear: 1 },
+    });
+    const overCap = await subscriptions.previewChangePlan(tenantId, 'starter');
+    expect(overCap.blockedByUnitsCap).toEqual({ used: 3, limit: 1 });
+    await prisma.plan.update({
+      where: { code: 'starter' },
+      data: { includedUnitsPerYear: growth.includedUnitsPerYear },
+    });
   });
 
   it('unlocks every paid feature and leaves minting uncapped', async () => {

@@ -22,6 +22,20 @@ export interface PlanLimits {
   maxApiKeys: number;
 }
 
+/**
+ * `includedUnitsPerYear: 0` means "no ceiling", not "nothing" — both `free`
+ * and `enterprise` use it, and `canMint` lets them mint without limit. Only a
+ * plan with a positive allowance that is not custom-priced is measured
+ * against that number.
+ */
+export function hasUnitCeiling(plan: {
+  includedUnitsPerYear: number;
+  features: unknown;
+}): boolean {
+  if (((plan.features ?? {}) as PlanFeatures).customPricing) return false;
+  return plan.includedUnitsPerYear > 0;
+}
+
 const DEFAULT_LIMITS: PlanLimits = { apiRateLimitPerMin: 60, maxApiKeys: 1 };
 
 /**

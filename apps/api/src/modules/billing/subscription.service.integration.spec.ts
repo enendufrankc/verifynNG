@@ -443,7 +443,10 @@ describe('SubscriptionService integration (real Postgres)', () => {
           name: 'Tiny',
           monthlyPriceNgnMinor: 100,
           monthlyPriceGbpMinor: 100,
-          includedUnitsPerYear: 0,
+          // A real ceiling, not 0 — a zero allowance means "no ceiling"
+          // (`free`, `enterprise`), which is what `canMint` has always done
+          // and what `hasUnitCeiling` now applies to the downgrade check.
+          includedUnitsPerYear: 1,
           includedScansPerMonth: 100,
           overageUnitPriceNgnMinor: 0,
           overageUnitPriceGbpMinor: 0,
@@ -453,14 +456,14 @@ describe('SubscriptionService integration (real Postgres)', () => {
           sortOrder: -1,
         },
       });
-      await makeUnits(tenantId, 1);
+      await makeUnits(tenantId, 2);
 
       const preview = await subscriptions.previewChangePlan(
         tenantId,
         tinyPlan.code,
       );
       expect(preview.direction).toBe('downgrade');
-      expect(preview.blockedByUnitsCap).toEqual({ used: 1, limit: 0 });
+      expect(preview.blockedByUnitsCap).toEqual({ used: 2, limit: 1 });
     });
   });
 });
