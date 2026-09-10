@@ -9,6 +9,7 @@ import { test, expect, type Page } from '@playwright/test';
  * routes and the existing success/error copy that the refresh must not change.
  */
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const DEV_PASSWORD = 'Passw0rd!Passw0rd!';
 const OWNER_EMAIL = 'owner@ivoryglow.local';
 const VIEWER_EMAIL = 'viewer@ivoryglow.local';
@@ -21,6 +22,40 @@ async function signIn(page: Page, email = OWNER_EMAIL): Promise<void> {
   await page.waitForURL((url) => !url.pathname.startsWith('/login'), {
     timeout: 15_000,
   });
+}
+
+/**
+ * `PolicyReacceptGuard` replaces the whole console body for an owner while a
+ * legal document awaits re-acceptance. `compliance.spec.ts` publishes such a
+ * version earlier in this project's run and leaves it unaccepted when it
+ * fails, which would otherwise make every assertion in this file depend on
+ * that spec's outcome. This clears it through the same API the interstitial's
+ * Accept button calls — the action a real owner takes — and changes no
+ * product behaviour.
+ */
+async function acceptPendingPolicies(
+  request: import('@playwright/test').APIRequestContext,
+): Promise<void> {
+  const login = await request.post(`${API_URL}/auth/login`, {
+    data: { email: OWNER_EMAIL, password: DEV_PASSWORD, tenant: 'ivoryglow' },
+  });
+  if (!login.ok()) return;
+  const { accessToken } = await login.json();
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const statusRes = await request.get(`${API_URL}/v1/legal/acceptance-status`, {
+    headers,
+  });
+  if (!statusRes.ok()) return;
+  const pending = (await statusRes.json()) as Array<{
+    kind: string;
+    version: string;
+  }>;
+  for (const doc of pending) {
+    await request.post(`${API_URL}/v1/legal/policies/accept`, {
+      headers,
+      data: { kind: doc.kind, version: doc.version },
+    });
+  }
 }
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
@@ -37,6 +72,10 @@ function uniqueSku(): string {
 }
 
 test.describe('E11 product owner UI', () => {
+  test.beforeAll(async ({ request }) => {
+    await acceptPendingPolicies(request);
+  });
+
   // eslint-disable-next-line no-empty-pattern
   test.beforeEach(({}, testInfo) => {
     test.skip(
