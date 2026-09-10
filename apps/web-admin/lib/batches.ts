@@ -14,7 +14,7 @@ export interface Batch {
   id: string;
   tenantId: string;
   productId: string;
-  oemId: string;
+  oemId: string | null;
   count: number;
   status: BatchStatus;
   idempotencyKey: string;
@@ -78,7 +78,7 @@ export function mintBatch(
   tenantPath: (path: string) => string,
   input: {
     productId: string;
-    oemId: string;
+    oemId: string | null;
     count: number;
     idempotencyKey: string;
     note?: string;

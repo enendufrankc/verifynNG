@@ -2,7 +2,7 @@
 
 |            |                                                                 |
 | ---------- | --------------------------------------------------------------- |
-| Status     | todo                                                            |
+| Status     | done                                                            |
 | Owner      | —                                                               |
 | Wave       | 4 (launch)                                                      |
 | Depends on | all wave-3 epics landed; owner sign-off for VM + email accounts |
