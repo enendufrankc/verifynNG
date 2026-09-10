@@ -114,7 +114,7 @@ export default function NewBatchPage() {
   );
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="space-y-s6 max-w-xl">
       <PageHeader
         title="Mint batch"
         description="Generate a new batch of tier-1/tier-2 unit codes."
@@ -123,77 +123,104 @@ export default function NewBatchPage() {
       <Form
         form={form}
         onSubmit={(values) => mintMutation.mutate(values)}
-        className="space-y-4"
+        className="space-y-s6"
       >
-        <FormField
-          label="Product"
-          htmlFor="mint-product"
-          error={form.formState.errors.productId?.message}
-          required
+        <div className="border-border bg-surface p-s5 sm:p-s6 space-y-s6 rounded-md border">
+          <section className="space-y-s5">
+            <h2 className="text-fg-muted text-xs font-semibold tracking-wider uppercase">
+              What to mint
+            </h2>
+
+            <FormField
+              label="Product"
+              htmlFor="mint-product"
+              error={form.formState.errors.productId?.message}
+              required
+            >
+              <Select
+                onValueChange={(value) => form.setValue('productId', value)}
+              >
+                <SelectTrigger id="mint-product">
+                  <SelectValue placeholder="Select a product" />
+                </SelectTrigger>
+                <SelectContent>
+                  {productOptions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.sku} — {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            <FormField
+              label="OEM"
+              htmlFor="mint-oem"
+              error={form.formState.errors.oemId?.message}
+              required
+            >
+              <Select onValueChange={(value) => form.setValue('oemId', value)}>
+                <SelectTrigger id="mint-oem">
+                  <SelectValue placeholder="Select an OEM" />
+                </SelectTrigger>
+                <SelectContent>
+                  {oemOptions.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </section>
+
+          <section className="border-border pt-s6 space-y-s5 border-t">
+            <h2 className="text-fg-muted text-xs font-semibold tracking-wider uppercase">
+              How many
+            </h2>
+
+            <FormField
+              label="Count"
+              htmlFor="mint-count"
+              error={form.formState.errors.count?.message}
+              required
+            >
+              <Input
+                id="mint-count"
+                type="number"
+                inputMode="numeric"
+                className="font-mono"
+                min={1}
+                max={MINT_MAX_COUNT}
+                {...form.register('count')}
+              />
+            </FormField>
+
+            {willRunInBackground && (
+              <div className="border-border bg-surface-sunken text-fg-muted gap-s2 p-s3 flex rounded-sm border text-sm">
+                <AlertTriangleIcon className="h-4 w-4 shrink-0" />
+                <span>
+                  Batches over {MINT_SYNC_MAX.toLocaleString()} units run in the
+                  background — you&apos;ll be redirected to the batch detail
+                  page to watch progress.
+                </span>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div
+          data-testid="mint-form-footer"
+          className="border-border bg-surface py-s4 sticky bottom-0 z-10 border-t sm:static sm:bg-transparent"
         >
-          <Select onValueChange={(value) => form.setValue('productId', value)}>
-            <SelectTrigger id="mint-product">
-              <SelectValue placeholder="Select a product" />
-            </SelectTrigger>
-            <SelectContent>
-              {productOptions.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.sku} — {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
-
-        <FormField
-          label="OEM"
-          htmlFor="mint-oem"
-          error={form.formState.errors.oemId?.message}
-          required
-        >
-          <Select onValueChange={(value) => form.setValue('oemId', value)}>
-            <SelectTrigger id="mint-oem">
-              <SelectValue placeholder="Select an OEM" />
-            </SelectTrigger>
-            <SelectContent>
-              {oemOptions.map((o) => (
-                <SelectItem key={o.id} value={o.id}>
-                  {o.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
-
-        <FormField
-          label="Count"
-          htmlFor="mint-count"
-          error={form.formState.errors.count?.message}
-          required
-        >
-          <Input
-            id="mint-count"
-            type="number"
-            min={1}
-            max={MINT_MAX_COUNT}
-            {...form.register('count')}
-          />
-        </FormField>
-
-        {willRunInBackground && (
-          <div className="border-border bg-surface-sunken text-fg-muted flex gap-2 rounded-md border p-3 text-sm">
-            <AlertTriangleIcon className="h-4 w-4 shrink-0" />
-            <span>
-              Batches over {MINT_SYNC_MAX.toLocaleString()} units run in the
-              background — you&apos;ll be redirected to the batch detail page to
-              watch progress.
-            </span>
-          </div>
-        )}
-
-        <Button type="submit" disabled={mintMutation.isPending}>
-          {mintMutation.isPending ? 'Minting…' : 'Mint batch'}
-        </Button>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto"
+            disabled={mintMutation.isPending}
+          >
+            {mintMutation.isPending ? 'Minting\u2026' : 'Mint batch'}
+          </Button>
+        </div>
       </Form>
     </div>
   );
