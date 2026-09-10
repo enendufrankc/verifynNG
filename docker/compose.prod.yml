@@ -114,6 +114,9 @@ services:
     build:
       args:
         NEXT_PUBLIC_API_URL: https://api.verifyproduct.app
+    environment:
+      # E09 landing page links (Protect your brand / Sign in) target the console.
+      APP_BASE_URL: https://admin.verifyproduct.app
 
   web-admin:
     restart: unless-stopped

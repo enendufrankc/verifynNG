@@ -80,7 +80,7 @@ test.describe('E19 compliance flows @compliance', () => {
       ),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      page.getByRole('heading', { name: 'Analytics' }),
     ).toBeVisible();
 
     // Owner: blocked by the full interstitial — the page content is not
@@ -93,7 +93,7 @@ test.describe('E19 compliance flows @compliance', () => {
       timeout: 10_000,
     });
     await expect(
-      page.getByRole('heading', { name: 'Dashboard' }),
+      page.getByRole('heading', { name: 'Analytics' }),
     ).not.toBeVisible();
 
     await page.getByRole('button', { name: 'Accept' }).click();

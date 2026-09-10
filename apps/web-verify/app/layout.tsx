@@ -5,7 +5,7 @@ import './globals.css';
 import { loadEnv } from '@verifynng/config';
 import { getTenantPublicProfile } from '@/lib/api';
 import { resolveLocale, LocaleProvider } from '@/lib/i18n';
-import { TenantThemeProvider } from '@/components/tenant/ThemeProvider';
+import { PublicShell } from '@/components/shell/PublicShell';
 import { TenantFooter } from '@/components/tenant/TenantFooter';
 import { OfflineBanner } from '@/components/shell/OfflineBanner';
 import { ServiceWorkerRegistration } from '@/components/shell/ServiceWorkerRegistration';
@@ -34,12 +34,12 @@ export default async function RootLayout({
         <LocaleProvider locale={locale}>
           <ServiceWorkerRegistration />
           <OfflineBanner />
-          <TenantThemeProvider profile={profile}>
-            <main className="px-s4 py-s10 flex flex-1 flex-col items-center justify-center">
-              {children}
-            </main>
-            <TenantFooter profile={profile} locale={locale} />
-          </TenantThemeProvider>
+          <PublicShell
+            profile={profile}
+            footer={<TenantFooter profile={profile} locale={locale} />}
+          >
+            {children}
+          </PublicShell>
         </LocaleProvider>
       </body>
     </html>

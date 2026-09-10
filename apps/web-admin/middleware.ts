@@ -31,6 +31,7 @@ export function middleware(request: NextRequest) {
 
   let response: NextResponse;
   const isPublic =
+    pathname === '/signup' || // E03 onboarding starts before a session exists.
     PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon');
