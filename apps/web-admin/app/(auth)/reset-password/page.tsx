@@ -58,9 +58,11 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <h2 className="text-fg text-lg font-semibold">Set new password</h2>
+    <form onSubmit={handleSubmit} className="space-y-s5">
+      <div className="space-y-s2">
+        <h2 className="text-fg text-lg font-semibold tracking-tight">
+          Set new password
+        </h2>
         <p className="text-fg-muted text-sm">
           Choose a strong password for your account.
         </p>
@@ -68,8 +70,9 @@ function ResetPasswordForm() {
 
       {error && (
         <div
-          className="bg-v-flag-tint text-v-flag rounded-md p-3 text-sm"
+          className="bg-v-flag-tint text-v-flag p-s3 rounded-sm text-sm"
           role="alert"
+          data-testid="auth-error"
         >
           {error}
         </div>
