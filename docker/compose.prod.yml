@@ -56,6 +56,9 @@ services:
       SSO_CALLBACK_URL: https://api.verifyproduct.app/auth/sso/callback
       CORS_ORIGINS_ADMIN: https://admin.verifyproduct.app
       CORS_ORIGINS_VERIFY: https://verifyproduct.app,https://www.verifyproduct.app
+      # The platform is free to use: new tenants open on the `free` plan
+      # rather than the 30-day trial the nightly period roll restricts.
+      BILLING_SIGNUP_PLAN: free
       # Mail: Resend adapter (E14) instead of Mailpit.
       MAIL_PROVIDER: resend
       RESEND_API_KEY: ${RESEND_API_KEY:?}

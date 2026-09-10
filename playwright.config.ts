@@ -42,6 +42,7 @@ const ADMIN_SPECS = [
   /\/oem-manifest\.spec\.ts$/,
   /\/product-owner-ui\.spec\.ts$/,
   /\/reports\.spec\.ts$/,
+  /\/signup\.spec\.ts$/,
   /\/anomalies\/.*\.spec\.ts$/,
 ];
 
