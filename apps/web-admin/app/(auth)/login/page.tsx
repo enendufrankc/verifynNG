@@ -228,6 +228,16 @@ function LoginForm() {
           </a>
         </div>
       )}
+
+      <p className="border-border pt-s5 text-fg-muted border-t text-center text-sm">
+        New brand?{' '}
+        <a
+          href="/signup"
+          className="text-brand-text focus-visible:ring-focus rounded-xs font-medium hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          Create an account
+        </a>
+      </p>
     </div>
   );
 }

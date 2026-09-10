@@ -9,6 +9,7 @@ import {
   Label,
   ProgressBar,
 } from '@verifyng/ui';
+import { useAuthStore } from '@/lib/auth-store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -35,6 +36,30 @@ type Tenant = {
   statusReason?: string | null;
 };
 type PolicyVersions = { aup: string; tos: string };
+/** `/api/auth/session` forwards `/auth/me`, whose memberships nest the tenant
+ *  rather than flattening its name and slug. Accept both shapes. */
+type SessionMembership = {
+  tenantId: string;
+  role: string;
+  tenantName?: string;
+  tenantSlug?: string;
+  tenant?: { name?: string; slug?: string };
+};
+type SessionResult = {
+  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    platformRole: string | null;
+    mfaEnabled: boolean;
+  };
+  memberships: SessionMembership[];
+  activeTenantId: string | null;
+  activeRole: string | null;
+  mfaRequired?: boolean;
+};
+const MIN_PASSWORD_LENGTH = 12;
 const initialDocuments: SelectedDocument[] = [
   {
     kind: 'cac_certificate',
@@ -120,6 +145,13 @@ export default function SignupPage() {
     'account' | 'business' | 'documents' | 'policies' | 'pending'
   >('account');
   const [email, setEmail] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [password, setPassword] = useState('');
+  /** `register` creates the account; `signin` is offered once the email turns
+   *  out to already have one, so an owner can resume an application. */
+  const [accountMode, setAccountMode] = useState<'register' | 'signin'>(
+    'register',
+  );
   const [name, setName] = useState('');
   const [country, setCountry] = useState('NG');
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -132,13 +164,15 @@ export default function SignupPage() {
   const [acceptTos, setAcceptTos] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const headers = useMemo(
-    () => ({
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const headers = useMemo(() => {
+    const value: Record<string, string> = {
       'content-type': 'application/json',
-      'x-user-email': email || 'owner@local.verifyng',
-    }),
-    [email, tenant?.id],
-  );
+    };
+    if (accessToken) value.authorization = `Bearer ${accessToken}`;
+    return value;
+  }, [accessToken]);
   const request = useCallback(
     async (path: string, init: RequestInit = {}) => {
       const response = await fetch(`${API_URL}${path}`, {
@@ -150,6 +184,140 @@ export default function SignupPage() {
     },
     [headers],
   );
+
+  /**
+   * The console's own session route rather than the API directly: it is what
+   * sets the httpOnly `vg_refresh` cookie the console middleware looks for,
+   * so an owner who finishes onboarding is already signed in.
+   */
+  const openSession = useCallback(async (body: Record<string, unknown>) => {
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data: unknown = await response.json();
+    if (!response.ok)
+      throw new Error(errorMessage(data, 'We could not sign you in.'));
+    return data as SessionResult;
+  }, []);
+
+  const storeSession = useCallback(
+    (session: SessionResult) => {
+      const memberships = session.memberships.map((membership) => ({
+        tenantId: membership.tenantId,
+        tenantName: membership.tenantName ?? membership.tenant?.name ?? '',
+        tenantSlug: membership.tenantSlug ?? membership.tenant?.slug ?? '',
+        role: membership.role as 'owner' | 'operator' | 'viewer' | 'oem',
+      }));
+      const active = memberships[0];
+      setAuth({
+        accessToken: session.accessToken,
+        user: session.user,
+        memberships,
+        activeTenantId: session.activeTenantId ?? active?.tenantId ?? '',
+        activeRole: session.activeRole ?? active?.role ?? 'owner',
+      });
+      return memberships;
+    },
+    [setAuth],
+  );
+
+  /**
+   * Sends an owner to wherever their application actually is. A brand that
+   * support has already activated belongs in the console, not in this
+   * wizard; one still in review resumes at the pending step.
+   */
+  const resumeExistingApplication = useCallback(
+    async (session: SessionResult, memberships: { tenantId: string }[]) => {
+      const membership = memberships[0];
+      if (!membership) {
+        setStep('business');
+        return;
+      }
+      const response = await fetch(
+        `${API_URL}/tenants/${membership.tenantId}`,
+        { headers: { authorization: `Bearer ${session.accessToken}` } },
+      );
+      if (!response.ok) {
+        setStep('business');
+        return;
+      }
+      const existing = (await response.json()) as Tenant;
+      if (existing.status === 'active') {
+        window.location.assign('/');
+        return;
+      }
+      setTenant(existing);
+      setRejectedReason(existing.statusReason ?? null);
+      setStep('pending');
+    },
+    [],
+  );
+
+  const createAccount = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      setMessage('Enter a valid work email to continue.');
+      return;
+    }
+    if (accountMode === 'register' && !contactName.trim()) {
+      setMessage('Enter your name so we know who to reply to.');
+      return;
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setMessage(
+        `Use a password of at least ${MIN_PASSWORD_LENGTH} characters.`,
+      );
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    try {
+      if (accountMode === 'register') {
+        const registration = await fetch(`${API_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+            displayName: contactName.trim(),
+          }),
+        });
+        if (registration.status === 409) {
+          setAccountMode('signin');
+          setMessage(
+            'That email already has an account. Enter its password to pick up where you left off.',
+          );
+          return;
+        }
+        if (!registration.ok) throw new Error(await readError(registration));
+      }
+      const session = await openSession({
+        action: 'login',
+        email: email.trim(),
+        password,
+      });
+      if (session.mfaRequired) {
+        setMessage(
+          'This account uses two-factor authentication. Sign in from the login page, then return here.',
+        );
+        return;
+      }
+      const memberships = storeSession(session);
+      await resumeExistingApplication(session, memberships);
+    } catch (error) {
+      setMessage(
+        errorMessage(
+          error,
+          accountMode === 'register'
+            ? 'We could not create your account.'
+            : 'We could not sign you in.',
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const createTenant = async () => {
     if (!name.trim()) {
@@ -177,6 +345,11 @@ export default function SignupPage() {
         }),
       });
       const result = (await response.json()) as { tenant: Tenant };
+      // The access token was minted before this membership existed, so it
+      // still carries an empty tenant claim — TenantContextGuard would 404
+      // every /tenants/:id call below on its tenant-match rule. Rotating the
+      // session now picks the new membership up.
+      storeSession(await openSession({ action: 'refresh' }));
       setTenant(result.tenant);
       setRejectedReason(null);
       setStep('documents');
@@ -341,6 +514,8 @@ export default function SignupPage() {
         ) {
           setRejectedReason(latest.statusReason);
         }
+        // Approved while this page was open — the owner has a console now.
+        if (latest.status === 'active') window.location.assign('/');
       } catch {
         /* transient poll failures are harmless */
       }
@@ -403,12 +578,29 @@ export default function SignupPage() {
             <section className="space-y-s6">
               <div className="space-y-s2">
                 <h2 className="text-fg text-2xl font-semibold tracking-tight">
-                  Create your account
+                  {accountMode === 'register'
+                    ? 'Create your account'
+                    : 'Sign in to continue'}
                 </h2>
                 <p className="text-fg-muted text-sm">
-                  Use the email your team should use for review updates.
+                  {accountMode === 'register'
+                    ? 'Use the email your team should use for review updates.'
+                    : 'This email already has an account. Sign in to pick your application back up.'}
                 </p>
               </div>
+              {accountMode === 'register' && (
+                <FormField label="Your name" htmlFor="signup-contact" required>
+                  <Input
+                    id="signup-contact"
+                    value={contactName}
+                    onChange={(event) =>
+                      setContactName(fieldValue(event.target))
+                    }
+                    placeholder="Ada Obi"
+                    autoComplete="name"
+                  />
+                </FormField>
+              )}
               <FormField label="Work email" htmlFor="signup-email" required>
                 <Input
                   id="signup-email"
@@ -419,20 +611,39 @@ export default function SignupPage() {
                   autoComplete="email"
                 />
               </FormField>
+              <FormField
+                label="Password"
+                htmlFor="signup-password"
+                required
+                description={
+                  accountMode === 'register'
+                    ? `At least ${MIN_PASSWORD_LENGTH} characters.`
+                    : undefined
+                }
+              >
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(fieldValue(event.target))}
+                  autoComplete={
+                    accountMode === 'register'
+                      ? 'new-password'
+                      : 'current-password'
+                  }
+                />
+              </FormField>
               <div className="border-border pt-s5 border-t">
                 <Button
                   className="w-full"
                   disabled={busy}
-                  onClick={() => {
-                    if (!email.trim() || !email.includes('@')) {
-                      setMessage('Enter a valid work email to continue.');
-                      return;
-                    }
-                    setMessage('');
-                    setStep('business');
-                  }}
+                  onClick={createAccount}
                 >
-                  Continue to business details
+                  {busy
+                    ? 'Just a moment\u2026'
+                    : accountMode === 'register'
+                      ? 'Create account and continue'
+                      : 'Sign in and continue'}
                 </Button>
               </div>
             </section>
@@ -636,6 +847,16 @@ export default function SignupPage() {
                 <div className="border-border pt-s5 border-t">
                   <Button className="w-full" onClick={replaceRejectedDocuments}>
                     Replace documents and resubmit
+                  </Button>
+                </div>
+              )}
+              {tenant?.status === 'active' && (
+                <div className="border-border pt-s5 border-t">
+                  <Button
+                    className="w-full"
+                    onClick={() => window.location.assign('/')}
+                  >
+                    Open your console
                   </Button>
                 </div>
               )}
