@@ -7,3 +7,28 @@
    makes it into the generated CSS, and the component silently renders
    unstyled/mispositioned. */
 @source '../node_modules/@verifyng/ui';
+
+/* E11 console shell — see docs/design/2026-09-10-console-ui-refresh.md.
+   Only token-driven base rules live here; every colour, radius and spacing
+   value comes from @verifyng/ui's tokens. */
+@layer base {
+  /* One consistent focus treatment for controls that aren't shared
+     primitives (native selects, file inputs, raw links in page bodies). */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Motion is limited to opacity and transform; reduced-motion users get the
+     same content without animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

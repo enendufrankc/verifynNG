@@ -268,12 +268,15 @@ Plan seed (`packages/db/prisma/seed/plans.ts`, run by `pnpm db:seed`):
 
 | code       | NGN/month  | GBP/month  | included units | included scans/month | notes                                                               |
 | ---------- | ---------- | ---------- | -------------- | -------------------- | ------------------------------------------------------------------- |
+| free       | 0          | 0          | unlimited      | unlimited            | every feature on, no expiry; production's `BILLING_SIGNUP_PLAN`     |
 | free-trial | 0          | 0          | 500 total      | 5,000                | 30-day trial; `trialTotalCap`; no public API                        |
 | starter    | ₦45,000    | £25        | 10,000/yr      | 50,000               | overage ₦8 / 0.4p per unit, ₦0.5 / 0.03p per scan                   |
 | growth     | ₦180,000   | £100       | 100,000/yr     | 500,000              | public API, webhooks, custom pages                                  |
 | enterprise | 0 (custom) | 0 (custom) | unlimited      | unlimited            | SSO, `customPricing`; invoices created by support with manual lines |
 
 Amounts are placeholders agreed with product; changing them is a seed edit + `SEED_VERSION` bump, not a code change.
+
+`BILLING_SIGNUP_PLAN` picks the plan a tenant's first subscription opens on, in both `SubscriptionService.startTrial` and the seed. It defaults to `free-trial`; production sets `free` while the platform costs nothing to use. Only a plan carrying `features.trialTotalCap` opens as `trialing` with a `trialEndsAt` — anything else opens `active` on a monthly period, so `runPeriodRoll` rolls it forward instead of restricting it.
 
 ## Tasks
 

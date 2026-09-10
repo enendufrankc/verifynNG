@@ -110,15 +110,27 @@ export default function ChangePlanPage() {
 
   const plans = (plansQuery.data ?? [])
     .filter((p) => p.active)
+    // A trial is something you start on, never something you switch to, so
+    // it only appears while it is the tenant's own plan.
+    .filter((p) => !p.features.trialTotalCap || p.id === subscription?.planId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const dialogPlan = plans.find((p) => p.code === dialogPlanCode);
   const preview = previewQuery.data;
+  // While the platform is free to use every tenant sits on `free`, which
+  // already carries every feature — there is nothing to upgrade to and no
+  // payment method on file to charge, so paid plans are shown for reference
+  // but not selectable.
+  const onFreePlan = currentPlan?.code === 'free';
 
   return (
     <div className="space-y-s6">
       <PageHeader
         title="Change plan"
-        description="Upgrades apply immediately with a prorated charge for the rest of this period. Downgrades take effect at your next renewal."
+        description={
+          onFreePlan
+            ? 'Every feature is included while the platform is free to use.'
+            : 'Upgrades apply immediately with a prorated charge for the rest of this period. Downgrades take effect at your next renewal.'
+        }
         actions={
           <Button variant="outline" asChild>
             <Link href="/billing">Back to overview</Link>
@@ -126,11 +138,28 @@ export default function ChangePlanPage() {
         }
       />
 
+      {onFreePlan && (
+        <div className="bg-surface-sunken border-border p-s4 rounded-md border">
+          <p className="text-fg font-medium">
+            You&apos;re on Free — everything is included
+          </p>
+          <p className="text-fg-muted mt-1 text-sm">
+            Unlimited units and scans, the public API, webhooks, single sign-on
+            and custom pages, with nothing to pay and no expiry date. The paid
+            plans below are listed for reference and will open when billing
+            starts.
+          </p>
+        </div>
+      )}
+
       <div className="gap-s4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => {
           const isCurrent = plan.id === subscription?.planId;
           const isPending = plan.id === subscription?.pendingPlanId;
           const isCustom = Boolean(plan.features.customPricing);
+          // A zero allowance means "no ceiling", not "nothing": these plans
+          // carry no `trialTotalCap`/`hardCap`, so `canMint` never caps them.
+          const uncapped = plan.includedUnitsPerYear === 0;
           const price = subscription
             ? planPrice(plan, subscription.currency)
             : plan.monthlyPriceNgnMinor;
@@ -152,12 +181,15 @@ export default function ChangePlanPage() {
               <ul className="text-fg-muted flex-1 space-y-1 text-sm">
                 <li className="flex items-center gap-1.5">
                   <CheckIcon className="h-3.5 w-3.5 shrink-0" />
-                  {plan.includedUnitsPerYear.toLocaleString()} units/yr included
+                  {uncapped
+                    ? 'Unlimited units'
+                    : `${plan.includedUnitsPerYear.toLocaleString()} units/yr included`}
                 </li>
                 <li className="flex items-center gap-1.5">
                   <CheckIcon className="h-3.5 w-3.5 shrink-0" />
-                  {plan.includedScansPerMonth.toLocaleString()} scans/mo
-                  included
+                  {uncapped
+                    ? 'Unlimited scans'
+                    : `${plan.includedScansPerMonth.toLocaleString()} scans/mo included`}
                 </li>
                 <li className="flex items-center gap-1.5">
                   <CheckIcon className="h-3.5 w-3.5 shrink-0" />
@@ -167,7 +199,7 @@ export default function ChangePlanPage() {
               </ul>
               <Button
                 variant={isCurrent ? 'outline' : 'default'}
-                disabled={isCurrent || isCustom || isPending}
+                disabled={isCurrent || isCustom || isPending || onFreePlan}
                 onClick={() => setDialogPlanCode(plan.code)}
               >
                 {isCurrent
@@ -176,7 +208,9 @@ export default function ChangePlanPage() {
                     ? 'Contact support'
                     : isPending
                       ? 'Scheduled'
-                      : 'Select'}
+                      : onFreePlan
+                        ? 'Not yet available'
+                        : 'Select'}
               </Button>
             </div>
           );

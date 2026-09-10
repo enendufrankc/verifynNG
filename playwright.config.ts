@@ -36,9 +36,13 @@ const VERIFY_SPECS = [
 const ADMIN_SPECS = [
   ...SHARED_SPECS,
   /\/analytics\.spec\.ts$/,
+  /\/auth-ui\.spec\.ts$/,
   /\/compliance\.spec\.ts$/,
+  /\/console-shell-ui\.spec\.ts$/,
   /\/oem-manifest\.spec\.ts$/,
+  /\/product-owner-ui\.spec\.ts$/,
   /\/reports\.spec\.ts$/,
+  /\/signup\.spec\.ts$/,
   /\/anomalies\/.*\.spec\.ts$/,
 ];
 

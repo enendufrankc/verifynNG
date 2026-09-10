@@ -123,9 +123,11 @@ function LoginForm() {
   const showPasswordForm = !ssoStatus?.enforceSso;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <h2 className="text-fg text-lg font-semibold">Sign in</h2>
+    <div className="space-y-s5">
+      <div className="space-y-s2">
+        <h2 className="text-fg text-lg font-semibold tracking-tight">
+          Sign in
+        </h2>
         <p className="text-fg-muted text-sm">
           Enter your credentials to access the console
         </p>
@@ -133,8 +135,9 @@ function LoginForm() {
 
       {error && (
         <div
-          className="bg-v-flag-tint text-v-flag rounded-md p-3 text-sm"
+          className="bg-v-flag-tint text-v-flag p-s3 rounded-sm text-sm"
           role="alert"
+          data-testid="auth-error"
         >
           {error}
         </div>
@@ -152,18 +155,30 @@ function LoginForm() {
       </FormField>
 
       {ssoStatus?.enabled && (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={continueWithSso}
-        >
-          {ssoStatus.buttonLabel ?? 'Continue with SSO'}
-        </Button>
+        <div className="space-y-s5">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={continueWithSso}
+          >
+            {ssoStatus.buttonLabel ?? 'Continue with SSO'}
+          </Button>
+          {showPasswordForm && (
+            <div
+              className="text-fg-faint gap-s3 flex items-center text-xs tracking-wider uppercase"
+              aria-hidden="true"
+            >
+              <span className="bg-border h-px flex-1" />
+              or
+              <span className="bg-border h-px flex-1" />
+            </div>
+          )}
+        </div>
       )}
 
       {showPasswordForm ? (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-s5">
           <FormField label="Email" htmlFor="email" required>
             <Input
               id="email"
@@ -189,30 +204,40 @@ function LoginForm() {
             />
           </FormField>
 
-          <div className="flex items-center justify-between">
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Signing in\u2026' : 'Sign in'}
+          </Button>
+
+          <p className="text-center">
             <a
               href="/forgot-password"
-              className="text-brand-text text-sm hover:underline"
+              className="text-brand-text focus-visible:ring-focus rounded-xs text-sm hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               Forgot password?
             </a>
-          </div>
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Signing in…' : 'Sign in'}
-          </Button>
+          </p>
         </form>
       ) : (
-        <div className="text-fg-muted space-y-2 text-sm">
+        <div className="text-fg-muted space-y-s2 text-sm">
           <p>Password sign-in is disabled for this organisation.</p>
           <a
             href={`/sso/break-glass?tenant=${encodeURIComponent(tenant.trim())}`}
-            className="text-brand-text hover:underline"
+            className="text-brand-text focus-visible:ring-focus rounded-xs hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             Owner emergency access
           </a>
         </div>
       )}
+
+      <p className="border-border pt-s5 text-fg-muted border-t text-center text-sm">
+        New brand?{' '}
+        <a
+          href="/signup"
+          className="text-brand-text focus-visible:ring-focus rounded-xs font-medium hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          Create an account
+        </a>
+      </p>
     </div>
   );
 }

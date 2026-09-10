@@ -7,11 +7,12 @@ import {
   Subscription,
   SubscriptionStatus,
 } from '@prisma/client';
+import { loadEnv } from '@verifynng/config';
 import { EventsService } from '../../common/events.service';
 import { TenantLifecycleService } from '../tenants/tenant-lifecycle.service';
 import { IllegalSubscriptionTransition } from './errors';
 import { InvoiceService } from './invoice.service';
-import type { PlanFeatures } from './entitlement.service';
+import { hasUnitCeiling, type PlanFeatures } from './entitlement.service';
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -61,32 +62,46 @@ export class SubscriptionService {
   }
 
   /**
-   * Bootstraps a tenant's first (trial) subscription. Idempotent — a tenant
-   * that already has one is left untouched, since this is invoked both
-   * directly (fresh-clone seeding) and via the `tenant.verified` listener
-   * below, which can fire more than once for the same tenant (e.g. a
-   * restricted -> active transition also emits `tenant.verified`; see
-   * `TenantLifecycleService.transition`'s event-naming ternary).
+   * Bootstraps a tenant's first subscription on `BILLING_SIGNUP_PLAN`.
+   * Idempotent — a tenant that already has one is left untouched, since this
+   * is invoked both directly (fresh-clone seeding) and via the
+   * `tenant.verified` listener below, which can fire more than once for the
+   * same tenant (e.g. a restricted -> active transition also emits
+   * `tenant.verified`; see `TenantLifecycleService.transition`'s
+   * event-naming ternary).
+   *
+   * The signup plan is a trial only when it caps units for the plan's whole
+   * lifetime (`features.trialTotalCap`, which only `free-trial` carries).
+   * Anything else — production's zero-price `free` plan — opens as an
+   * ordinary monthly `active` subscription with no `trialEndsAt`, so
+   * `runPeriodRoll` rolls its period forward rather than restricting it.
    */
   async startTrial(tenantId: string): Promise<Subscription> {
     const existing = await this.getForTenant(tenantId);
     if (existing) return existing;
 
-    const [tenant, trialPlan] = await Promise.all([
+    const [tenant, signupPlan] = await Promise.all([
       this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } }),
-      this.prisma.plan.findUniqueOrThrow({ where: { code: 'free-trial' } }),
+      this.prisma.plan.findUniqueOrThrow({
+        where: { code: loadEnv().BILLING_SIGNUP_PLAN },
+      }),
     ]);
     const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + THIRTY_DAYS_MS);
+    const isTrial =
+      ((signupPlan.features ?? {}) as PlanFeatures).trialTotalCap === true;
+    const trialEndsAt = isTrial
+      ? new Date(now.getTime() + THIRTY_DAYS_MS)
+      : null;
+    const status: SubscriptionStatus = isTrial ? 'trialing' : 'active';
 
     const subscription = await this.prisma.subscription.create({
       data: {
         tenantId,
-        planId: trialPlan.id,
-        status: 'trialing',
+        planId: signupPlan.id,
+        status,
         currency: tenant.country === 'GB' ? 'GBP' : 'NGN',
         currentPeriodStart: now,
-        currentPeriodEnd: trialEndsAt,
+        currentPeriodEnd: trialEndsAt ?? addMonthsUtc(now, 1),
         trialEndsAt,
       },
     });
@@ -94,9 +109,9 @@ export class SubscriptionService {
       tenantId,
       subscriptionId: subscription.id,
       fromPlanCode: null,
-      toPlanCode: trialPlan.code,
+      toPlanCode: signupPlan.code,
       fromStatus: null,
-      toStatus: 'trialing',
+      toStatus: status,
       effectiveAt: now.toISOString(),
     });
     return subscription;
@@ -260,10 +275,9 @@ export class SubscriptionService {
 
     const isUpgrade = targetPlan.sortOrder > sub.plan.sortOrder;
     let blockedByUnitsCap: { used: number; limit: number } | null = null;
-    if (!isUpgrade) {
+    if (!isUpgrade && hasUnitCeiling(targetPlan)) {
       const used = await this.prisma.unit.count({ where: { tenantId } });
-      const features = (targetPlan.features ?? {}) as PlanFeatures;
-      if (!features.customPricing && used > targetPlan.includedUnitsPerYear) {
+      if (used > targetPlan.includedUnitsPerYear) {
         blockedByUnitsCap = { used, limit: targetPlan.includedUnitsPerYear };
       }
     }
@@ -351,7 +365,7 @@ export class SubscriptionService {
     const isUpgrade = targetPlan.sortOrder > sub.plan.sortOrder;
 
     if (!isUpgrade) {
-      if (!opts.force) {
+      if (!opts.force && hasUnitCeiling(targetPlan)) {
         const used = await this.prisma.unit.count({ where: { tenantId } });
         if (used > targetPlan.includedUnitsPerYear) {
           throw new ConflictException({

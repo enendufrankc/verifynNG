@@ -104,15 +104,22 @@ export default function BatchDetailPage() {
   }
 
   const columns: ColumnDef<Unit>[] = [
-    { accessorKey: 'serial', header: 'Serial' },
+    {
+      accessorKey: 'serial',
+      header: 'Serial',
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">{row.original.serial}</span>
+      ),
+    },
     {
       accessorKey: 'tier1Code',
       header: 'Tier-1 code',
       cell: ({ row }) => {
         const code = row.original.tier1Code;
-        if (!canDownload) return redactCode(code);
+        if (!canDownload)
+          return <span className="font-mono text-xs">{redactCode(code)}</span>;
         return (
-          <div className="flex items-center gap-2">
+          <div className="gap-s2 flex items-center">
             <span className="font-mono text-xs">{code}</span>
             <Button
               variant="ghost"
@@ -137,18 +144,26 @@ export default function BatchDetailPage() {
 
   if (batchQuery.isError) {
     return (
-      <EmptyState
-        icon={AlertTriangleIcon}
-        title="Couldn't load this batch"
-        description="It may not exist, or the catalog service isn't reachable yet."
-      />
+      <div className="border-border bg-surface rounded-md border">
+        <EmptyState
+          data-testid="batch-error"
+          icon={AlertTriangleIcon}
+          title="Couldn't load this batch"
+          description="It may not exist, or the catalog service isn't reachable yet."
+          action={
+            <Button asChild variant="outline">
+              <Link href="/batches">Back to batches</Link>
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
   const batch = batchQuery.data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-s6">
       <PageHeader
         title={batch ? `Batch ${batch.id.slice(0, 8)}` : 'Batch'}
         description={
@@ -167,7 +182,7 @@ export default function BatchDetailPage() {
 
       {batch && (
         <>
-          <div className="border-border bg-surface space-y-3 rounded-md border p-4">
+          <div className="border-border bg-surface space-y-s3 p-s5 rounded-md border">
             <ProgressBar
               value={batch.progress.minted}
               max={batch.progress.total}
@@ -179,8 +194,10 @@ export default function BatchDetailPage() {
             )}
           </div>
 
-          <div className="space-y-3">
-            <h2 className="text-sm font-medium">Downloads</h2>
+          <div className="border-border bg-surface space-y-s4 p-s5 rounded-md border">
+            <h2 className="text-fg-muted text-xs font-semibold tracking-wider uppercase">
+              Downloads
+            </h2>
             {!batch.exportsReadyAt ? (
               <p className="text-fg-muted text-sm">
                 Exports are still being generated for this batch.
@@ -190,7 +207,7 @@ export default function BatchDetailPage() {
                 Only operators and owners can download batch exports.
               </p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="gap-s2 flex flex-wrap">
                 {ARTEFACTS.map((artefact) => (
                   <Button
                     key={artefact.kind}
@@ -208,12 +225,14 @@ export default function BatchDetailPage() {
             )}
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium">Units</h2>
+          <div className="space-y-s4">
+            <div className="gap-s3 flex flex-wrap items-center justify-between">
+              <h2 className="text-fg-muted text-xs font-semibold tracking-wider uppercase">
+                Units
+              </h2>
               <Link
                 href={`/units/batch/${batchId}`}
-                className="text-brand text-sm hover:underline"
+                className="text-brand-text focus-visible:ring-focus rounded-xs text-sm hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 Units &amp; recall (E07) →
               </Link>
@@ -222,7 +241,15 @@ export default function BatchDetailPage() {
               columns={columns}
               data={unitsQuery.data ?? []}
               isLoading={unitsQuery.isLoading}
-              emptyState={<EmptyState title="No units yet" />}
+              emptyState={
+                <div className="border-border bg-surface rounded-md border">
+                  <EmptyState
+                    data-testid="units-empty"
+                    title="No units yet"
+                    description="Units appear here once minting completes."
+                  />
+                </div>
+              }
               pagination={{
                 hasPrev: !!unitsCursor,
                 hasNext: (unitsQuery.data?.length ?? 0) === 100,

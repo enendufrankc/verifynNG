@@ -238,6 +238,11 @@ const e18Schema = z.object({
 // ── E15 Billing & Entitlements ──────────────────────────────────
 const e15Schema = z.object({
   PAYMENT_GATEWAY: z.enum(['paystack', 'fake']).default('fake'),
+  // Plan code every new tenant's first subscription is opened on. The E15
+  // default is the 30-day `free-trial`, which the nightly period roll expires
+  // into `restricted`; production runs `free` while the platform costs
+  // nothing to use — an ordinary active subscription with no end date.
+  BILLING_SIGNUP_PLAN: z.string().default('free-trial'),
   PAYSTACK_BASE_URL: z.string().default('http://fake-pay:4102'),
   PAYSTACK_SECRET_KEY: z.string().default('fake_sk_test'),
   PAYSTACK_PUBLIC_KEY: z.string().default('fake_pk_test'),

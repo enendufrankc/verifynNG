@@ -7,7 +7,7 @@
  */
 import type { Prisma, PrismaClient } from '@prisma/client';
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 export interface PlanSeed {
   code: string;
@@ -25,6 +25,32 @@ export interface PlanSeed {
 }
 
 export const PLANS: PlanSeed[] = [
+  {
+    // The platform's launch posture: everything switched on, nothing to pay,
+    // no expiry. `BILLING_SIGNUP_PLAN=free` puts new tenants here instead of
+    // on the time-boxed trial below. It deliberately carries neither
+    // `trialTotalCap` nor `hardCap`, so `EntitlementService.canMint` never
+    // caps minting on it.
+    code: 'free',
+    name: 'Free',
+    monthlyPriceNgnMinor: 0,
+    monthlyPriceGbpMinor: 0,
+    includedUnitsPerYear: 0,
+    includedScansPerMonth: 0,
+    overageUnitPriceNgnMinor: 0,
+    overageUnitPriceGbpMinor: 0,
+    overageScanPriceNgnMinor: 0,
+    overageScanPriceGbpMinor: 0,
+    features: {
+      publicApi: true,
+      webhooks: true,
+      sso: true,
+      customPages: true,
+      maxApiKeys: 10,
+      apiRateLimitPerMin: 600,
+    },
+    sortOrder: 0,
+  },
   {
     code: 'free-trial',
     name: 'Free trial',
@@ -45,7 +71,7 @@ export const PLANS: PlanSeed[] = [
       apiRateLimitPerMin: 60,
       trialTotalCap: true,
     },
-    sortOrder: 0,
+    sortOrder: 1,
   },
   {
     code: 'starter',
@@ -66,7 +92,7 @@ export const PLANS: PlanSeed[] = [
       maxApiKeys: 3,
       apiRateLimitPerMin: 120,
     },
-    sortOrder: 1,
+    sortOrder: 2,
   },
   {
     code: 'growth',
@@ -87,7 +113,7 @@ export const PLANS: PlanSeed[] = [
       maxApiKeys: 10,
       apiRateLimitPerMin: 600,
     },
-    sortOrder: 2,
+    sortOrder: 3,
   },
   {
     code: 'enterprise',
@@ -109,7 +135,7 @@ export const PLANS: PlanSeed[] = [
       apiRateLimitPerMin: 6000,
       customPricing: true,
     },
-    sortOrder: 3,
+    sortOrder: 4,
   },
 ];
 

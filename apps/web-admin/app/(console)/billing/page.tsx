@@ -140,18 +140,36 @@ export default function BillingOverviewPage() {
         <h2 className="text-fg text-sm font-semibold">
           Usage this period{usage ? ` — ${usage.period}` : ''}
         </h2>
-        <ProgressBar
-          label={`Units minted (${usage?.unitsMinted ?? 0} / ${usage?.includedUnits ?? 0})`}
-          value={usage?.unitsMinted ?? 0}
-          max={Math.max(1, usage?.includedUnits ?? 1)}
-          showValue
-        />
-        <ProgressBar
-          label={`Scans recorded (${usage?.scansRecorded ?? 0} / ${usage?.includedScans ?? 0})`}
-          value={usage?.scansRecorded ?? 0}
-          max={Math.max(1, usage?.includedScans ?? 1)}
-          showValue
-        />
+        {/* A zero allowance means the plan has no ceiling (free, enterprise),
+            not that nothing is included — a bar against it would read as
+            permanently full. Show the raw counts instead. */}
+        {usage && usage.includedUnits === 0 ? (
+          <p className="text-fg-muted text-sm">
+            <span className="text-fg font-medium">
+              {usage.unitsMinted.toLocaleString()}
+            </span>{' '}
+            units minted and{' '}
+            <span className="text-fg font-medium">
+              {usage.scansRecorded.toLocaleString()}
+            </span>{' '}
+            scans recorded. No limit on this plan.
+          </p>
+        ) : (
+          <>
+            <ProgressBar
+              label={`Units minted (${usage?.unitsMinted ?? 0} / ${usage?.includedUnits ?? 0})`}
+              value={usage?.unitsMinted ?? 0}
+              max={Math.max(1, usage?.includedUnits ?? 1)}
+              showValue
+            />
+            <ProgressBar
+              label={`Scans recorded (${usage?.scansRecorded ?? 0} / ${usage?.includedScans ?? 0})`}
+              value={usage?.scansRecorded ?? 0}
+              max={Math.max(1, usage?.includedScans ?? 1)}
+              showValue
+            />
+          </>
+        )}
         {usage && usage.projectedOverageMinor > 0 && subscription && (
           <p className="text-fg-muted text-sm">
             Projected overage this period:{' '}

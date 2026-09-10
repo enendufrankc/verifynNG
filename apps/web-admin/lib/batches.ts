@@ -14,6 +14,8 @@ export interface Batch {
   id: string;
   tenantId: string;
   productId: string;
+  /** Nullable in the schema (`Batch.oemId String?`) — a batch can exist with
+   *  no OEM assigned yet. */
   oemId: string | null;
   count: number;
   status: BatchStatus;

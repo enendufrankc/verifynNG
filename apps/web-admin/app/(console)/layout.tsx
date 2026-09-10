@@ -44,17 +44,19 @@ export default function ConsoleLayout({
       </div>
 
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent side="left" className="w-60 p-0">
+        <SheetContent side="left" className="w-60 max-w-[85vw] p-0">
           <Sidebar />
         </SheetContent>
       </Sheet>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
         <ImpersonationBanner />
         <StatusBanner status={bannerStatus} href="/billing/invoices" />
-        <main className="flex-1 overflow-y-auto p-6">
-          <PolicyReacceptGuard>{children}</PolicyReacceptGuard>
+        <main className="p-s4 sm:p-s6 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl">
+            <PolicyReacceptGuard>{children}</PolicyReacceptGuard>
+          </div>
         </main>
       </div>
     </div>

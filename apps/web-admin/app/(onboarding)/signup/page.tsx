@@ -1,6 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  Label,
+  ProgressBar,
+} from '@verifyng/ui';
+import { useAuthStore } from '@/lib/auth-store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -27,6 +36,30 @@ type Tenant = {
   statusReason?: string | null;
 };
 type PolicyVersions = { aup: string; tos: string };
+/** `/api/auth/session` forwards `/auth/me`, whose memberships nest the tenant
+ *  rather than flattening its name and slug. Accept both shapes. */
+type SessionMembership = {
+  tenantId: string;
+  role: string;
+  tenantName?: string;
+  tenantSlug?: string;
+  tenant?: { name?: string; slug?: string };
+};
+type SessionResult = {
+  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    platformRole: string | null;
+    mfaEnabled: boolean;
+  };
+  memberships: SessionMembership[];
+  activeTenantId: string | null;
+  activeRole: string | null;
+  mfaRequired?: boolean;
+};
+const MIN_PASSWORD_LENGTH = 12;
 const initialDocuments: SelectedDocument[] = [
   {
     kind: 'cac_certificate',
@@ -106,15 +139,19 @@ function fieldValue(target: unknown) {
 function selectedFile(target: unknown) {
   return (target as { files?: { 0?: File } }).files?.[0];
 }
-function checkedValue(target: unknown) {
-  return (target as { checked: boolean }).checked;
-}
 
 export default function SignupPage() {
   const [step, setStep] = useState<
     'account' | 'business' | 'documents' | 'policies' | 'pending'
   >('account');
   const [email, setEmail] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [password, setPassword] = useState('');
+  /** `register` creates the account; `signin` is offered once the email turns
+   *  out to already have one, so an owner can resume an application. */
+  const [accountMode, setAccountMode] = useState<'register' | 'signin'>(
+    'register',
+  );
   const [name, setName] = useState('');
   const [country, setCountry] = useState('NG');
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -127,13 +164,15 @@ export default function SignupPage() {
   const [acceptTos, setAcceptTos] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const headers = useMemo(
-    () => ({
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const headers = useMemo(() => {
+    const value: Record<string, string> = {
       'content-type': 'application/json',
-      'x-user-email': email || 'owner@local.verifyng',
-    }),
-    [email, tenant?.id],
-  );
+    };
+    if (accessToken) value.authorization = `Bearer ${accessToken}`;
+    return value;
+  }, [accessToken]);
   const request = useCallback(
     async (path: string, init: RequestInit = {}) => {
       const response = await fetch(`${API_URL}${path}`, {
@@ -146,6 +185,164 @@ export default function SignupPage() {
     [headers],
   );
 
+  /**
+   * The console's own session route rather than the API directly: it is what
+   * sets the httpOnly `vg_refresh` cookie the console middleware looks for,
+   * so an owner who finishes onboarding is already signed in.
+   */
+  const openSession = useCallback(async (body: Record<string, unknown>) => {
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data: unknown = await response.json();
+    if (!response.ok)
+      throw new Error(errorMessage(data, 'We could not sign you in.'));
+    return data as SessionResult;
+  }, []);
+
+  const storeSession = useCallback(
+    (session: SessionResult) => {
+      const memberships = session.memberships.map((membership) => ({
+        tenantId: membership.tenantId,
+        tenantName: membership.tenantName ?? membership.tenant?.name ?? '',
+        tenantSlug: membership.tenantSlug ?? membership.tenant?.slug ?? '',
+        role: membership.role as 'owner' | 'operator' | 'viewer' | 'oem',
+      }));
+      const active = memberships[0];
+      setAuth({
+        accessToken: session.accessToken,
+        user: session.user,
+        memberships,
+        activeTenantId: session.activeTenantId ?? active?.tenantId ?? '',
+        activeRole: session.activeRole ?? active?.role ?? 'owner',
+      });
+      return memberships;
+    },
+    [setAuth],
+  );
+
+  /** The two policy versions `POST /tenants` and the submit step both pin. */
+  const loadPolicyVersions = useCallback(async () => {
+    const [aupResponse, tosResponse] = await Promise.all([
+      request('/policies/aup/current'),
+      request('/policies/tos/current'),
+    ]);
+    const versions = {
+      aup: ((await aupResponse.json()) as { version: string }).version,
+      tos: ((await tosResponse.json()) as { version: string }).version,
+    };
+    setPolicyVersions(versions);
+    return versions;
+  }, [request]);
+
+  /**
+   * Sends an owner to wherever their application actually is: a brand support
+   * has activated belongs in the console rather than this wizard, one that
+   * has been submitted waits at the review step, and one still `pending` was
+   * abandoned before its documents went up, so it resumes there.
+   */
+  const resumeExistingApplication = useCallback(
+    async (session: SessionResult, memberships: { tenantId: string }[]) => {
+      const membership = memberships[0];
+      if (!membership) {
+        setStep('business');
+        return;
+      }
+      const response = await fetch(
+        `${API_URL}/tenants/${membership.tenantId}`,
+        { headers: { authorization: `Bearer ${session.accessToken}` } },
+      );
+      if (!response.ok) {
+        setStep('business');
+        return;
+      }
+      const existing = (await response.json()) as Tenant;
+      if (existing.status === 'active') {
+        window.location.assign('/');
+        return;
+      }
+      setTenant(existing);
+      setRejectedReason(existing.statusReason ?? null);
+      setName(existing.name);
+      if (existing.status === 'pending' && !existing.statusReason) {
+        // Created but never submitted. The submit step pins policy versions,
+        // and this session has not been through the business step that
+        // normally fetches them.
+        await loadPolicyVersions();
+        setStep('documents');
+        return;
+      }
+      setStep('pending');
+    },
+    [loadPolicyVersions],
+  );
+
+  const createAccount = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      setMessage('Enter a valid work email to continue.');
+      return;
+    }
+    if (accountMode === 'register' && !contactName.trim()) {
+      setMessage('Enter your name so we know who to reply to.');
+      return;
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setMessage(
+        `Use a password of at least ${MIN_PASSWORD_LENGTH} characters.`,
+      );
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    try {
+      if (accountMode === 'register') {
+        const registration = await fetch(`${API_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+            displayName: contactName.trim(),
+          }),
+        });
+        if (registration.status === 409) {
+          setAccountMode('signin');
+          setMessage(
+            'That email already has an account. Enter its password to pick up where you left off.',
+          );
+          return;
+        }
+        if (!registration.ok) throw new Error(await readError(registration));
+      }
+      const session = await openSession({
+        action: 'login',
+        email: email.trim(),
+        password,
+      });
+      if (session.mfaRequired) {
+        setMessage(
+          'This account uses two-factor authentication. Sign in from the login page, then return here.',
+        );
+        return;
+      }
+      const memberships = storeSession(session);
+      await resumeExistingApplication(session, memberships);
+    } catch (error) {
+      setMessage(
+        errorMessage(
+          error,
+          accountMode === 'register'
+            ? 'We could not create your account.'
+            : 'We could not sign you in.',
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const createTenant = async () => {
     if (!name.trim()) {
       setMessage('Enter your business name to continue.');
@@ -154,15 +351,7 @@ export default function SignupPage() {
     setBusy(true);
     setMessage('');
     try {
-      const [aupResponse, tosResponse] = await Promise.all([
-        request('/policies/aup/current'),
-        request('/policies/tos/current'),
-      ]);
-      const currentPolicies = {
-        aup: ((await aupResponse.json()) as { version: string }).version,
-        tos: ((await tosResponse.json()) as { version: string }).version,
-      };
-      setPolicyVersions(currentPolicies);
+      const currentPolicies = await loadPolicyVersions();
       const response = await request('/tenants', {
         method: 'POST',
         body: JSON.stringify({
@@ -172,6 +361,11 @@ export default function SignupPage() {
         }),
       });
       const result = (await response.json()) as { tenant: Tenant };
+      // The access token was minted before this membership existed, so it
+      // still carries an empty tenant claim — TenantContextGuard would 404
+      // every /tenants/:id call below on its tenant-match rule. Rotating the
+      // session now picks the new membership up.
+      storeSession(await openSession({ action: 'refresh' }));
       setTenant(result.tenant);
       setRejectedReason(null);
       setStep('documents');
@@ -336,6 +530,8 @@ export default function SignupPage() {
         ) {
           setRejectedReason(latest.statusReason);
         }
+        // Approved while this page was open — the owner has a console now.
+        if (latest.status === 'active') window.location.assign('/');
       } catch {
         /* transient poll failures are harmless */
       }
@@ -364,83 +560,133 @@ export default function SignupPage() {
     rejectedReason &&
       (tenant?.status === 'rejected' || tenant?.status === 'pending'),
   );
+  const stepLabel = step === 'pending' ? 'Under review' : step;
+
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-950 sm:px-8">
-      <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-black/30">
-        <div className="bg-amber-300 px-7 py-8 sm:px-12">
-          <p className="text-xs font-bold tracking-[0.24em] text-slate-700 uppercase">
+    <main className="bg-bg px-s4 py-s10 sm:px-s6 min-h-screen">
+      <div className="border-border bg-surface mx-auto max-w-2xl overflow-hidden rounded-md border shadow-md">
+        <div className="border-border bg-surface-sunken px-s6 py-s8 sm:px-s10 border-b">
+          <p className="text-fg-muted text-xs font-semibold tracking-wider uppercase">
             VerifyNG / New brand
           </p>
-          <h1 className="mt-5 max-w-lg text-4xl font-black tracking-tight sm:text-5xl">
+          <h1 className="text-fg mt-s4 max-w-lg text-3xl font-semibold tracking-tight sm:text-4xl">
             Build trust before your first scan.
           </h1>
-          <p className="mt-4 max-w-md text-sm leading-6 text-slate-800">
+          <p className="text-fg-muted mt-s3 max-w-md text-sm leading-6">
             Tell us about your business and prove the mark is yours. Our team
             will review your application.
           </p>
         </div>
-        <div className="px-7 py-8 sm:px-12 sm:py-10">
-          <div className="mb-8 flex items-center justify-between text-xs font-bold tracking-[0.18em] text-slate-400 uppercase">
-            <span>Step {stepNumber} of 5</span>
-            <span>{step === 'pending' ? 'Under review' : step}</span>
+        <div className="px-s6 py-s8 sm:px-s10">
+          <div className="mb-s8 space-y-s2">
+            <div className="text-fg-muted flex items-center justify-between text-xs font-semibold tracking-wider uppercase">
+              <span>Step {stepNumber} of 5</span>
+              <span>{stepLabel}</span>
+            </div>
+            <ProgressBar
+              value={stepNumber}
+              max={5}
+              label={`Step ${stepNumber} of 5`}
+              className="[&>div:first-child]:hidden"
+            />
           </div>
           {step === 'account' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">Create your account</h2>
-                <p className="mt-2 text-sm text-slate-500">
-                  Use the email your team should use for review updates.
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  {accountMode === 'register'
+                    ? 'Create your account'
+                    : 'Sign in to continue'}
+                </h2>
+                <p className="text-fg-muted text-sm">
+                  {accountMode === 'register'
+                    ? 'Use the email your team should use for review updates.'
+                    : 'This email already has an account. Sign in to pick your application back up.'}
                 </p>
               </div>
-              <label className="block text-sm font-semibold">
-                Work email
-                <input
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-amber-200"
+              {accountMode === 'register' && (
+                <FormField label="Your name" htmlFor="signup-contact" required>
+                  <Input
+                    id="signup-contact"
+                    value={contactName}
+                    onChange={(event) =>
+                      setContactName(fieldValue(event.target))
+                    }
+                    placeholder="Ada Obi"
+                    autoComplete="name"
+                  />
+                </FormField>
+              )}
+              <FormField label="Work email" htmlFor="signup-email" required>
+                <Input
+                  id="signup-email"
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(fieldValue(event.target))}
                   placeholder="you@yourbrand.com"
                   autoComplete="email"
                 />
-              </label>
-              <button
-                disabled={busy}
-                className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                onClick={() => {
-                  if (!email.trim() || !email.includes('@')) {
-                    setMessage('Enter a valid work email to continue.');
-                    return;
-                  }
-                  setMessage('');
-                  setStep('business');
-                }}
+              </FormField>
+              <FormField
+                label="Password"
+                htmlFor="signup-password"
+                required
+                description={
+                  accountMode === 'register'
+                    ? `At least ${MIN_PASSWORD_LENGTH} characters.`
+                    : undefined
+                }
               >
-                Continue to business details
-              </button>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(fieldValue(event.target))}
+                  autoComplete={
+                    accountMode === 'register'
+                      ? 'new-password'
+                      : 'current-password'
+                  }
+                />
+              </FormField>
+              <div className="border-border pt-s5 border-t">
+                <Button
+                  className="w-full"
+                  disabled={busy}
+                  onClick={createAccount}
+                >
+                  {busy
+                    ? 'Just a moment\u2026'
+                    : accountMode === 'register'
+                      ? 'Create account and continue'
+                      : 'Sign in and continue'}
+                </Button>
+              </div>
             </section>
           )}
           {step === 'business' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">Business details</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  Business details
+                </h2>
+                <p className="text-fg-muted text-sm">
                   Use the legal business name that appears on your registration
                   documents.
                 </p>
               </div>
-              <label className="block text-sm font-semibold">
-                Business name
-                <input
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-amber-200"
+              <FormField label="Business name" htmlFor="signup-name" required>
+                <Input
+                  id="signup-name"
                   value={name}
                   onChange={(event) => setName(fieldValue(event.target))}
                   placeholder="Test Brand Ltd"
                 />
-              </label>
-              <label className="block text-sm font-semibold">
-                Country
+              </FormField>
+              <FormField label="Country" htmlFor="signup-country" required>
                 <select
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+                  id="signup-country"
+                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-11 w-full rounded-sm border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                   value={country}
                   onChange={(event) => setCountry(fieldValue(event.target))}
                 >
@@ -448,21 +694,27 @@ export default function SignupPage() {
                   <option value="GH">Ghana</option>
                   <option value="ZA">South Africa</option>
                 </select>
-              </label>
-              <button
-                disabled={busy}
-                className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                onClick={createTenant}
-              >
-                {busy ? 'Creating application…' : 'Continue to documents'}
-              </button>
+              </FormField>
+              <div className="border-border pt-s5 border-t">
+                <Button
+                  className="w-full"
+                  disabled={busy}
+                  onClick={createTenant}
+                >
+                  {busy
+                    ? 'Creating application\u2026'
+                    : 'Continue to documents'}
+                </Button>
+              </div>
             </section>
           )}
           {step === 'documents' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">Prove your business</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  Prove your business
+                </h2>
+                <p className="text-fg-muted text-sm">
                   PDF, PNG, and JPEG files up to 10 MB. Uploads go directly to
                   our secure storage.
                 </p>
@@ -470,121 +722,137 @@ export default function SignupPage() {
               {documents.map((document) => (
                 <div
                   key={document.kind}
-                  className="rounded-2xl border border-slate-200 p-4"
+                  className="border-border p-s4 space-y-s3 rounded-sm border"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <label className="text-sm font-bold">
+                  <div className="gap-s4 flex items-start justify-between">
+                    <Label
+                      htmlFor={`signup-doc-${document.kind}`}
+                      className="text-fg"
+                    >
                       {document.label}
-                      <input
-                        className="mt-3 block w-full text-sm font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:font-semibold"
-                        type="file"
-                        accept="application/pdf,image/png,image/jpeg"
-                        onChange={(event) =>
-                          chooseFile(document.kind, selectedFile(event.target))
-                        }
-                      />
-                    </label>
-                    <span className="text-xs font-bold text-slate-400 uppercase">
+                    </Label>
+                    <span className="text-fg-faint text-xs font-semibold tracking-wide uppercase">
                       {document.state === 'uploaded'
                         ? 'Ready'
                         : (document.file?.name ?? 'Required')}
                     </span>
                   </div>
-                  {document.state !== 'empty' && (
-                    <div className="mt-4">
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className={`h-full rounded-full ${document.state === 'error' ? 'bg-red-500' : 'bg-amber-400'}`}
-                          style={{ width: `${document.progress}%` }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">
-                        {document.error ??
-                          (document.state === 'uploaded'
-                            ? 'Uploaded and verified.'
-                            : `${document.progress}% uploaded`)}
-                      </p>
-                    </div>
+                  <input
+                    id={`signup-doc-${document.kind}`}
+                    className="text-fg-muted file:bg-surface-sunken file:text-fg focus-visible:ring-ring block w-full rounded-sm text-sm file:mr-3 file:rounded-full file:border-0 file:px-3 file:py-2 file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    onChange={(event) =>
+                      chooseFile(document.kind, selectedFile(event.target))
+                    }
+                  />
+                  {document.state === 'error' && document.error && (
+                    <p className="bg-v-flag-tint text-v-flag p-s3 rounded-sm text-sm">
+                      {document.error}
+                    </p>
+                  )}
+                  {(document.state === 'uploading' ||
+                    document.state === 'uploaded') && (
+                    <ProgressBar
+                      value={document.progress}
+                      label={
+                        document.state === 'uploaded'
+                          ? 'Uploaded and verified.'
+                          : `${document.progress}% uploaded`
+                      }
+                    />
                   )}
                 </div>
               ))}
-              <div className="flex gap-3">
-                <button
+              <div className="border-border gap-s3 pt-s5 flex flex-col border-t sm:flex-row-reverse">
+                <Button
+                  className="flex-1"
                   disabled={busy}
-                  className="rounded-xl border border-slate-300 px-4 py-3 font-bold"
+                  onClick={uploadDocuments}
+                >
+                  {busy ? 'Uploading\u2026' : 'Upload and continue'}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
                   onClick={() => setStep('business')}
                 >
                   Back
-                </button>
-                <button
-                  disabled={busy}
-                  className="flex-1 rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                  onClick={uploadDocuments}
-                >
-                  {busy ? 'Uploading…' : 'Upload and continue'}
-                </button>
+                </Button>
               </div>
             </section>
           )}
           {step === 'policies' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">The trust agreement</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  The trust agreement
+                </h2>
+                <p className="text-fg-muted text-sm">
                   Review and accept both policies before your documents can
                   enter review.
                 </p>
               </div>
-              <label className="flex gap-3 rounded-2xl border border-slate-200 p-4 text-sm leading-6">
-                <input
-                  className="mt-1 size-4 accent-slate-950"
-                  type="checkbox"
+              <div className="border-border p-s4 gap-s3 flex items-start rounded-sm border">
+                <Checkbox
+                  id="accept-aup"
+                  className="mt-s1"
                   checked={acceptAup}
-                  onChange={(event) => setAcceptAup(checkedValue(event.target))}
+                  onCheckedChange={(value) => setAcceptAup(value === true)}
                 />
-                I accept the Acceptable Use Policy, version{' '}
-                {policyVersions?.aup ?? 'current'}.
-              </label>
-              <label className="flex gap-3 rounded-2xl border border-slate-200 p-4 text-sm leading-6">
-                <input
-                  className="mt-1 size-4 accent-slate-950"
-                  type="checkbox"
+                <Label htmlFor="accept-aup" className="text-fg leading-6">
+                  I accept the Acceptable Use Policy, version{' '}
+                  {policyVersions?.aup ?? 'current'}.
+                </Label>
+              </div>
+              <div className="border-border p-s4 gap-s3 flex items-start rounded-sm border">
+                <Checkbox
+                  id="accept-tos"
+                  className="mt-s1"
                   checked={acceptTos}
-                  onChange={(event) => setAcceptTos(checkedValue(event.target))}
+                  onCheckedChange={(value) => setAcceptTos(value === true)}
                 />
-                I accept the Terms of Service, version{' '}
-                {policyVersions?.tos ?? 'current'}.
-              </label>
-              <div className="flex gap-3">
-                <button
+                <Label htmlFor="accept-tos" className="text-fg leading-6">
+                  I accept the Terms of Service, version{' '}
+                  {policyVersions?.tos ?? 'current'}.
+                </Label>
+              </div>
+              <div className="border-border gap-s3 pt-s5 flex flex-col border-t sm:flex-row-reverse">
+                <Button
+                  className="flex-1"
                   disabled={busy}
-                  className="rounded-xl border border-slate-300 px-4 py-3 font-bold"
+                  onClick={acceptPoliciesAndSubmit}
+                >
+                  {busy ? 'Submitting\u2026' : 'Submit for review'}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
                   onClick={() => setStep('documents')}
                 >
                   Back
-                </button>
-                <button
-                  disabled={busy}
-                  className="flex-1 rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                  onClick={acceptPoliciesAndSubmit}
-                >
-                  {busy ? 'Submitting…' : 'Submit for review'}
-                </button>
+                </Button>
               </div>
             </section>
           )}
           {step === 'pending' && (
-            <section className="space-y-6">
-              <div className="rounded-2xl bg-amber-100 p-6">
-                <p className="text-xs font-bold tracking-[0.18em] text-amber-900 uppercase">
+            <section className="space-y-s6">
+              <div
+                className={`p-s6 space-y-s3 rounded-sm ${
+                  showRejected
+                    ? 'bg-v-susp-tint text-v-susp'
+                    : 'bg-surface-sunken text-fg'
+                }`}
+              >
+                <p className="text-xs font-semibold tracking-wider uppercase">
                   {showRejected ? 'Changes requested' : 'Application received'}
                 </p>
-                <h2 className="mt-3 text-3xl font-black">
+                <h2 className="text-2xl font-semibold tracking-tight">
                   {showRejected
                     ? 'A little more proof.'
                     : 'You are in the review queue.'}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-slate-700">
+                <p className="text-sm leading-6">
                   {showRejected
                     ? (rejectedReason ??
                       'Support has requested changes to your application.')
@@ -592,14 +860,23 @@ export default function SignupPage() {
                 </p>
               </div>
               {showRejected && (
-                <button
-                  className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white"
-                  onClick={replaceRejectedDocuments}
-                >
-                  Replace documents and resubmit
-                </button>
+                <div className="border-border pt-s5 border-t">
+                  <Button className="w-full" onClick={replaceRejectedDocuments}>
+                    Replace documents and resubmit
+                  </Button>
+                </div>
               )}
-              <p className="text-center text-xs text-slate-400">
+              {tenant?.status === 'active' && (
+                <div className="border-border pt-s5 border-t">
+                  <Button
+                    className="w-full"
+                    onClick={() => window.location.assign('/')}
+                  >
+                    Open your console
+                  </Button>
+                </div>
+              )}
+              <p className="text-fg-faint text-center text-xs">
                 Current status: {tenant?.status ?? 'pending'}
               </p>
             </section>
@@ -607,7 +884,8 @@ export default function SignupPage() {
           {message && (
             <p
               role="alert"
-              className="mt-6 rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-800"
+              data-testid="signup-error"
+              className="bg-v-flag-tint text-v-flag mt-s6 p-s4 rounded-sm text-sm font-medium"
             >
               {message}
             </p>

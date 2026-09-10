@@ -7,7 +7,7 @@ import { filterNavByRole } from '@/lib/role-utils';
 import { useAuth } from '@/lib/auth-store';
 import { PanelLeftCloseIcon, PanelLeftIcon } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@verifyng/ui';
+import { cn, IconButton } from '@verifyng/ui';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -27,17 +27,33 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'border-border bg-surface flex h-full flex-col border-r transition-all',
+        'border-border bg-surface flex h-full flex-col border-r transition-[width] duration-200',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
-      <div className="border-border flex items-center justify-between border-b px-3 py-3">
-        {!collapsed && (
-          <span className="text-fg text-sm font-semibold">Verify Admin</span>
+      <div
+        className={cn(
+          'border-border px-s3 flex h-14 shrink-0 items-center border-b',
+          collapsed ? 'justify-center' : 'justify-between',
         )}
-        <button
+      >
+        {!collapsed && (
+          <span className="gap-s2 flex items-center">
+            <span
+              aria-hidden="true"
+              className="bg-brand text-brand-ink grid h-6 w-6 place-content-center rounded-xs text-xs font-bold"
+            >
+              V
+            </span>
+            <span className="text-fg text-sm font-semibold tracking-tight">
+              Verify Admin
+            </span>
+          </span>
+        )}
+        <IconButton
+          size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="text-fg-muted hover:bg-surface-sunken rounded-md p-1.5"
+          className="text-fg-muted hover:text-fg w-10 px-0"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? (
@@ -45,14 +61,17 @@ export function Sidebar() {
           ) : (
             <PanelLeftCloseIcon className="h-4 w-4" />
           )}
-        </button>
+        </IconButton>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-2" aria-label="Main navigation">
+      <nav
+        className="py-s3 space-y-s5 flex-1 overflow-y-auto"
+        aria-label="Main navigation"
+      >
         {groupedBySection.map((group) => (
-          <div key={group.key} className="mb-3">
+          <div key={group.key} className="space-y-s1">
             {!collapsed && (
-              <div className="text-fg-faint px-3 pb-1 text-xs font-medium tracking-wider uppercase">
+              <div className="text-fg-faint px-s4 pb-s1 text-xs font-semibold tracking-wider uppercase">
                 {group.label}
               </div>
             )}
@@ -67,7 +86,7 @@ export function Sidebar() {
                   key={entry.id}
                   href={entry.href}
                   className={cn(
-                    'mx-2 flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors',
+                    'mx-s2 gap-s3 px-s2 focus-visible:ring-focus relative flex min-h-11 items-center rounded-sm text-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none lg:min-h-10',
                     isActive
                       ? 'bg-surface-sunken text-fg font-medium'
                       : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
@@ -76,8 +95,16 @@ export function Sidebar() {
                   title={collapsed ? entry.label : undefined}
                   aria-current={isActive ? 'page' : undefined}
                 >
+                  {isActive && (
+                    <span
+                      aria-hidden="true"
+                      className="bg-brand absolute inset-y-1 left-0 w-0.5 rounded-full"
+                    />
+                  )}
                   <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span>{entry.label}</span>}
+                  {!collapsed && (
+                    <span className="truncate">{entry.label}</span>
+                  )}
                 </Link>
               );
             })}

@@ -29,13 +29,18 @@ export default function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <div className="space-y-4 text-center">
-        <h2 className="text-fg text-lg font-semibold">Check your email</h2>
+      <div className="space-y-s5 text-center">
+        <h2 className="text-fg text-lg font-semibold tracking-tight">
+          Check your email
+        </h2>
         <p className="text-fg-muted text-sm">
           If an account exists with that email, you&apos;ll receive a password
           reset link.
         </p>
-        <a href="/login" className="text-brand-text text-sm hover:underline">
+        <a
+          href="/login"
+          className="text-brand-text focus-visible:ring-focus inline-block rounded-xs text-sm hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
           Back to sign in
         </a>
       </div>
@@ -43,9 +48,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <h2 className="text-fg text-lg font-semibold">Reset your password</h2>
+    <form onSubmit={handleSubmit} className="space-y-s5">
+      <div className="space-y-s2">
+        <h2 className="text-fg text-lg font-semibold tracking-tight">
+          Reset your password
+        </h2>
         <p className="text-fg-muted text-sm">
           Enter your email and we&apos;ll send you a reset link.
         </p>
@@ -70,7 +77,7 @@ export default function ForgotPasswordPage() {
 
       <a
         href="/login"
-        className="text-brand-text block text-center text-sm hover:underline"
+        className="text-brand-text focus-visible:ring-focus block rounded-xs text-center text-sm hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       >
         Back to sign in
       </a>
