@@ -110,6 +110,9 @@ export default function ChangePlanPage() {
 
   const plans = (plansQuery.data ?? [])
     .filter((p) => p.active)
+    // A trial is something you start on, never something you switch to, so
+    // it only appears while it is the tenant's own plan.
+    .filter((p) => !p.features.trialTotalCap || p.id === subscription?.planId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
   const dialogPlan = plans.find((p) => p.code === dialogPlanCode);
   const preview = previewQuery.data;
