@@ -11,22 +11,24 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav?: () => void }) {
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="border-border bg-surface flex h-14 items-center justify-between border-b px-4">
-      <div className="flex items-center gap-2">
+    <header className="border-border bg-surface px-s4 gap-s3 flex h-14 shrink-0 items-center justify-between border-b">
+      <div className="gap-s2 flex min-w-0 items-center">
         <IconButton
-          className="lg:hidden"
+          className="text-fg-muted hover:text-fg lg:hidden"
           aria-label="Open navigation"
           onClick={onOpenMobileNav}
         >
           <MenuIcon className="h-4 w-4" />
         </IconButton>
-        <ConsoleBreadcrumbs />
+        <div className="min-w-0 truncate">
+          <ConsoleBreadcrumbs />
+        </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="gap-s2 flex shrink-0 items-center">
         <TenantSwitcher />
-        <button
+        <IconButton
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="text-fg-muted hover:bg-surface-sunken rounded-md p-1.5"
+          className="text-fg-muted hover:text-fg"
           aria-label="Toggle dark mode"
         >
           {theme === 'dark' ? (
@@ -34,7 +36,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav?: () => void }) {
           ) : (
             <MoonIcon className="h-4 w-4" />
           )}
-        </button>
+        </IconButton>
         <UserMenu />
       </div>
     </header>

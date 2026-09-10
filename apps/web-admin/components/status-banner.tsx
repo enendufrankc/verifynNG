@@ -50,13 +50,17 @@ export function StatusBanner({ status, href }: StatusBannerProps) {
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-2 ${config.bg} ${config.text}`}
+      className={`gap-s2 px-s4 py-s2 flex shrink-0 flex-wrap items-center ${config.bg} ${config.text}`}
       role="status"
+      data-testid="status-banner"
     >
       <Icon className="h-4 w-4 shrink-0" />
       <p className="text-sm font-medium">{config.message}</p>
       {status === 'restricted' && href && (
-        <Link href={href} className="ml-auto text-sm font-semibold underline">
+        <Link
+          href={href}
+          className="focus-visible:ring-focus ml-auto rounded-xs text-sm font-semibold underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
           Pay now
         </Link>
       )}

@@ -167,8 +167,11 @@ export function DataTable<TData, TValue>({
                 className="border-border bg-surface space-y-2 rounded-md border p-4"
               >
                 {row.getVisibleCells().map((cell) => (
-                  <div key={cell.id} className="flex justify-between text-sm">
-                    <span className="text-fg-muted">
+                  <div
+                    key={cell.id}
+                    className="gap-s3 flex justify-between text-sm"
+                  >
+                    <span className="text-fg-muted shrink-0">
                       {flexRender(
                         cell.column.columnDef.header,
                         cell.getContext() as unknown as HeaderContext<
@@ -177,7 +180,7 @@ export function DataTable<TData, TValue>({
                         >,
                       )}
                     </span>
-                    <span>
+                    <span className="min-w-0 text-right">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),

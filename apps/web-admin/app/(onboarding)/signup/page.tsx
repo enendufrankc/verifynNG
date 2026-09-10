@@ -1,6 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Checkbox,
+  FormField,
+  Input,
+  Label,
+  ProgressBar,
+} from '@verifyng/ui';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -105,9 +113,6 @@ function fieldValue(target: unknown) {
 }
 function selectedFile(target: unknown) {
   return (target as { files?: { 0?: File } }).files?.[0];
-}
-function checkedValue(target: unknown) {
-  return (target as { checked: boolean }).checked;
 }
 
 export default function SignupPage() {
@@ -364,83 +369,97 @@ export default function SignupPage() {
     rejectedReason &&
       (tenant?.status === 'rejected' || tenant?.status === 'pending'),
   );
+  const stepLabel = step === 'pending' ? 'Under review' : step;
+
   return (
-    <main className="min-h-screen bg-slate-950 px-5 py-10 text-slate-950 sm:px-8">
-      <div className="mx-auto max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl shadow-black/30">
-        <div className="bg-amber-300 px-7 py-8 sm:px-12">
-          <p className="text-xs font-bold tracking-[0.24em] text-slate-700 uppercase">
+    <main className="bg-bg px-s4 py-s10 sm:px-s6 min-h-screen">
+      <div className="border-border bg-surface mx-auto max-w-2xl overflow-hidden rounded-md border shadow-md">
+        <div className="border-border bg-surface-sunken px-s6 py-s8 sm:px-s10 border-b">
+          <p className="text-fg-muted text-xs font-semibold tracking-wider uppercase">
             VerifyNG / New brand
           </p>
-          <h1 className="mt-5 max-w-lg text-4xl font-black tracking-tight sm:text-5xl">
+          <h1 className="text-fg mt-s4 max-w-lg text-3xl font-semibold tracking-tight sm:text-4xl">
             Build trust before your first scan.
           </h1>
-          <p className="mt-4 max-w-md text-sm leading-6 text-slate-800">
+          <p className="text-fg-muted mt-s3 max-w-md text-sm leading-6">
             Tell us about your business and prove the mark is yours. Our team
             will review your application.
           </p>
         </div>
-        <div className="px-7 py-8 sm:px-12 sm:py-10">
-          <div className="mb-8 flex items-center justify-between text-xs font-bold tracking-[0.18em] text-slate-400 uppercase">
-            <span>Step {stepNumber} of 5</span>
-            <span>{step === 'pending' ? 'Under review' : step}</span>
+        <div className="px-s6 py-s8 sm:px-s10">
+          <div className="mb-s8 space-y-s2">
+            <div className="text-fg-muted flex items-center justify-between text-xs font-semibold tracking-wider uppercase">
+              <span>Step {stepNumber} of 5</span>
+              <span>{stepLabel}</span>
+            </div>
+            <ProgressBar
+              value={stepNumber}
+              max={5}
+              label={`Step ${stepNumber} of 5`}
+              className="[&>div:first-child]:hidden"
+            />
           </div>
           {step === 'account' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">Create your account</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  Create your account
+                </h2>
+                <p className="text-fg-muted text-sm">
                   Use the email your team should use for review updates.
                 </p>
               </div>
-              <label className="block text-sm font-semibold">
-                Work email
-                <input
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-amber-200"
+              <FormField label="Work email" htmlFor="signup-email" required>
+                <Input
+                  id="signup-email"
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(fieldValue(event.target))}
                   placeholder="you@yourbrand.com"
                   autoComplete="email"
                 />
-              </label>
-              <button
-                disabled={busy}
-                className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                onClick={() => {
-                  if (!email.trim() || !email.includes('@')) {
-                    setMessage('Enter a valid work email to continue.');
-                    return;
-                  }
-                  setMessage('');
-                  setStep('business');
-                }}
-              >
-                Continue to business details
-              </button>
+              </FormField>
+              <div className="border-border pt-s5 border-t">
+                <Button
+                  className="w-full"
+                  disabled={busy}
+                  onClick={() => {
+                    if (!email.trim() || !email.includes('@')) {
+                      setMessage('Enter a valid work email to continue.');
+                      return;
+                    }
+                    setMessage('');
+                    setStep('business');
+                  }}
+                >
+                  Continue to business details
+                </Button>
+              </div>
             </section>
           )}
           {step === 'business' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">Business details</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  Business details
+                </h2>
+                <p className="text-fg-muted text-sm">
                   Use the legal business name that appears on your registration
                   documents.
                 </p>
               </div>
-              <label className="block text-sm font-semibold">
-                Business name
-                <input
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-amber-200"
+              <FormField label="Business name" htmlFor="signup-name" required>
+                <Input
+                  id="signup-name"
                   value={name}
                   onChange={(event) => setName(fieldValue(event.target))}
                   placeholder="Test Brand Ltd"
                 />
-              </label>
-              <label className="block text-sm font-semibold">
-                Country
+              </FormField>
+              <FormField label="Country" htmlFor="signup-country" required>
                 <select
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3"
+                  id="signup-country"
+                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-11 w-full rounded-sm border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                   value={country}
                   onChange={(event) => setCountry(fieldValue(event.target))}
                 >
@@ -448,21 +467,27 @@ export default function SignupPage() {
                   <option value="GH">Ghana</option>
                   <option value="ZA">South Africa</option>
                 </select>
-              </label>
-              <button
-                disabled={busy}
-                className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                onClick={createTenant}
-              >
-                {busy ? 'Creating application…' : 'Continue to documents'}
-              </button>
+              </FormField>
+              <div className="border-border pt-s5 border-t">
+                <Button
+                  className="w-full"
+                  disabled={busy}
+                  onClick={createTenant}
+                >
+                  {busy
+                    ? 'Creating application\u2026'
+                    : 'Continue to documents'}
+                </Button>
+              </div>
             </section>
           )}
           {step === 'documents' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">Prove your business</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  Prove your business
+                </h2>
+                <p className="text-fg-muted text-sm">
                   PDF, PNG, and JPEG files up to 10 MB. Uploads go directly to
                   our secure storage.
                 </p>
@@ -470,121 +495,137 @@ export default function SignupPage() {
               {documents.map((document) => (
                 <div
                   key={document.kind}
-                  className="rounded-2xl border border-slate-200 p-4"
+                  className="border-border p-s4 space-y-s3 rounded-sm border"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <label className="text-sm font-bold">
+                  <div className="gap-s4 flex items-start justify-between">
+                    <Label
+                      htmlFor={`signup-doc-${document.kind}`}
+                      className="text-fg"
+                    >
                       {document.label}
-                      <input
-                        className="mt-3 block w-full text-sm font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:font-semibold"
-                        type="file"
-                        accept="application/pdf,image/png,image/jpeg"
-                        onChange={(event) =>
-                          chooseFile(document.kind, selectedFile(event.target))
-                        }
-                      />
-                    </label>
-                    <span className="text-xs font-bold text-slate-400 uppercase">
+                    </Label>
+                    <span className="text-fg-faint text-xs font-semibold tracking-wide uppercase">
                       {document.state === 'uploaded'
                         ? 'Ready'
                         : (document.file?.name ?? 'Required')}
                     </span>
                   </div>
-                  {document.state !== 'empty' && (
-                    <div className="mt-4">
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className={`h-full rounded-full ${document.state === 'error' ? 'bg-red-500' : 'bg-amber-400'}`}
-                          style={{ width: `${document.progress}%` }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">
-                        {document.error ??
-                          (document.state === 'uploaded'
-                            ? 'Uploaded and verified.'
-                            : `${document.progress}% uploaded`)}
-                      </p>
-                    </div>
+                  <input
+                    id={`signup-doc-${document.kind}`}
+                    className="text-fg-muted file:bg-surface-sunken file:text-fg focus-visible:ring-ring block w-full rounded-sm text-sm file:mr-3 file:rounded-full file:border-0 file:px-3 file:py-2 file:text-sm file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    onChange={(event) =>
+                      chooseFile(document.kind, selectedFile(event.target))
+                    }
+                  />
+                  {document.state === 'error' && document.error && (
+                    <p className="bg-v-flag-tint text-v-flag p-s3 rounded-sm text-sm">
+                      {document.error}
+                    </p>
+                  )}
+                  {(document.state === 'uploading' ||
+                    document.state === 'uploaded') && (
+                    <ProgressBar
+                      value={document.progress}
+                      label={
+                        document.state === 'uploaded'
+                          ? 'Uploaded and verified.'
+                          : `${document.progress}% uploaded`
+                      }
+                    />
                   )}
                 </div>
               ))}
-              <div className="flex gap-3">
-                <button
+              <div className="border-border gap-s3 pt-s5 flex flex-col border-t sm:flex-row-reverse">
+                <Button
+                  className="flex-1"
                   disabled={busy}
-                  className="rounded-xl border border-slate-300 px-4 py-3 font-bold"
+                  onClick={uploadDocuments}
+                >
+                  {busy ? 'Uploading\u2026' : 'Upload and continue'}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
                   onClick={() => setStep('business')}
                 >
                   Back
-                </button>
-                <button
-                  disabled={busy}
-                  className="flex-1 rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                  onClick={uploadDocuments}
-                >
-                  {busy ? 'Uploading…' : 'Upload and continue'}
-                </button>
+                </Button>
               </div>
             </section>
           )}
           {step === 'policies' && (
-            <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold">The trust agreement</h2>
-                <p className="mt-2 text-sm text-slate-500">
+            <section className="space-y-s6">
+              <div className="space-y-s2">
+                <h2 className="text-fg text-2xl font-semibold tracking-tight">
+                  The trust agreement
+                </h2>
+                <p className="text-fg-muted text-sm">
                   Review and accept both policies before your documents can
                   enter review.
                 </p>
               </div>
-              <label className="flex gap-3 rounded-2xl border border-slate-200 p-4 text-sm leading-6">
-                <input
-                  className="mt-1 size-4 accent-slate-950"
-                  type="checkbox"
+              <div className="border-border p-s4 gap-s3 flex items-start rounded-sm border">
+                <Checkbox
+                  id="accept-aup"
+                  className="mt-s1"
                   checked={acceptAup}
-                  onChange={(event) => setAcceptAup(checkedValue(event.target))}
+                  onCheckedChange={(value) => setAcceptAup(value === true)}
                 />
-                I accept the Acceptable Use Policy, version{' '}
-                {policyVersions?.aup ?? 'current'}.
-              </label>
-              <label className="flex gap-3 rounded-2xl border border-slate-200 p-4 text-sm leading-6">
-                <input
-                  className="mt-1 size-4 accent-slate-950"
-                  type="checkbox"
+                <Label htmlFor="accept-aup" className="text-fg leading-6">
+                  I accept the Acceptable Use Policy, version{' '}
+                  {policyVersions?.aup ?? 'current'}.
+                </Label>
+              </div>
+              <div className="border-border p-s4 gap-s3 flex items-start rounded-sm border">
+                <Checkbox
+                  id="accept-tos"
+                  className="mt-s1"
                   checked={acceptTos}
-                  onChange={(event) => setAcceptTos(checkedValue(event.target))}
+                  onCheckedChange={(value) => setAcceptTos(value === true)}
                 />
-                I accept the Terms of Service, version{' '}
-                {policyVersions?.tos ?? 'current'}.
-              </label>
-              <div className="flex gap-3">
-                <button
+                <Label htmlFor="accept-tos" className="text-fg leading-6">
+                  I accept the Terms of Service, version{' '}
+                  {policyVersions?.tos ?? 'current'}.
+                </Label>
+              </div>
+              <div className="border-border gap-s3 pt-s5 flex flex-col border-t sm:flex-row-reverse">
+                <Button
+                  className="flex-1"
                   disabled={busy}
-                  className="rounded-xl border border-slate-300 px-4 py-3 font-bold"
+                  onClick={acceptPoliciesAndSubmit}
+                >
+                  {busy ? 'Submitting\u2026' : 'Submit for review'}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
                   onClick={() => setStep('documents')}
                 >
                   Back
-                </button>
-                <button
-                  disabled={busy}
-                  className="flex-1 rounded-xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-60"
-                  onClick={acceptPoliciesAndSubmit}
-                >
-                  {busy ? 'Submitting…' : 'Submit for review'}
-                </button>
+                </Button>
               </div>
             </section>
           )}
           {step === 'pending' && (
-            <section className="space-y-6">
-              <div className="rounded-2xl bg-amber-100 p-6">
-                <p className="text-xs font-bold tracking-[0.18em] text-amber-900 uppercase">
+            <section className="space-y-s6">
+              <div
+                className={`p-s6 space-y-s3 rounded-sm ${
+                  showRejected
+                    ? 'bg-v-susp-tint text-v-susp'
+                    : 'bg-surface-sunken text-fg'
+                }`}
+              >
+                <p className="text-xs font-semibold tracking-wider uppercase">
                   {showRejected ? 'Changes requested' : 'Application received'}
                 </p>
-                <h2 className="mt-3 text-3xl font-black">
+                <h2 className="text-2xl font-semibold tracking-tight">
                   {showRejected
                     ? 'A little more proof.'
                     : 'You are in the review queue.'}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-slate-700">
+                <p className="text-sm leading-6">
                   {showRejected
                     ? (rejectedReason ??
                       'Support has requested changes to your application.')
@@ -592,14 +633,13 @@ export default function SignupPage() {
                 </p>
               </div>
               {showRejected && (
-                <button
-                  className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white"
-                  onClick={replaceRejectedDocuments}
-                >
-                  Replace documents and resubmit
-                </button>
+                <div className="border-border pt-s5 border-t">
+                  <Button className="w-full" onClick={replaceRejectedDocuments}>
+                    Replace documents and resubmit
+                  </Button>
+                </div>
               )}
-              <p className="text-center text-xs text-slate-400">
+              <p className="text-fg-faint text-center text-xs">
                 Current status: {tenant?.status ?? 'pending'}
               </p>
             </section>
@@ -607,7 +647,8 @@ export default function SignupPage() {
           {message && (
             <p
               role="alert"
-              className="mt-6 rounded-xl bg-red-50 p-4 text-sm font-semibold text-red-800"
+              data-testid="signup-error"
+              className="bg-v-flag-tint text-v-flag mt-s6 p-s4 rounded-sm text-sm font-medium"
             >
               {message}
             </p>

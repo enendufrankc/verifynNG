@@ -70,8 +70,9 @@ export default function BatchesPage() {
       header: 'Batch',
       cell: ({ row }) => (
         <Link
+          data-testid="batch-link"
           href={`/batches/${row.original.id}`}
-          className="text-brand font-medium hover:underline"
+          className="text-brand-text focus-visible:ring-focus rounded-xs font-mono text-sm font-medium hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {row.original.id.slice(0, 8)}
         </Link>
@@ -80,14 +81,26 @@ export default function BatchesPage() {
     {
       accessorKey: 'productId',
       header: 'Product',
-      cell: ({ row }) => productName(row.original.productId),
+      cell: ({ row }) => (
+        <span className="font-mono text-sm">
+          {productName(row.original.productId)}
+        </span>
+      ),
     },
     {
       accessorKey: 'oemId',
       header: 'OEM',
       cell: ({ row }) => oemName(row.original.oemId),
     },
-    { accessorKey: 'count', header: 'Count' },
+    {
+      accessorKey: 'count',
+      header: 'Count',
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {row.original.count.toLocaleString()}
+        </span>
+      ),
+    },
     {
       accessorKey: 'status',
       header: 'Status',
@@ -112,17 +125,21 @@ export default function BatchesPage() {
     {
       accessorKey: 'createdAt',
       header: 'Created',
-      cell: ({ row }) => new Date(row.original.createdAt).toLocaleString(),
+      cell: ({ row }) => (
+        <span className="text-fg-muted text-sm">
+          {new Date(row.original.createdAt).toLocaleString()}
+        </span>
+      ),
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-s6">
       <PageHeader
         title="Batches"
         description="Minted unit batches for this tenant's products."
         actions={
-          <div className="flex items-center gap-3">
+          <div className="gap-s3 flex items-center">
             <HelpLink docSlug="console/batches" module="batches" />
             {isOwner && (
               <Button asChild>
@@ -137,17 +154,41 @@ export default function BatchesPage() {
       />
 
       {batchesQuery.isError ? (
-        <EmptyState
-          icon={AlertTriangleIcon}
-          title="Couldn't load batches"
-          description="The catalog service isn't reachable yet."
-        />
+        <div className="border-border bg-surface rounded-md border">
+          <EmptyState
+            data-testid="batches-error"
+            icon={AlertTriangleIcon}
+            title="Couldn't load batches"
+            description="The catalog service isn't reachable yet."
+            action={
+              <Button variant="outline" onClick={() => batchesQuery.refetch()}>
+                Try again
+              </Button>
+            }
+          />
+        </div>
       ) : (
         <DataTable
           columns={columns}
           data={batchesQuery.data ?? []}
           isLoading={batchesQuery.isLoading}
-          emptyState={<EmptyState icon={LayersIcon} title="No batches yet" />}
+          emptyState={
+            <div className="border-border bg-surface rounded-md border">
+              <EmptyState
+                data-testid="batches-empty"
+                icon={LayersIcon}
+                title="No batches yet"
+                description="Mint a batch to generate unit codes for a product."
+                action={
+                  isOwner ? (
+                    <Button asChild>
+                      <Link href="/batches/new">Mint batch</Link>
+                    </Button>
+                  ) : undefined
+                }
+              />
+            </div>
+          }
         />
       )}
     </div>
