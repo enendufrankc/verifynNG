@@ -223,10 +223,25 @@ export default function SignupPage() {
     [setAuth],
   );
 
+  /** The two policy versions `POST /tenants` and the submit step both pin. */
+  const loadPolicyVersions = useCallback(async () => {
+    const [aupResponse, tosResponse] = await Promise.all([
+      request('/policies/aup/current'),
+      request('/policies/tos/current'),
+    ]);
+    const versions = {
+      aup: ((await aupResponse.json()) as { version: string }).version,
+      tos: ((await tosResponse.json()) as { version: string }).version,
+    };
+    setPolicyVersions(versions);
+    return versions;
+  }, [request]);
+
   /**
-   * Sends an owner to wherever their application actually is. A brand that
-   * support has already activated belongs in the console, not in this
-   * wizard; one still in review resumes at the pending step.
+   * Sends an owner to wherever their application actually is: a brand support
+   * has activated belongs in the console rather than this wizard, one that
+   * has been submitted waits at the review step, and one still `pending` was
+   * abandoned before its documents went up, so it resumes there.
    */
   const resumeExistingApplication = useCallback(
     async (session: SessionResult, memberships: { tenantId: string }[]) => {
@@ -250,9 +265,18 @@ export default function SignupPage() {
       }
       setTenant(existing);
       setRejectedReason(existing.statusReason ?? null);
+      setName(existing.name);
+      if (existing.status === 'pending' && !existing.statusReason) {
+        // Created but never submitted. The submit step pins policy versions,
+        // and this session has not been through the business step that
+        // normally fetches them.
+        await loadPolicyVersions();
+        setStep('documents');
+        return;
+      }
       setStep('pending');
     },
-    [],
+    [loadPolicyVersions],
   );
 
   const createAccount = async () => {
@@ -327,15 +351,7 @@ export default function SignupPage() {
     setBusy(true);
     setMessage('');
     try {
-      const [aupResponse, tosResponse] = await Promise.all([
-        request('/policies/aup/current'),
-        request('/policies/tos/current'),
-      ]);
-      const currentPolicies = {
-        aup: ((await aupResponse.json()) as { version: string }).version,
-        tos: ((await tosResponse.json()) as { version: string }).version,
-      };
-      setPolicyVersions(currentPolicies);
+      const currentPolicies = await loadPolicyVersions();
       const response = await request('/tenants', {
         method: 'POST',
         body: JSON.stringify({

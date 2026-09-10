@@ -121,9 +121,20 @@ test.describe('self-serve brand signup', () => {
     await page.locator('#signup-password').fill(PASSWORD);
     await page.getByRole('button', { name: 'Sign in and continue' }).click();
 
+    // Nothing was submitted, so they land back on the step they abandoned —
+    // not on a review queue they never joined — and can finish from there.
+    await expect(
+      page.getByRole('heading', { name: 'Prove your business' }),
+    ).toBeVisible({ timeout: 15_000 });
+    await attach(page, 'cac_certificate');
+    await attach(page, 'director_id');
+    await page.getByRole('button', { name: 'Upload and continue' }).click();
+    await page.locator('#accept-aup').click();
+    await page.locator('#accept-tos').click();
+    await page.getByRole('button', { name: 'Submit for review' }).click();
     await expect(
       page.getByRole('heading', { name: 'You are in the review queue.' }),
-    ).toBeVisible({ timeout: 15_000 });
+    ).toBeVisible({ timeout: 20_000 });
   });
 
   test('an anonymous request still cannot create a tenant', async ({
