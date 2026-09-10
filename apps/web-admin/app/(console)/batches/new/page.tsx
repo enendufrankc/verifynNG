@@ -211,7 +211,7 @@ export default function NewBatchPage() {
 
         <div
           data-testid="mint-form-footer"
-          className="border-border bg-surface py-s4 sticky bottom-0 z-10 border-t sm:static sm:bg-transparent"
+          className="border-border bg-surface p-s4 sticky bottom-0 z-10 rounded-md border sm:static sm:border-0 sm:bg-transparent sm:p-0"
         >
           <Button
             type="submit"
