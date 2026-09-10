@@ -128,12 +128,33 @@ export default function ProductsPage() {
     !gtinValue || validateGtin(gtinValue) ? null : 'Invalid GTIN check digit';
 
   const columns: ColumnDef<Product>[] = [
-    { accessorKey: 'sku', header: 'SKU' },
-    { accessorKey: 'name', header: 'Name' },
+    {
+      accessorKey: 'sku',
+      header: 'SKU',
+      cell: ({ row }) => (
+        <span data-testid="product-sku" className="font-mono text-sm">
+          {row.original.sku}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      cell: ({ row }) => (
+        <span className="text-fg font-medium">{row.original.name}</span>
+      ),
+    },
     {
       accessorKey: 'gtin',
       header: 'GTIN',
-      cell: ({ row }) => row.original.gtin ?? '—',
+      cell: ({ row }) =>
+        row.original.gtin ? (
+          <span className="text-fg-muted font-mono text-sm">
+            {row.original.gtin}
+          </span>
+        ) : (
+          <span className="text-fg-faint">—</span>
+        ),
     },
     {
       id: 'status',
@@ -148,7 +169,7 @@ export default function ProductsPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-s6">
       <PageHeader
         title="Products"
         description="Catalog products this tenant mints batches for."
@@ -163,21 +184,43 @@ export default function ProductsPage() {
       />
 
       {productsQuery.isError ? (
-        <EmptyState
-          icon={AlertTriangleIcon}
-          title="Couldn't load products"
-          description="The catalog service isn't reachable yet."
-        />
+        <div className="border-border bg-surface rounded-md border">
+          <EmptyState
+            data-testid="products-error"
+            icon={AlertTriangleIcon}
+            title="Couldn't load products"
+            description="The catalog service isn't reachable yet."
+            action={
+              <Button variant="outline" onClick={() => productsQuery.refetch()}>
+                Try again
+              </Button>
+            }
+          />
+        </div>
       ) : (
         <DataTable
           columns={columns}
           data={productsQuery.data ?? []}
           isLoading={productsQuery.isLoading}
-          emptyState={<EmptyState icon={PackageIcon} title="No products yet" />}
+          emptyState={
+            <div className="border-border bg-surface rounded-md border">
+              <EmptyState
+                data-testid="products-empty"
+                icon={PackageIcon}
+                title="No products yet"
+                description="Add the first product this tenant will mint batches for."
+                action={
+                  canWrite ? (
+                    <Button onClick={openCreate}>New product</Button>
+                  ) : undefined
+                }
+              />
+            </div>
+          }
           rowActions={
             canWrite
               ? (product) => (
-                  <div className="flex gap-2">
+                  <div className="gap-s1 flex justify-end">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -211,7 +254,7 @@ export default function ProductsPage() {
           <Form
             form={form}
             onSubmit={(values) => saveMutation.mutate(values)}
-            className="space-y-4"
+            className="space-y-s5"
           >
             <FormField
               label="SKU"
@@ -219,7 +262,11 @@ export default function ProductsPage() {
               error={form.formState.errors.sku?.message}
               required
             >
-              <Input id="product-sku" {...form.register('sku')} />
+              <Input
+                id="product-sku"
+                className="font-mono"
+                {...form.register('sku')}
+              />
             </FormField>
             <FormField
               label="Name"
@@ -237,6 +284,7 @@ export default function ProductsPage() {
               <Input
                 id="product-gtin"
                 inputMode="numeric"
+                className="font-mono"
                 placeholder="8, 12, 13 or 14 digits"
                 {...form.register('gtin')}
               />
