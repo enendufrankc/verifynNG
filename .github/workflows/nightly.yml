@@ -59,7 +59,7 @@ jobs:
             echo "Seed is not deterministic!"
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: seed-manifest
           path: packages/db/prisma/seed/realistic/manifest.json
